@@ -1,0 +1,13 @@
+{
+  "num_agents" : 3,
+  "num_basis_function" : 9,
+  "map_width" : 1000,
+  "map_height" : 1000,
+  "grid_cell_size" : 1,
+  "min_a" : 0,
+  "gain_matrix" : 0,
+  "gamma_matrix" : 0,
+  "lr_gain" : 0,
+  "data_weighting" : 0,
+  "positive_consensus_gain" : 0
+}
