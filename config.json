@@ -1,13 +1,14 @@
 {
-  "num_agents" : 3,
-  "num_basis_function" : 9,
-  "map_width" : 1000,
-  "map_height" : 1000,
-  "grid_cell_size" : 1,
-  "min_a" : 0,
+  "num_agents" : 5,
+  "num_basis_functions" : 9,
+  "basis_sigma" : 10.8,
   "gain_matrix" : 0,
   "gamma_matrix" : 0,
   "lr_gain" : 0,
   "data_weighting" : 0,
-  "positive_consensus_gain" : 0
+  "positive_consensus_gain" : 0,
+  "min_a" : 0,
+  "map_width" : 100,
+  "map_height" : 100,
+  "grid_cell_size" : 1
 }
