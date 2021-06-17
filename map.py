@@ -25,20 +25,48 @@ class Map:
         positions = [self.coord_to_gcell(agent.pos) for agent in agents]
         self.tree = KDTree(positions)
 
-    def voronoi_calculations(self, agents):
-        """ Calculates the centroid, moment, and mass of each agent's voronoi
+    def reset_agents(self, agents):
+        for agent in agents:
+            agent.mass = 0
+            agent.moment = 0
+            agent.centroid = 0
+
+    def set_agent_voronoi(self, agents):
+        """ Determines the grid cells corresponding to each agent's Voronoi
             partition
         """
         test = np.zeros((self.map_height, self.map_width))
         dists, inds = self.tree.query(np.c_[self.grows, self.gcols], k=1)
-        print(inds.shape)
+        inds = inds.reshape(self.map_height, self.map_width)
 
-        for i in range(test.shape[0]):
-            for j in range(test.shape[1]):
-                test[i][j] = agents[inds[i * self.map_width + j]].color
+        # reset each agent's voronoi grid cells
+        for agent in agents:
+            agent.v_part = []
 
-        return test
+        # assign grid cells to each agent's voronoi partition
+        for i in range(inds.shape[0]):
+            for j in range(inds.shape[1]):
+                 agents[inds[i, j]].v_part.append((i, j))
 
+        # convert each agent's voronoi partition to a numpy array
+        for agent in agents:
+            agent.v_part = np.array(agent.v_part)
+
+    def calc_agent_voronoi(self, agents):
+        """ Calculates the centroid, moment, and mass of each agent's voronoi
+            partition
+        """
+        for agent in agents:
+            # iterate through each agent's voronoi partition
+            for cell in agent.v_part:
+                # increment mass and moment
+                phi_approx = agent.sense_approx(cell)
+                agent.mass += phi_approx
+                agent.moment += np.array(cell).reshape(len(cell), -1) * phi_approx
+
+        # calc centroid now that mass and moment have been obtained
+        for agent in agents:
+            agent.centroid = agent.moment / agent.mass
 
     def render_agents(self, agents):
         for a in agents:
@@ -48,7 +76,10 @@ class Map:
         for a in agents:
             a.render_voronoi_region()
 
-    def set_agent_voronoi(self, agents):
+    def set_agent_voronoi_2(self, agents):
+        """ Don't use this, but lets keep it in case we need it later for
+            some reason
+        """
         positions = [self.coord_to_gcell(agent.pos) for agent in agents]
         vor = Voronoi(positions, qhull_options='Qbb Qc Qx')
 

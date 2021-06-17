@@ -12,10 +12,12 @@ class Agent:
         self.means = means
         self.sigma = sigma
         self.a_est = np.full((self.num_basis_f, 1), self.min_a)
-        self.vor_vert = []
         self.color = color
 
-        # Eq 7: est mass, momenet, and centroid of agent's voronoi partition 
+        # grid cells corresponding to the agent's voronoi partition
+        self.v_part = []
+
+        # Eq 7: est mass, momenet, and centroid of agent's voronoi partition
         self.v_mass = None
         self.v_moment = None
         self.v_centroid = None
@@ -26,8 +28,12 @@ class Agent:
     def calc_voronoi(self):
         pass
 
-    def sense_approx(self):
+    def sense_true(self):
         return self.calc_basis(self.pos).T @ self.a
+
+    def sense_approx(self, q):
+        # print(self.calc_basis(q).T)
+        return self.calc_basis(q).T @ self.a_est
 
     def calc_basis(self, pos):
         basis = []

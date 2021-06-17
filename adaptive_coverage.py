@@ -23,16 +23,18 @@ def adaptive_coverage(map, agents, opt_a):
 
     # iterate until each agent's estimated paramters are close to the optimal
     # while conv_check(agents, opt_a, error=ERROR) == False:
-        # reset KDTree used to compute Voronoi regions
+
+    # reset KDTree used to compute Voronoi regions
     map.set_tree(agents)
 
-    # calc centroid, mass, and moment for each agent
+    # assign grid cells to each agent's voronoi partition
     map.set_agent_voronoi(agents)
-    test = map.voronoi_calculations(agents)
 
-    plt.figure(2)
-    plt.imshow(test)
-    plt.show()
+    # calc centroid, mass, and moment for each agent
+    map.reset_agents(agents)
+    map.calc_agent_voronoi(agents)
+
+
 
 
 
@@ -40,6 +42,7 @@ def adaptive_coverage(map, agents, opt_a):
 
 
 if __name__ == "__main__":
+    np.random.seed(2)
     # colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
     colors = [0.0, 0.25, 0.5, 0.75, 1]
 

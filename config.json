@@ -7,7 +7,7 @@
   "lr_gain" : 0,
   "data_weighting" : 0,
   "positive_consensus_gain" : 0,
-  "min_a" : 0,
+  "min_a" : 1,
   "map_width" : 100,
   "map_height" : 100,
   "grid_cell_size" : 1
