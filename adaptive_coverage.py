@@ -17,7 +17,11 @@ def conv_check(agents, a_opt, error=0.01):
     return True
 
 
-def adaptive_coverage(map, agents, opt_a):
+def adaptive_coverage(map, agents, opt_a, lr_gain, gain_const, gamma_const, render_agents=False):
+    # init gain and gamma matricies
+    gain_matrix = gain_const * np.eye(2)
+    gamma_matrix = gamma_const * np.eye(9)
+
     la = np.zeros((opt_a.shape)) # capital lambda from equation 11
     lb = np.zeros((opt_a.shape)) # lowercase lambda from equation 11
 
@@ -28,21 +32,28 @@ def adaptive_coverage(map, agents, opt_a):
 
     # calc centroid, mass, and moment for each agent
     map.set_agent_voronoi(agents)
-    test = map.voronoi_calculations(agents)
+    map.calc_agent_voronoi(agents)
 
-    plt.figure(2)
-    plt.imshow(test)
-    plt.show()
+    # update a_est
+    for agent in agents:
+        F = agent.calc_F(gain_matrix)
+        a_pre = -F @ agent.a_est - lr_gain * (la @ agent.a_est - lb) # eq 13
 
+    # potentially render agents
+    if render_agents:
+        for agent in agents:
+            agent.render_self()
+            agent.render_centroid()
 
-
-
+    map.plot_voronoi(agents)
 
 
 if __name__ == "__main__":
-    # colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
-    colors = [0.0, 0.25, 0.5, 0.75, 1]
+    # set seed to get reproducable outputs
+    np.random.seed(2)
 
+    colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
+    # colors = [0.0, 0.25, 0.5, 0.75, 1]
 
     # get environment variables from json file
     with open('config.json') as f:
@@ -59,9 +70,9 @@ if __name__ == "__main__":
     MAP_HEIGHT = env_vars["map_height"]
     GRID_CELL_SIZE = env_vars["grid_cell_size"]
     MIN_A = env_vars["min_a"]
-    GAIN_MATRIX = np.array(env_vars["gain_matrix"])
-    GAMMA_MATRIX = np.array(env_vars["gamma_matrix"])
-    LR_GAIN = np.array(env_vars["lr_gain"])
+    GAIN_CONST = env_vars["gain_const"]
+    GAMMA_CONST = env_vars["gamma_const"]
+    LR_GAIN = env_vars["lr_gain"]
     DATA_WEIGHTING = np.array(env_vars["data_weighting"])
     POS_CONSENSUS_GAIN = np.array(env_vars["positive_consensus_gain"])
     POS_DIM = env_vars["pos_dim"]
@@ -89,6 +100,6 @@ if __name__ == "__main__":
     print_agent_coords(agents)
 
     # run adaptive coverage algorithm
-    adaptive_coverage(map, agents, opt_a)
+    adaptive_coverage(map, agents, opt_a, LR_GAIN, GAIN_CONST, GAMMA_CONST, render_agents=True)
 
     plt.show()

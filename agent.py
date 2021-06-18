@@ -11,18 +11,18 @@ class Agent:
         self.num_basis_fx = num_basis_functions
         self.means = means
         self.sigma = sigma
-        self.a_est = np.full((self.num_basis_fx, 1), self.min_a)
+        self.a_est = np.full((self.num_basis_fx, 1), self.MIN_A)
         self.POS_DIM = pos_dim
         self.color = color
 
         # grid cells corresponding to the agent's voronoi partition
         self.v_part_list = []
-        self.v_part = np.zeros((1, POS_DIM))
+        self.v_part = np.zeros((1, self.POS_DIM))
 
         # Eq 7: est mass, moment, and centroid of agent's voronoi partition
         self.v_mass = 0
-        self.v_moment = np.zeros((POS_DIM, 1))
-        self.v_centroid = np.zeros((POS_DIM, 1))
+        self.v_moment = np.zeros((self.POS_DIM, 1))
+        self.v_centroid = np.zeros((self.POS_DIM, 1))
 
     def move_agent(self, tv, av):
         pass
@@ -51,11 +51,31 @@ class Agent:
             basis.append(1/(self.sigma * np.sqrt(2 * np.pi)) * np.exp( - (pos - mu)**2 / (2 * self.sigma**2)))
         return np.array(basis)
 
+    def calc_F(self, gain_matrix):
+        left = np.zeros((self.num_basis_functions, len(self.pos))) # 9x2 matrix
+        right = np.zeros((len(self.pos), self.num_basis_functions))) # 2x9 matrix
+
+        pos = np.array(self.pos).reshape(len(self.pos), -1)
+        for cell in self.v_part:
+            left += (self.calc_basis(cell) @ (cell - pos).T)
+            right += ((cell - pos) @ self.calc_basis(cell).T)
+
+        # calc F according to equation 12
+        return (left @ gain_matrix @ right) / self.v_mass
+
     def sense(self):
         pass
 
-    def render(self):
+    def render_all(self):
+        self.render_self()
+        self.render_voronoi_region()
+        self.render_centroid()
+
+    def render_self(self):
         plt.scatter(self.pos[1], self.pos[0], s=50, c=self.color)
+
+    def render_centroid(self):
+        plt.scatter(self.v_centroid[0], self.v_centroid[1], s=25, c=self.color)
 
     def render_voronoi_region(self):
         rows = [v[0] for v in self.vor_vert]
@@ -64,11 +84,11 @@ class Agent:
 
     def reset(self):
         self.v_part_list = []
-        self.v_part = np.zeros((1, POS_DIM))
+        self.v_part = np.zeros((1, self.POS_DIM))
 
         self.v_mass = 0
-        self.v_moment = np.zeros((POS_DIM, 1))
-        self.v_centroid = np.zeros((POS_DIM, 1))
+        self.v_moment = np.zeros((self.POS_DIM, 1))
+        self.v_centroid = np.zeros((self.POS_DIM, 1))
 
     def update_v_part(self):
-        v_part = np.array(v_part_list)
+        self.v_part = np.array(self.v_part_list)

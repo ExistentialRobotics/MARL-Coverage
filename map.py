@@ -38,7 +38,7 @@ class Map:
         inds = inds.reshape(self.map_height, self.map_width)
 
         # reset each agent's voronoi grid cells
-        reset_agents(agents)
+        self.reset_agents(agents)
 
         # assign grid cells to each agent's voronoi partition
         for i in range(inds.shape[0]):
@@ -63,6 +63,12 @@ class Map:
     def render_voronoi_regions(self, agents):
         for a in agents:
             a.render_voronoi_region()
+
+    def plot_voronoi(self, agents):
+        positions = [self.coord_to_gcell(agent.pos) for agent in agents]
+        vor = Voronoi(positions, qhull_options='Qbb Qc Qx')
+        fig = voronoi_plot_2d(vor)
+        plt.show()
 
     """
     def set_agent_voronoi_2(self, agents):
