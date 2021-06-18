@@ -23,18 +23,16 @@ def adaptive_coverage(map, agents, opt_a):
 
     # iterate until each agent's estimated paramters are close to the optimal
     # while conv_check(agents, opt_a, error=ERROR) == False:
-
-    # reset KDTree used to compute Voronoi regions
+        # reset KDTree used to compute Voronoi regions
     map.set_tree(agents)
 
-    # assign grid cells to each agent's voronoi partition
-    map.set_agent_voronoi(agents)
-
     # calc centroid, mass, and moment for each agent
-    map.reset_agents(agents)
-    map.calc_agent_voronoi(agents)
+    map.set_agent_voronoi(agents)
+    test = map.voronoi_calculations(agents)
 
-
+    plt.figure(2)
+    plt.imshow(test)
+    plt.show()
 
 
 
@@ -42,7 +40,6 @@ def adaptive_coverage(map, agents, opt_a):
 
 
 if __name__ == "__main__":
-    np.random.seed(2)
     # colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
     colors = [0.0, 0.25, 0.5, 0.75, 1]
 
@@ -55,37 +52,38 @@ if __name__ == "__main__":
     print_env_vars(env_vars)
 
     # set environment variables
-    num_agents = env_vars["num_agents"]
-    num_basis_functions = env_vars["num_basis_functions"]
-    basis_sigma = env_vars["basis_sigma"]
-    map_width = env_vars["map_width"]
-    map_height = env_vars["map_height"]
-    grid_cell_size = env_vars["grid_cell_size"]
-    min_a = env_vars["min_a"]
-    gain_matrix = env_vars["gain_matrix"]
-    gamma_matrix = env_vars["gamma_matrix"]
-    lr_gain = env_vars["lr_gain"]
-    data_weighting = env_vars["data_weighting"]
-    positive_consensus_gain = env_vars["positive_consensus_gain"]
+    NUM_AGENTS = env_vars["num_agents"]
+    NUM_BASIS_FX = env_vars["num_basis_functions"]
+    BASIS_SIGMA = env_vars["basis_sigma"]
+    MAP_WIDTH = env_vars["map_width"]
+    MAP_HEIGHT = env_vars["map_height"]
+    GRID_CELL_SIZE = env_vars["grid_cell_size"]
+    MIN_A = env_vars["min_a"]
+    GAIN_MATRIX = np.array(env_vars["gain_matrix"])
+    GAMMA_MATRIX = np.array(env_vars["gamma_matrix"])
+    LR_GAIN = np.array(env_vars["lr_gain"])
+    DATA_WEIGHTING = np.array(env_vars["data_weighting"])
+    POS_CONSENSUS_GAIN = np.array(env_vars["positive_consensus_gain"])
+    POS_DIM = env_vars["pos_dim"]
 
     # set a (change this to be in config later)
-    opt_a = np.array([100, min_a, min_a, min_a, min_a, min_a, min_a, min_a, 100])
+    opt_a = np.array([100, MIN_A, MIN_A, MIN_A, MIN_A, MIN_A, MIN_A, MIN_A, 100])
 
-    # instanciate map
-    map = Map(map_width, map_height, grid_cell_size)
+    # instantiate map
+    map = Map(MAP_WIDTH, MAP_HEIGHT, GRID_CELL_SIZE)
 
     # calc basis centers, assuming you want them in the center of each quadrant
     means = []
-    for i in range(int(np.sqrt(num_basis_functions))):
-        y = (map_height / (np.sqrt(num_basis_functions) * 2)) + i * (map_height / np.sqrt(num_basis_functions))
-        for j in range(int(np.sqrt(num_basis_functions))):
-            x = (map_width / (np.sqrt(num_basis_functions) * 2)) + j * (map_width / np.sqrt(num_basis_functions))
+    for i in range(int(np.sqrt(NUM_BASIS_FX))):
+        y = (MAP_HEIGHT / (np.sqrt(NUM_BASIS_FX) * 2)) + i * (MAP_HEIGHT / np.sqrt(NUM_BASIS_FX))
+        for j in range(int(np.sqrt(NUM_BASIS_FX))):
+            x = (MAP_WIDTH / (np.sqrt(NUM_BASIS_FX) * 2)) + j * (MAP_WIDTH / np.sqrt(NUM_BASIS_FX))
             means.append(((x + y) / 2))
 
     # create agents with random initial positions
     agents = []
-    for i in range(num_agents):
-        agents.append(Agent(np.random.randint(map_width), np.random.randint(map_height), num_basis_functions, means, basis_sigma, min_a, color=colors[i]))
+    for i in range(NUM_AGENTS):
+        agents.append(Agent(np.random.randint(MAP_WIDTH), np.random.randint(MAP_HEIGHT), NUM_BASIS_FX, means, BASIS_SIGMA, MIN_A, POS_DIM, color=colors[i]))
 
     # print agent coordinates for debugging purposes
     print_agent_coords(agents)
