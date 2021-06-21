@@ -17,27 +17,46 @@ def conv_check(agents, a_opt, error=0.01):
     return True
 
 
-def adaptive_coverage(map, agents, opt_a, lr_gain, gain_const, gamma_const, render_agents=False):
+def adaptive_coverage(map, agents, opt_a, lr_gain, gain_const, gamma_const, data_weighting, render_agents=False, iters=2):
     # init gain and gamma matricies
     gain_matrix = gain_const * np.eye(2)
     gamma_matrix = gamma_const * np.eye(9)
 
-    la = np.zeros((opt_a.shape)) # capital lambda from equation 11
-    lb = np.zeros((opt_a.shape)) # lowercase lambda from equation 11
+    la = np.zeros((opt_a.shape[0], opt_a.shape[0])) # capital lambda from equation 11
+    lb = np.zeros((opt_a.shape[0], 1)) # lowercase lambda from equation 11
 
     # iterate until each agent's estimated paramters are close to the optimal
     # while conv_check(agents, opt_a, error=ERROR) == False:
+    for _ in range(iters):
+        print("---------------------ITER: " + str(_ + 1) + "----------------------")
+
         # reset KDTree used to compute Voronoi regions
-    map.set_tree(agents)
+        map.set_tree(agents)
 
-    # calc centroid, mass, and moment for each agent
-    map.set_agent_voronoi(agents)
-    map.calc_agent_voronoi(agents)
+        # calc centroid, mass, and moment for each agent
+        map.set_agent_voronoi(agents)
+        map.calc_agent_voronoi(agents)
 
-    # update a_est
-    for agent in agents:
-        F = agent.calc_F(gain_matrix)
-        a_pre = -F @ agent.a_est - lr_gain * (la @ agent.a_est - lb) # eq 13
+        print_agent_centroids(agents)
+
+        # update a_est
+        for agent in agents:
+            F = -agent.calc_F(gain_matrix)
+
+            print("F = " + str(F))
+
+            a_pre = (F @ agent.a_est) - lr_gain * (la @ agent.a_est - lb) # eq 13
+            print(str(F @ agent.a_est))
+
+            I_proj = agent.calc_I(a_pre) # eq 15
+            agent.a_est = gamma_matrix @ (a_pre - I_proj @ a_pre) # eq 14
+
+        # update lambdas
+        pos = (agent.pos[0] + agent.pos[1]) / 2
+        basis = agent.calc_basis(pos)
+        basis = basis.reshape(basis.shape[0], 1)
+        la += data_weighting * (basis @ basis.T) # eq 11
+        lb += data_weighting * (basis * agent.sense_true()) # eq 11
 
     # potentially render agents
     if render_agents:
@@ -51,6 +70,7 @@ def adaptive_coverage(map, agents, opt_a, lr_gain, gain_const, gamma_const, rend
 if __name__ == "__main__":
     # set seed to get reproducable outputs
     np.random.seed(2)
+    np.set_printoptions(suppress=True)
 
     colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
     # colors = [0.0, 0.25, 0.5, 0.75, 1]
@@ -73,7 +93,7 @@ if __name__ == "__main__":
     GAIN_CONST = env_vars["gain_const"]
     GAMMA_CONST = env_vars["gamma_const"]
     LR_GAIN = env_vars["lr_gain"]
-    DATA_WEIGHTING = np.array(env_vars["data_weighting"])
+    DATA_WEIGHTING = env_vars["data_weighting"]
     POS_CONSENSUS_GAIN = np.array(env_vars["positive_consensus_gain"])
     POS_DIM = env_vars["pos_dim"]
 
@@ -94,12 +114,12 @@ if __name__ == "__main__":
     # create agents with random initial positions
     agents = []
     for i in range(NUM_AGENTS):
-        agents.append(Agent(np.random.randint(MAP_WIDTH), np.random.randint(MAP_HEIGHT), NUM_BASIS_FX, means, BASIS_SIGMA, MIN_A, POS_DIM, color=colors[i]))
+        agents.append(Agent(np.random.randint(MAP_WIDTH), np.random.randint(MAP_HEIGHT), NUM_BASIS_FX, means, BASIS_SIGMA, MIN_A, opt_a, POS_DIM, color=colors[i]))
 
     # print agent coordinates for debugging purposes
     print_agent_coords(agents)
 
     # run adaptive coverage algorithm
-    adaptive_coverage(map, agents, opt_a, LR_GAIN, GAIN_CONST, GAMMA_CONST, render_agents=True)
+    adaptive_coverage(map, agents, opt_a, LR_GAIN, GAIN_CONST, GAMMA_CONST, DATA_WEIGHTING, render_agents=True)
 
     plt.show()
