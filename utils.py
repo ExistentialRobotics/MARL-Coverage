@@ -20,5 +20,9 @@ def print_agent_centroids(agents):
         print("x: " + str(a.v_centroid[0]) + " y: " + str(a.v_centroid[1]))
     print("-------------------------------------------------------------------")
 
-def plot_agent_voronoi(agents):
-    pass
+def print_agent_voronoi(agent):
+    print("-----------------------Printing Agent Voronoi Partitions-----------------------")
+    print("Agent: x = " + str(agent.pos[0]) + " y = " + str(agent.pos[1]))
+    for v in agent.v_part_list:
+        print("x: " + str(v[0]) + " y: " + str(v[1]))
+    print("-------------------------------------------------------------------")

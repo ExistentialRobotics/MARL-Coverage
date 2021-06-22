@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 class Agent:
 
     def __init__(self, init_x, init_y, num_basis_functions, means, sigma, min_a, opt_a, pos_dim, color='r'):
-        self.pos = (init_x, init_y)
+        self.pos = np.array([[init_x], [init_y]], dtype='f')
         self.MIN_A = min_a
         self.opt_a = opt_a
         self.num_basis_fx = num_basis_functions
@@ -25,15 +25,20 @@ class Agent:
         self.v_moment = np.zeros((self.POS_DIM, 1))
         self.v_centroid = np.zeros((self.POS_DIM, 1))
 
-    def move_agent(self, tv, av):
-        pass
+        self.la = np.zeros((opt_a.shape[0], opt_a.shape[0])) # capital lambda from equation 11
+        self.lb = np.zeros((opt_a.shape[0], 1)) # lowercase lambda from equation 11
+
+    def odom_command(self, gain_matrix):
+        u = gain_matrix @ (self.v_centroid - np.array(self.pos).reshape(len(self.pos), 1)) # eq 11
+        self.pos[0] += u[0]
+        self.pos[1] += u[1]
 
     def calc_centroid(self):
-        for cell in self.v_part:
+        for coord in self.v_part:
             # increment mass and moment
-            phi_approx = self.sense_approx(cell)[0]
+            phi_approx = self.sense_approx(coord)[0]
             self.v_mass += phi_approx
-            self.v_moment += np.array(cell).reshape(len(cell), -1) * phi_approx # changes cell from row to column vector -- is this correct?
+            self.v_moment += np.array(coord).reshape(len(coord), -1) * phi_approx # changes cell from row to column vector -- is this correct?
 
         # calc centroid now that mass and moment have been obtained
         self.v_centroid = self.v_moment / self.v_mass
@@ -59,15 +64,15 @@ class Agent:
 
         # calculate left and right voronoi integrations in numerator of 12
         pos = np.array(self.pos).reshape(len(self.pos), -1)
-        for cell in self.v_part:
+        for coord in self.v_part:
             # calculate basis
-            c = (cell[0] + cell[1]) / 2
-            cell = np.array(cell).reshape(len(cell), -1)
+            c = (coord[0] + coord[1]) / 2
+            coord = np.array(coord).reshape(len(coord), -1)
             basis = self.calc_basis(c)
 
             # increment left and right matrix calculations
-            left += (basis.reshape(basis.shape[0], -1) @ (cell - pos).T)
-            right += ((cell - pos) @ basis.reshape(basis.shape[0], -1).T)
+            left += (basis.reshape(basis.shape[0], -1) @ (coord - pos).T)
+            right += ((coord - pos) @ basis.reshape(basis.shape[0], -1).T)
 
         # calc F according to equation 12
         return (left @ gain_matrix @ right) / self.v_mass
@@ -80,7 +85,7 @@ class Agent:
             j = 1
             if self.a_est[i] > self.MIN_A:
                 j = 0
-            if self.a_est[i] == self.MIN_A and a_pre[j] >= 0:
+            if self.a_est[i] == self.MIN_A and a_pre[i] >= 0:
                 j = 0
             I[i, i] = j
 
@@ -95,7 +100,7 @@ class Agent:
         self.render_centroid()
 
     def render_self(self):
-        plt.scatter(self.pos[1], self.pos[0], s=50, c=self.color)
+        plt.scatter(self.pos[0], self.pos[1], s=50, c=self.color)
 
     def render_centroid(self):
         plt.scatter(self.v_centroid[0], self.v_centroid[1], s=25, c=self.color)

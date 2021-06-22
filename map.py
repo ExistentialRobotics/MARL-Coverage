@@ -21,6 +21,9 @@ class Map:
     def coord_to_gcell(self, coord):
         return int((coord[1] / self.cell_size)), int((coord[0] / self.cell_size))
 
+    def gcell_to_coord(self, cell):
+        return int(cell[1] * self.cell_size), int(cell[0] * self.cell_size)
+
     def set_tree(self, agents):
         positions = [self.coord_to_gcell(agent.pos) for agent in agents]
         self.tree = KDTree(positions)
@@ -31,9 +34,10 @@ class Map:
 
     def set_agent_voronoi(self, agents):
         """ Determines the grid cells corresponding to each agent's Voronoi
-            partition
+            partition. An agents Voronoi cell positions are in map (row, col)
+            form.
         """
-        # UNUSED: test = np.zeros((self.map_height, self.map_width))
+        test = np.zeros((self.map_height, self.map_width))
         dists, inds = self.tree.query(np.c_[self.grows, self.gcols], k=1)
         inds = inds.reshape(self.map_height, self.map_width)
 
@@ -43,11 +47,15 @@ class Map:
         # assign grid cells to each agent's voronoi partition
         for i in range(inds.shape[0]):
             for j in range(inds.shape[1]):
-                 agents[inds[i, j]].v_part_list.append((i, j))
+                x, y = self.gcell_to_coord((i, j))
+                agents[inds[i, j]].v_part_list.append((x, y))
+                # test[i, j] = agents[inds[i, j]].color
 
         # convert each agent's voronoi partition to a numpy array
         for agent in agents:
             agent.update_v_part()
+
+        return test
 
     def calc_agent_voronoi(self, agents):
         """ Calculates the centroid, moment, and mass of each agent's voronoi

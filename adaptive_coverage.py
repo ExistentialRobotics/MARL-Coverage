@@ -17,13 +17,10 @@ def conv_check(agents, a_opt, error=0.01):
     return True
 
 
-def adaptive_coverage(map, agents, opt_a, lr_gain, gain_const, gamma_const, data_weighting, render_agents=False, iters=2):
+def adaptive_coverage(map, agents, opt_a, lr_gain, gain_const, gamma_const, data_weighting, render_agents=False, iters=3):
     # init gain and gamma matricies
     gain_matrix = gain_const * np.eye(2)
     gamma_matrix = gamma_const * np.eye(9)
-
-    la = np.zeros((opt_a.shape[0], opt_a.shape[0])) # capital lambda from equation 11
-    lb = np.zeros((opt_a.shape[0], 1)) # lowercase lambda from equation 11
 
     # iterate until each agent's estimated paramters are close to the optimal
     # while conv_check(agents, opt_a, error=ERROR) == False:
@@ -37,26 +34,30 @@ def adaptive_coverage(map, agents, opt_a, lr_gain, gain_const, gamma_const, data
         map.set_agent_voronoi(agents)
         map.calc_agent_voronoi(agents)
 
-        print_agent_centroids(agents)
+        # print_agent_centroids(agents)
+        # print_agent_voronoi(agents[0])
 
         # update a_est
         for agent in agents:
             F = -agent.calc_F(gain_matrix)
 
-            print("F = " + str(F))
+            # print("F = " + str(F))
 
-            a_pre = (F @ agent.a_est) - lr_gain * (la @ agent.a_est - lb) # eq 13
-            print(str(F @ agent.a_est))
+            a_pre = (F @ agent.a_est) - lr_gain * (agent.la @ agent.a_est - agent.lb) # eq 13
 
             I_proj = agent.calc_I(a_pre) # eq 15
             agent.a_est = gamma_matrix @ (a_pre - I_proj @ a_pre) # eq 14
+            # print(agent.a_est)
 
-        # update lambdas
-        pos = (agent.pos[0] + agent.pos[1]) / 2
-        basis = agent.calc_basis(pos)
-        basis = basis.reshape(basis.shape[0], 1)
-        la += data_weighting * (basis @ basis.T) # eq 11
-        lb += data_weighting * (basis * agent.sense_true()) # eq 11
+            # update lambdas
+            pos = (agent.pos[0] + agent.pos[1]) / 2
+            basis = agent.calc_basis(pos)
+            basis = basis.reshape(basis.shape[0], 1)
+            agent.la += data_weighting * (basis @ basis.T) # eq 11
+            agent.lb += data_weighting * (basis * agent.sense_true()) # eq 11
+
+            # apply control input
+            agent.odom_command(gain_matrix) # eq 10
 
     # potentially render agents
     if render_agents:
