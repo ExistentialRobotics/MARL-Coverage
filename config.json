@@ -1,5 +1,5 @@
 {
-  "num_agents" : 5,
+  "num_agents" : 7,
   "num_basis_functions" : 9,
   "basis_sigma" : 10.8,
   "gain_const" : 3,

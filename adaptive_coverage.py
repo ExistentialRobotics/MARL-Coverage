@@ -17,12 +17,14 @@ def conv_check(agents, a_opt, error=0.01):
     return True
 
 
-def adaptive_coverage(map, agents, opt_a, lr_gain, gain_const, gamma_const, data_weighting, render_agents=False, iters=3):
+def adaptive_coverage(map, agents, opt_a, lr_gain, gain_const, gamma_const, data_weighting, render_agents=False, iters=10):
     # init gain and gamma matricies
     gain_matrix = gain_const * np.eye(2)
     gamma_matrix = gamma_const * np.eye(9)
 
     # iterate until each agent's estimated paramters are close to the optimal
+    est_errors = []
+    true_errors = []
     # while conv_check(agents, opt_a, error=ERROR) == False:
     for _ in range(iters):
         print("---------------------ITER: " + str(_ + 1) + "----------------------")
@@ -38,7 +40,13 @@ def adaptive_coverage(map, agents, opt_a, lr_gain, gain_const, gamma_const, data
         # print_agent_voronoi(agents[0])
 
         # update a_est
+        est_mean = 0
+        true_mean = 0
         for agent in agents:
+            # calc true centroid
+            agent.calc_centroid(true_c=True)
+
+            # calc F
             F = -agent.calc_F(gain_matrix)
 
             # print("F = " + str(F))
@@ -56,8 +64,16 @@ def adaptive_coverage(map, agents, opt_a, lr_gain, gain_const, gamma_const, data
             agent.la += data_weighting * (basis @ basis.T) # eq 11
             agent.lb += data_weighting * (basis * agent.sense_true()) # eq 11
 
+            # inc estimated and true position errors
+            est_mean += np.linalg.norm((agent.v_centroid - agent.pos))
+            true_mean += np.linalg.norm((agent.t_centroid - agent.pos))
+
             # apply control input
             agent.odom_command(gain_matrix) # eq 10
+
+        # average estimated and true position errors
+        est_errors.append((est_mean / len(agents)))
+        true_errors.append((true_mean / len(agents)))
 
     # potentially render agents
     if render_agents:
@@ -66,6 +82,8 @@ def adaptive_coverage(map, agents, opt_a, lr_gain, gain_const, gamma_const, data
             agent.render_centroid()
 
     map.plot_voronoi(agents)
+
+    return est_errors, true_errors
 
 
 if __name__ == "__main__":
@@ -121,6 +139,16 @@ if __name__ == "__main__":
     print_agent_coords(agents)
 
     # run adaptive coverage algorithm
-    adaptive_coverage(map, agents, opt_a, LR_GAIN, GAIN_CONST, GAMMA_CONST, DATA_WEIGHTING, render_agents=True)
+    est_errors, true_errors = adaptive_coverage(map, agents, opt_a, LR_GAIN, GAIN_CONST, GAMMA_CONST, DATA_WEIGHTING, render_agents=True)
+
+    # plot the dist from centroids per iteration
+    plt.figure(1)
+    plt.title("Dist from True and Estimated Centroids")
+    plt.xlabel('Iterations')
+    plt.ylabel('Dist')
+    line_e, = plt.plot(est_errors, label="Est Centroid")
+    line_t, = plt.plot(true_errors, label="True Centroid")
+    plt.legend(handles=[line_e, line_t])
+    plt.show()
 
     plt.show()

@@ -8,7 +8,7 @@ class Agent:
     def __init__(self, init_x, init_y, num_basis_functions, means, sigma, min_a, opt_a, pos_dim, color='r'):
         self.pos = np.array([[init_x], [init_y]], dtype='f')
         self.MIN_A = min_a
-        self.opt_a = opt_a
+        self.opt_a = opt_a.reshape(opt_a.shape[0], 1)
         self.num_basis_fx = num_basis_functions
         self.means = means
         self.sigma = sigma
@@ -25,6 +25,11 @@ class Agent:
         self.v_moment = np.zeros((self.POS_DIM, 1))
         self.v_centroid = np.zeros((self.POS_DIM, 1))
 
+        # true mass, moment, and centroid of agent's voronoi partition
+        self.t_mass = 0
+        self.t_moment = np.zeros((self.POS_DIM, 1))
+        self.t_centroid = np.zeros((self.POS_DIM, 1))
+
         self.la = np.zeros((opt_a.shape[0], opt_a.shape[0])) # capital lambda from equation 11
         self.lb = np.zeros((opt_a.shape[0], 1)) # lowercase lambda from equation 11
 
@@ -33,24 +38,40 @@ class Agent:
         self.pos[0] += u[0]
         self.pos[1] += u[1]
 
-    def calc_centroid(self):
+    def calc_centroid(self, true_c=False):
         for coord in self.v_part:
             # increment mass and moment
-            phi_approx = self.sense_approx(coord)[0]
-            self.v_mass += phi_approx
-            self.v_moment += np.array(coord).reshape(len(coord), -1) * phi_approx # changes cell from row to column vector -- is this correct?
+            if true_c:
+                phi_approx = self.sense_approx(coord, opt=True)[0]
+            else:
+                phi_approx = self.sense_approx(coord)[0]
+
+            if true_c:
+                self.v_mass += phi_approx
+                self.v_moment += np.array(coord).reshape(len(coord), -1) * phi_approx # changes cell from row to column vector -- is this correct?
+            else:
+                self.t_mass += phi_approx
+                self.t_moment += np.array(coord).reshape(len(coord), -1) * phi_approx # changes cell from row to column vector -- is this correct?
 
         # calc centroid now that mass and moment have been obtained
-        self.v_centroid = self.v_moment / self.v_mass
+        if true_c:
+            self.v_centroid = self.v_moment / self.v_mass
+        else:
+            self.t_centroid = self.t_moment / self.t_mass
 
     def sense_true(self):
         pos = (self.pos[0] + self.pos[1]) / 2
         return self.calc_basis(pos).T @ self.opt_a
 
-    def sense_approx(self, q):
+    def sense_approx(self, q, opt=False):
         """ Looks up estimated sensor value at a position q """
         q = (q[0] + q[1]) / 2
-        return self.calc_basis(q).T @ self.a_est
+        r = -1
+        if opt:
+            r = self.calc_basis(q).T @ self.opt_a
+        else:
+            r = self.calc_basis(q).T @ self.a_est
+        return r
 
     def calc_basis(self, pos):
         basis = []
