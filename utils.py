@@ -17,7 +17,7 @@ def print_agent_coords(agents):
 def print_agent_centroids(agents):
     print("-----------------------Printing Agent Centroids-----------------------")
     for a in agents:
-        print("x: " + str(a.v_centroid[0]) + " y: " + str(a.v_centroid[1]))
+        print("x: " + str(a.e_centroid[0]) + " y: " + str(a.e_centroid[1]))
     print("-------------------------------------------------------------------")
 
 def print_agent_voronoi(agent):

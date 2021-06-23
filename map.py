@@ -37,7 +37,6 @@ class Map:
             partition. An agents Voronoi cell positions are in map (row, col)
             form.
         """
-        test = np.zeros((self.map_height, self.map_width))
         dists, inds = self.tree.query(np.c_[self.grows, self.gcols], k=1)
         inds = inds.reshape(self.map_height, self.map_width)
 
@@ -49,20 +48,17 @@ class Map:
             for j in range(inds.shape[1]):
                 x, y = self.gcell_to_coord((i, j))
                 agents[inds[i, j]].v_part_list.append((x, y))
-                # test[i, j] = agents[inds[i, j]].color
 
         # convert each agent's voronoi partition to a numpy array
         for agent in agents:
             agent.update_v_part()
-
-        return test
 
     def calc_agent_voronoi(self, agents):
         """ Calculates the centroid, moment, and mass of each agent's voronoi
             partition
         """
         for agent in agents:
-            agent.calc_centroid()
+            agent.calc_est_centroid()
 
     def render_agents(self, agents):
         for a in agents:
@@ -77,22 +73,3 @@ class Map:
         vor = Voronoi(positions, qhull_options='Qbb Qc Qx')
         fig = voronoi_plot_2d(vor)
         plt.show()
-
-    """
-    def set_agent_voronoi_2(self, agents):
-        \""" Don't use this, but lets keep it in case we need it later for
-            some reason
-        \"""
-        positions = [self.coord_to_gcell(agent.pos) for agent in agents]
-        vor = Voronoi(positions, qhull_options='Qbb Qc Qx')
-
-        vertices = vor.vertices
-        p_to_reg = vor.point_region
-        regions = vor.regions
-        for i in range(len(p_to_reg)):
-            for j in range(len(regions[i])):
-                if regions[i][j] != -1:
-                    agents[i].vor_vert.append(vertices[regions[i][j]])
-
-        fig = voronoi_plot_2d(vor)
-    """
