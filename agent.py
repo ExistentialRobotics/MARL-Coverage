@@ -219,12 +219,19 @@ class Agent:
         """
         reset resets the agent's voronoi related instance variables.
         """
+        # reset grid cells in voronoi region
         self.v_part_list = []
         self.v_part = np.zeros((1, self.POS_DIM))
 
+        # reset estimated centroid calculations
         self.e_mass = 0
         self.e_moment = np.zeros((self.POS_DIM, 1))
         self.e_centroid = np.zeros((self.POS_DIM, 1))
+
+        # reset true centroid calculations
+        self.t_mass = 0
+        self.t_moment = np.zeros((self.POS_DIM, 1))
+        self.t_centroid = np.zeros((self.POS_DIM, 1))
 
     def update_v_part(self):
         """
