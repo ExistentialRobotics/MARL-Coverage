@@ -9,6 +9,7 @@ Emails: pstratto@ucsd.edu, hahui@ucsd.edu
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 def print_env_vars(env_vars):
     """
     print_env_vars prints the program's environment variables to the console
@@ -37,6 +38,7 @@ def print_agent_coords(agents):
         print("x: " + str(a.pos[0]) + " y: " + str(a.pos[1]))
     print("-------------------------------------------------------------------")
 
+
 def print_agent_centroids(agents):
     """
     print_agent_centroids prints each agent's estimated centroid position to the
@@ -51,6 +53,7 @@ def print_agent_centroids(agents):
         print("x: " + str(a.e_centroid[0]) + " y: " + str(a.e_centroid[1]))
     print("-------------------------------------------------------------------")
 
+
 def print_agent_voronoi(agent):
     """
     print_agent_voronoi prints an agent's grid cells corresponding to its
@@ -58,10 +61,18 @@ def print_agent_voronoi(agent):
 
     Parameter
     ---------
-    agent : agent who's voronoi partition is printed 
+    agent : agent who's voronoi partition is printed
     """
     print("-----------------Printing Agent Voronoi Partitions-----------------")
     print("Agent: x = " + str(agent.pos[0]) + " y = " + str(agent.pos[1]))
     for v in agent.v_part_list:
         print("x: " + str(v[0]) + " y: " + str(v[1]))
     print("-------------------------------------------------------------------")
+
+
+def print_agent_params(agents):
+    print("----------------Printing Agent Estimated Parameters----------------")
+    for agent in agents:
+        print("Agent: x = " + str(agent.pos[0]) + " y = " + str(agent.pos[1]))
+        print("a: " + str(agent.a_est))
+        print("---------------------------------------------------------------")

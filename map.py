@@ -42,6 +42,13 @@ class Map:
         self.grows = self.grows.ravel()
         self.gcols = self.gcols.ravel()
 
+    def a_error(self, agents):
+        a_mean = 0
+        for agent in agents:
+            # print(np.linalg.norm((agent.a_opt - agent.a_est)))
+            a_mean += np.linalg.norm((agent.a_opt - agent.a_est))
+        return (a_mean / len(agents))
+
     def coord_to_gcell(self, coord):
         """
         coord_to_gcell converts a x, y coordinate to a row, col grid cell.

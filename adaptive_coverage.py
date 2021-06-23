@@ -65,7 +65,7 @@ def adaptive_coverage(map, agents, a_opt, lr_gain, gain_const, gamma_const,
     # iterate until each agent's estimated paramters are close to the optimal
     est_errors = []
     true_errors = []
-
+    a_errors = []
     for _ in range(iters):
         if (_ + 1) % 5 == 0:
             print("-----------------ITER: " + str(_ + 1) + "------------------")
@@ -107,6 +107,9 @@ def adaptive_coverage(map, agents, a_opt, lr_gain, gain_const, gamma_const,
             I_proj = agent.calc_I(a_pre) # eq 15
             a_dot = a_pre - I_proj @ a_pre
             agent.a_est = agent.a_est + DT * gamma_matrix @ a_dot # eq 14
+            agent.a_est = np.where(agent.a_est < agent.MIN_A, agent.MIN_A,
+                                   agent.a_est)
+
 
             # update lambdas
             basis = agent.calc_basis(np.array([agent.pos[0,0], agent.pos[1,0]]))
@@ -120,11 +123,12 @@ def adaptive_coverage(map, agents, a_opt, lr_gain, gain_const, gamma_const,
             # apply control input
             agent.odom_command(gain_matrix) # eq 10
 
-        # average estimated and true position errors
+        # average estimated position errors, true position errors, and a error
         est_errors.append((est_mean / len(agents)))
         true_errors.append((true_mean / len(agents)))
+        a_errors.append(map.a_error(agents))
 
-    return est_errors, true_errors
+    return est_errors, true_errors, a_errors
 
 
 if __name__ == "__main__":
@@ -164,30 +168,30 @@ if __name__ == "__main__":
         d_f = DATA_WEIGHTING
 
     # set a (change this to be in config later)
-    opt_a = np.array([100, 100])
-    # opt_a = np.array([100, MIN_A, MIN_A, MIN_A, MIN_A, MIN_A, MIN_A, MIN_A,
-    #                   100])
+    # opt_a = np.array([100, 100])
+    opt_a = np.array([100, MIN_A, MIN_A, MIN_A, MIN_A, MIN_A, MIN_A, MIN_A,
+                      100])
 
 
     cov_m = BASIS_SIGMA * np.eye(2)
-    means = np.array([(25, 25), (75, 75)])
-    basis_f = [multivariate_normal(mean=np.array([25, 25]), cov=cov_m),
-               multivariate_normal(mean=np.array([75, 75]), cov=cov_m)]
+    # means = np.array([(25, 25), (75, 75)])
+    # basis_f = [multivariate_normal(mean=np.array([25, 25]), cov=cov_m),
+    #            multivariate_normal(mean=np.array([75, 75]), cov=cov_m)]
 
-    # # calc basis centers assuming they're in the center of each quadrant
-    # basis_f = []
-    # means = []
-    # for i in range(int(np.sqrt(NUM_BASIS_FX))):
-    #     y = (MAP_HEIGHT / (np.sqrt(NUM_BASIS_FX) * 2)) + i * (MAP_HEIGHT /
-    #          np.sqrt(NUM_BASIS_FX))
-    #     for j in range(int(np.sqrt(NUM_BASIS_FX))):
-    #         x = (MAP_WIDTH / (np.sqrt(NUM_BASIS_FX) * 2)) + j * (MAP_WIDTH /
-    #              np.sqrt(NUM_BASIS_FX))
-    #         means.append((x, y))
-    #
-    #         # add multivariate normals as each basis function
-    #         basis_f.append(multivariate_normal(mean=np.array([x, y]),
-    #                        cov=cov_m))
+    # calc basis centers assuming they're in the center of each quadrant
+    basis_f = []
+    means = []
+    for i in range(int(np.sqrt(NUM_BASIS_FX))):
+        y = (MAP_HEIGHT / (np.sqrt(NUM_BASIS_FX) * 2)) + i * (MAP_HEIGHT /
+             np.sqrt(NUM_BASIS_FX))
+        for j in range(int(np.sqrt(NUM_BASIS_FX))):
+            x = (MAP_WIDTH / (np.sqrt(NUM_BASIS_FX) * 2)) + j * (MAP_WIDTH /
+                 np.sqrt(NUM_BASIS_FX))
+            means.append((x, y))
+
+            # add multivariate normals as each basis function
+            basis_f.append(multivariate_normal(mean=np.array([x, y]),
+                           cov=cov_m))
 
     # instantiate map
     map = Map(MAP_WIDTH, MAP_HEIGHT, GRID_CELL_SIZE)
@@ -197,16 +201,17 @@ if __name__ == "__main__":
     for i in range(NUM_AGENTS):
         agents.append(Agent(np.random.randint(MAP_WIDTH),
                             np.random.randint(MAP_HEIGHT), basis_f, means,
-                            MIN_A, opt_a, POS_DIM, color=colors[i]))
+                            MIN_A, opt_a, POS_DIM, color=colors[2]))
 
     # print agent coordinates for debugging purposes
     print_agent_coords(agents)
 
     # run adaptive coverage algorithm
-    est_errors, true_errors = adaptive_coverage(map, agents, opt_a, LR_GAIN,
-                                                GAIN_CONST, GAMMA_CONST,
-                                                data_weighting=d_f, DT=DT,
-                                                render_agents=True, iters=ITERS)
+    est_errors, true_errors, a_errors = adaptive_coverage(map, agents, opt_a,
+                                                LR_GAIN, GAIN_CONST,
+                                                GAMMA_CONST, data_weighting=d_f,
+                                                DT=DT, render_agents=True,
+                                                iters=ITERS)
 
     # plot agent positions and means corresponding to highest a_opt values
     plt.scatter(agents[0].means[0][0], agents[0].means[0][1], s=50, c='r',
@@ -221,6 +226,9 @@ if __name__ == "__main__":
     # plot final voronoi diagram
     map.plot_voronoi(agents)
 
+    # print final agent paramters
+    print_agent_params(agents)
+
     # plot the dist from centroids per iteration
     plt.figure(2)
     plt.title("Dist from True and Estimated Centroids")
@@ -229,4 +237,13 @@ if __name__ == "__main__":
     line_e, = plt.plot(est_errors, label="Est Centroid")
     line_t, = plt.plot(true_errors, label="True Centroid")
     plt.legend(handles=[line_e, line_t])
+    plt.show()
+
+    # plot the mean parameter error per interation
+    plt.figure(3)
+    plt.title("Mean Agent Parameter Error")
+    plt.xlabel('Iterations')
+    plt.ylabel('Error')
+    line_a, = plt.plot(a_errors, label="||a_tilde - a||")
+    plt.legend(handles=[line_a])
     plt.show()
