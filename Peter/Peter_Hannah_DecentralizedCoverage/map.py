@@ -10,6 +10,7 @@ Emails: pstratto@ucsd.edu, hahui@ucsd.edu
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.spatial import Voronoi, voronoi_plot_2d, KDTree
+from scipy.spatial import Delaunay
 from utils import *
 
 class Map:
@@ -42,11 +43,35 @@ class Map:
         self.grows = self.grows.ravel()
         self.gcols = self.gcols.ravel()
 
+    def set_consensus(self, agents):
+        # get Delaunay triangulation to determine agent neighbors
+        points = np.array([np.array([agent.pos[0,0], agent.pos[1,0]]) for agent in agents])
+        tri = Delaunay(points).simplices
+
+        c_terms = [0 for agent in agents]
+        for t in tri:
+            # get dists between agents
+            # d_01 = np.linalg.norm((agents[t[0]].pos - agents[t[1]].pos))
+            # d_02 = np.linalg.norm((agents[t[0]].pos - agents[t[2]].pos))
+            # d_12 = np.linalg.norm((agents[t[1]].pos - agents[t[2]].pos))
+            d_01 = 1
+            d_02 = 1
+            d_12 = 1
+
+            # inc consensus terms for agents in the triangle
+            c_terms[t[0]] += d_01 * (agents[t[0]].a_est - agents[t[1]].a_est) + d_02 * (agents[t[0]].a_est - agents[t[2]].a_est)
+            c_terms[t[1]] += d_01 * (agents[t[1]].a_est - agents[t[0]].a_est) + d_12 * (agents[t[1]].a_est - agents[t[2]].a_est)
+            c_terms[t[2]] += d_12 * (agents[t[2]].a_est - agents[t[1]].a_est) + d_02 * (agents[t[2]].a_est - agents[t[0]].a_est)
+
+        # set each agent's consensus term
+        for i in range(len(c_terms)):
+            agents[i].c_term = c_terms[i]
+
     def a_error(self, agents):
         a_mean = 0
         for agent in agents:
-            # print(np.linalg.norm((agent.a_opt - agent.a_est)))
             a_mean += np.linalg.norm((agent.a_opt - agent.a_est))
+        print((a_mean / len(agents)))
         return (a_mean / len(agents))
 
     def coord_to_gcell(self, coord):

@@ -73,6 +73,9 @@ class Agent:
         self.la = np.zeros((a_opt.shape[0], a_opt.shape[0])) # capital lambda
         self.lb = np.zeros((a_opt.shape[0], 1)) # lowercase lambda
 
+        # consensus term for agent
+        self.c_term = 0
+
     def odom_command(self, gain_matrix):
         """
         odom_command executes the odometry command for the agent based on its
@@ -232,6 +235,9 @@ class Agent:
         self.t_mass = 0
         self.t_moment = np.zeros((self.POS_DIM, 1))
         self.t_centroid = np.zeros((self.POS_DIM, 1))
+
+        # reset consensus term
+        self.c_term = 0
 
     def update_v_part(self):
         """

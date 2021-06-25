@@ -71,6 +71,7 @@ def print_agent_voronoi(agent):
 
 
 def print_agent_params(agents):
+    np.set_printoptions(suppress=True)
     print("----------------Printing Agent Estimated Parameters----------------")
     for agent in agents:
         print("Agent: x = " + str(agent.pos[0]) + " y = " + str(agent.pos[1]))
