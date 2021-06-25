@@ -60,7 +60,7 @@ class Map:
         for i in range(self.m.shape[0]):
             for j in range(self.m.shape[1]):
                 b = agent.calc_basis(self.m[i, j])
-                if b.T @ b <= 0:
+                if np.all((b @ b.T <= 0)):
                     return False
         return True
 
@@ -111,11 +111,12 @@ class Map:
 
         Return
         ------
-        float reprenting the mean parameter error of all the agents 
+        float reprenting the mean parameter error of all the agents
         """
         a_mean = 0
         for agent in agents:
             a_mean += np.linalg.norm((agent.a_opt - agent.a_est))
+        # print((a_mean / len(agents)))
         return (a_mean / len(agents))
 
     def coord_to_gcell(self, coord):
