@@ -43,7 +43,37 @@ class Map:
         self.grows = self.grows.ravel()
         self.gcols = self.gcols.ravel()
 
+    def pdef_check(self, agent):
+        """
+        pdef_check verifies that the basis functions are positive definite at
+        each position in the environment.
+
+        Parameter
+        ---------
+        agent : agent used to calculate the basis functions at each position,
+                any agent works as this parameter
+
+        Return
+        ------
+        boolean reprenting if the basis functions were positive definite or not
+        """
+        for i in range(self.m.shape[0]):
+            for j in range(self.m.shape[1]):
+                b = agent.calc_basis(self.m[i, j])
+                if b.T @ b <= 0:
+                    return False
+        return True
+
     def set_consensus(self, agents):
+        """
+        set_consensus sets each agent's consensus parameter by summing the
+        differences between the agent's estimated paramters and its voronoi
+        neighbor's estimated parameters.
+
+        Parameter
+        ---------
+        agents : list of agents to calculate the consensus parameters of
+        """
         # get Delaunay triangulation to determine agent neighbors
         points = np.array([np.array([agent.pos[0,0], agent.pos[1,0]]) for agent in agents])
         tri = Delaunay(points).simplices
@@ -59,19 +89,33 @@ class Map:
             d_12 = 1
 
             # inc consensus terms for agents in the triangle
-            c_terms[t[0]] += d_01 * (agents[t[0]].a_est - agents[t[1]].a_est) + d_02 * (agents[t[0]].a_est - agents[t[2]].a_est)
-            c_terms[t[1]] += d_01 * (agents[t[1]].a_est - agents[t[0]].a_est) + d_12 * (agents[t[1]].a_est - agents[t[2]].a_est)
-            c_terms[t[2]] += d_12 * (agents[t[2]].a_est - agents[t[1]].a_est) + d_02 * (agents[t[2]].a_est - agents[t[0]].a_est)
+            c_terms[t[0]] += d_01 * (agents[t[0]].a_est - agents[t[1]].a_est) +\
+                             d_02 * (agents[t[0]].a_est - agents[t[2]].a_est)
+            c_terms[t[1]] += d_01 * (agents[t[1]].a_est - agents[t[0]].a_est) +\
+                             d_12 * (agents[t[1]].a_est - agents[t[2]].a_est)
+            c_terms[t[2]] += d_12 * (agents[t[2]].a_est - agents[t[1]].a_est) +\
+                             d_02 * (agents[t[2]].a_est - agents[t[0]].a_est)
 
         # set each agent's consensus term
         for i in range(len(c_terms)):
             agents[i].c_term = c_terms[i]
 
     def a_error(self, agents):
+        """
+        a_error calculates the parameter error between each agent's estimated
+        parameters and the optimal parameters.
+
+        Parameter
+        ---------
+        agents : list of agents to calculate the parameter errors of
+
+        Return
+        ------
+        float reprenting the mean parameter error of all the agents 
+        """
         a_mean = 0
         for agent in agents:
             a_mean += np.linalg.norm((agent.a_opt - agent.a_est))
-        print((a_mean / len(agents)))
         return (a_mean / len(agents))
 
     def coord_to_gcell(self, coord):

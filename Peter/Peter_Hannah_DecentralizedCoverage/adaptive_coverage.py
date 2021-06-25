@@ -20,7 +20,7 @@ import matplotlib.colors as mcolors
 
 def adaptive_coverage(map, agents, a_opt, lr_gain, c_gain, gain_const, gamma_const,
                       data_weighting=None, DT=1, render_agents=False,
-                      iters=100, consensus=False):
+                      iters=100, consensus=False, posdef_check=False):
     """
     adaptive_coverage implements the central algorithm produced by the paper:
     Decentralized, Adaptive Coverage Control for Networked Robots. It controls a
@@ -47,6 +47,10 @@ def adaptive_coverage(map, agents, a_opt, lr_gain, c_gain, gain_const, gamma_con
     render_agents  : boolean to display the agents each iteration or not
     iters          : int dictating the number of iterations to run the algorithm
                      for
+    consensus      : boolean used to determine if the algo runs with the
+                     parameter consensus update step or not
+    posdef_check   : boolean used to determine if corollary 2 is checked on each
+                     iteration or not
 
     Returns
     -------
@@ -54,6 +58,8 @@ def adaptive_coverage(map, agents, a_opt, lr_gain, c_gain, gain_const, gamma_con
                  estimated centroids on each iteration
     true_dists : list contain mean distance from agents to their true centroids
                  on each iteration
+    a_errors   : list containing the mean error from each agent's estimated
+                 parameters and the optimal parameters on each iteration
     """
     # effectively have no data weighting if no function is provided
     if data_weighting is None:
@@ -101,7 +107,6 @@ def adaptive_coverage(map, agents, a_opt, lr_gain, c_gain, gain_const, gamma_con
         est_mean = 0
         true_mean = 0
         for agent in agents:
-            print("c term: " + str(agent.c_term))
             # calc true centroid
             agent.calc_true_centroid()
 
@@ -140,6 +145,11 @@ def adaptive_coverage(map, agents, a_opt, lr_gain, c_gain, gain_const, gamma_con
         true_errors.append((true_mean / len(agents)))
         a_errors.append(map.a_error(agents))
 
+        # verify if corollary 2 holds on each iteration
+        if posdef_check:
+            p = map.pdef_check(agents[0])
+            print("Positive definite basis functions: " + str(p))
+
     return est_errors, true_errors, a_errors
 
 
@@ -148,6 +158,7 @@ if __name__ == "__main__":
     np.random.seed(2)
     np.set_printoptions(suppress=True)
 
+    # agent color options
     colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
 
     # get environment variables from json file
@@ -172,8 +183,15 @@ if __name__ == "__main__":
     CONSENSUS_GAIN = env_vars["positive_consensus_gain"]
     POS_DIM = env_vars["pos_dim"]
     DT = env_vars["dt"]
+    PDEF = env_vars["posdef_check"]
     ITERS = env_vars["iters"]
 
+    # determine whether or not to check gaussian basis positive definiteness
+    pdef = False
+    if PDEF == 1:
+        pdef = True
+
+    # determine whether or not to use a data weighting function
     if DATA_WEIGHTING == -1:
         d_f = None
     else:
@@ -223,7 +241,8 @@ if __name__ == "__main__":
                                                 LR_GAIN, CONSENSUS_GAIN, GAIN_CONST,
                                                 GAMMA_CONST, data_weighting=d_f,
                                                 DT=DT, render_agents=True,
-                                                iters=ITERS, consensus=True)
+                                                iters=ITERS, consensus=True,
+                                                posdef_check=pdef)
 
     # plot agent positions and means corresponding to highest a_opt values
     plt.scatter(agents[0].means[0][0], agents[0].means[0][1], s=50, c='r',

@@ -71,6 +71,13 @@ def print_agent_voronoi(agent):
 
 
 def print_agent_params(agents):
+    """
+    print_agent_params prints each agent's estimated parameters.
+
+    Parameter
+    ---------
+    agents : list of agents to print the parameters of
+    """
     np.set_printoptions(suppress=True)
     print("----------------Printing Agent Estimated Parameters----------------")
     for agent in agents:
