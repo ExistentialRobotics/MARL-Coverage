@@ -1,2 +1,44 @@
 # DecentralizedCoverage
 Implementation of Decentralized, Adaptive Coverage Control for Networked Robots
+
+Hyperparameters that Will Get Agent Parameters to Converge:
+
+--------------------------------------------------------------------------------
+Algo ran with consensus and with voronoi edge weighting set to 1, as specified
+in remark 5:
+"num_agents" : 6,
+"num_basis_functions" : 2,
+"basis_sigma" : 10.8,
+"gain_const" : 1.0,
+"gamma_const" : 1.0,
+"lr_gain" : 10.0,
+"data_weighting" : -1,
+"positive_consensus_gain" : 0.1,
+"min_a" : 1.0,
+"map_width" : 100,
+"map_height" : 100,
+"grid_cell_size" : 1.0,
+"pos_dim" : 2,
+"dt" : 1.0,
+"posdef_check" : 1,
+"iters" : 25
+--------------------------------------------------------------------------------
+Algo ran with consensus and with voronoi edge weighting set to length of voronoi
+edge:
+"num_agents" : 6,
+"num_basis_functions" : 2,
+"basis_sigma" : 10.8,
+"gain_const" : 1.0,
+"gamma_const" : 1.0,
+"lr_gain" : 10.0,
+"data_weighting" : -1,
+"positive_consensus_gain" : 0.005,
+"min_a" : 1.0,
+"map_width" : 100,
+"map_height" : 100,
+"grid_cell_size" : 1.0,
+"pos_dim" : 2,
+"dt" : 1.0,
+"posdef_check" : 1,
+"iters" : 300
+--------------------------------------------------------------------------------

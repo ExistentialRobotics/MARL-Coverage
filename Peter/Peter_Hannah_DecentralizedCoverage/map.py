@@ -64,15 +64,17 @@ class Map:
                     return False
         return True
 
-    def set_consensus(self, agents):
+    def set_consensus(self, agents, length_w=False):
         """
         set_consensus sets each agent's consensus parameter by summing the
         differences between the agent's estimated paramters and its voronoi
         neighbor's estimated parameters.
 
-        Parameter
-        ---------
-        agents : list of agents to calculate the consensus parameters of
+        Parameters
+        ----------
+        agents   : list of agents to calculate the consensus parameters of
+        length_w : boolean representing whether or not to weighting consensus
+                   terms according length of shared voronoi edge
         """
         # get Delaunay triangulation to determine agent neighbors
         points = np.array([np.array([agent.pos[0,0], agent.pos[1,0]]) for agent in agents])
@@ -81,12 +83,13 @@ class Map:
         c_terms = [0 for agent in agents]
         for t in tri:
             # get dists between agents
-            # d_01 = np.linalg.norm((agents[t[0]].pos - agents[t[1]].pos))
-            # d_02 = np.linalg.norm((agents[t[0]].pos - agents[t[2]].pos))
-            # d_12 = np.linalg.norm((agents[t[1]].pos - agents[t[2]].pos))
             d_01 = 1
             d_02 = 1
             d_12 = 1
+            if length_w:
+                d_01 = np.linalg.norm((agents[t[0]].pos - agents[t[1]].pos))
+                d_02 = np.linalg.norm((agents[t[0]].pos - agents[t[2]].pos))
+                d_12 = np.linalg.norm((agents[t[1]].pos - agents[t[2]].pos))
 
             # inc consensus terms for agents in the triangle
             c_terms[t[0]] += d_01 * (agents[t[0]].a_est - agents[t[1]].a_est) +\
@@ -116,7 +119,7 @@ class Map:
         a_mean = 0
         for agent in agents:
             a_mean += np.linalg.norm((agent.a_opt - agent.a_est))
-        # print((a_mean / len(agents)))
+        print((a_mean / len(agents)))
         return (a_mean / len(agents))
 
     def coord_to_gcell(self, coord):

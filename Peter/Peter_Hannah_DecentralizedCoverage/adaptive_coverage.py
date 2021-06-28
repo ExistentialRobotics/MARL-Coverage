@@ -101,7 +101,7 @@ def adaptive_coverage(map, agents, a_opt, lr_gain, c_gain, gain_const, gamma_con
 
         # calculate consensus terms if using consensus
         if consensus:
-            map.set_consensus(agents)
+            map.set_consensus(agents, length_w=True)
 
         # update a_est
         est_mean = 0
