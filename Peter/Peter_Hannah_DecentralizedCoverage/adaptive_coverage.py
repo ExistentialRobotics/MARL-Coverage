@@ -241,7 +241,7 @@ if __name__ == "__main__":
                                                 LR_GAIN, CONSENSUS_GAIN, GAIN_CONST,
                                                 GAMMA_CONST, data_weighting=d_f,
                                                 DT=DT, render_agents=True,
-                                                iters=ITERS, consensus=True,
+                                                iters=ITERS, consensus=False,
                                                 posdef_check=pdef)
 
     # plot agent positions and means corresponding to highest a_opt values
