@@ -17,10 +17,11 @@ from agent import *
 from utils import *
 import matplotlib.colors as mcolors
 
+CONFIG = 'Experiment_1/config.json' # which config file to load hyperparameters
 
 def adaptive_coverage(map, agents, a_opt, lr_gain, c_gain, gain_const, gamma_const,
                       data_weighting=None, DT=1, render_agents=False,
-                      iters=100, consensus=False, posdef_check=False):
+                      iters=100, consensus=False, lw=False, posdef_check=False):
     """
     adaptive_coverage implements the central algorithm produced by the paper:
     Decentralized, Adaptive Coverage Control for Networked Robots. It controls a
@@ -61,6 +62,8 @@ def adaptive_coverage(map, agents, a_opt, lr_gain, c_gain, gain_const, gamma_con
     a_errors   : list containing the mean error from each agent's estimated
                  parameters and the optimal parameters on each iteration
     """
+    plt.figure(1)
+
     # effectively have no data weighting if no function is provided
     if data_weighting is None:
         data_weighting = 1
@@ -80,6 +83,9 @@ def adaptive_coverage(map, agents, a_opt, lr_gain, c_gain, gain_const, gamma_con
         # potentially render agents
         if render_agents:
             plt.clf()
+            plt.title("Agent Positions (Circles) and Gaussian Centers (Xs)")
+            plt.xlabel('X')
+            plt.ylabel('Y')
             # render areas that agents should be moving towards
             plt.scatter(agents[0].means[0][0], agents[0].means[0][1], s=50,
                         c='r', marker='x')
@@ -101,7 +107,7 @@ def adaptive_coverage(map, agents, a_opt, lr_gain, c_gain, gain_const, gamma_con
 
         # calculate consensus terms if using consensus
         if consensus:
-            map.set_consensus(agents, length_w=True)
+            map.set_consensus(agents, length_w=lw)
 
         # update a_est
         est_mean = 0
@@ -162,7 +168,10 @@ if __name__ == "__main__":
     colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
 
     # get environment variables from json file
-    with open('config.json') as f:
+    with open(CONFIG) as f:
+        print("---------------------------------------------------------------")
+        print("Running experiement using: " + str(CONFIG))
+        print("---------------------------------------------------------------")
         env_vars = json.load(f)
 
     # print env vars for debugging purposes
@@ -183,13 +192,27 @@ if __name__ == "__main__":
     CONSENSUS_GAIN = env_vars["positive_consensus_gain"]
     POS_DIM = env_vars["pos_dim"]
     DT = env_vars["dt"]
-    PDEF = env_vars["posdef_check"]
     ITERS = env_vars["iters"]
 
+    # determine whether or not to use consensus
+    CONSENSUS = False
+    if env_vars["consensus"] == 1:
+        CONSENSUS = True
+
+    # determine whether or not to weight consensus parameters by length
+    LW = False
+    if env_vars["length_w"] == 1:
+        LW = True
+
+    # determine whether or not to render agents
+    RENDER_A = False
+    if env_vars["render_a"] == 1:
+        RENDER_A = True
+
     # determine whether or not to check gaussian basis positive definiteness
-    pdef = False
-    if PDEF == 1:
-        pdef = True
+    PDEF = False
+    if env_vars["posdef_check"] == 1:
+        PDEF = True
 
     # determine whether or not to use a data weighting function
     if DATA_WEIGHTING == -1:
@@ -199,29 +222,30 @@ if __name__ == "__main__":
 
     # set a (change this to be in config later)
     opt_a = np.array([100, 100])
-    # opt_a = np.array([100, MIN_A, MIN_A, MIN_A, MIN_A, MIN_A, MIN_A, MIN_A,
-    #                   100])
+    if NUM_BASIS_FX == 9:
+        opt_a = np.array([100, MIN_A, MIN_A, MIN_A, MIN_A, MIN_A, MIN_A, MIN_A,
+                          100])
 
-
+    # set gaussian basis functions and their means
     cov_m = BASIS_SIGMA * np.eye(2)
     means = np.array([(25, 25), (75, 75)])
     basis_f = [multivariate_normal(mean=np.array([25, 25]), cov=cov_m),
                multivariate_normal(mean=np.array([75, 75]), cov=cov_m)]
+    if NUM_BASIS_FX == 9:
+        # calc basis centers assuming they're in the center of each quadrant
+        basis_f = []
+        means = []
+        for i in range(int(np.sqrt(NUM_BASIS_FX))):
+            y = (MAP_HEIGHT / (np.sqrt(NUM_BASIS_FX) * 2)) + i * (MAP_HEIGHT /
+                 np.sqrt(NUM_BASIS_FX))
+            for j in range(int(np.sqrt(NUM_BASIS_FX))):
+                x = (MAP_WIDTH / (np.sqrt(NUM_BASIS_FX) * 2)) + j * (MAP_WIDTH /
+                     np.sqrt(NUM_BASIS_FX))
+                means.append((x, y))
 
-    # calc basis centers assuming they're in the center of each quadrant
-    # basis_f = []
-    # means = []
-    # for i in range(int(np.sqrt(NUM_BASIS_FX))):
-    #     y = (MAP_HEIGHT / (np.sqrt(NUM_BASIS_FX) * 2)) + i * (MAP_HEIGHT /
-    #          np.sqrt(NUM_BASIS_FX))
-    #     for j in range(int(np.sqrt(NUM_BASIS_FX))):
-    #         x = (MAP_WIDTH / (np.sqrt(NUM_BASIS_FX) * 2)) + j * (MAP_WIDTH /
-    #              np.sqrt(NUM_BASIS_FX))
-    #         means.append((x, y))
-    #
-    #         # add multivariate normals as each basis function
-    #         basis_f.append(multivariate_normal(mean=np.array([x, y]),
-    #                        cov=cov_m))
+                # add multivariate normals as each basis function
+                basis_f.append(multivariate_normal(mean=np.array([x, y]),
+                               cov=cov_m))
 
     # instantiate map
     map = Map(MAP_WIDTH, MAP_HEIGHT, GRID_CELL_SIZE)
@@ -238,13 +262,19 @@ if __name__ == "__main__":
 
     # run adaptive coverage algorithm
     est_errors, true_errors, a_errors = adaptive_coverage(map, agents, opt_a,
-                                                LR_GAIN, CONSENSUS_GAIN, GAIN_CONST,
-                                                GAMMA_CONST, data_weighting=d_f,
-                                                DT=DT, render_agents=True,
-                                                iters=ITERS, consensus=False,
-                                                posdef_check=pdef)
+                                                LR_GAIN, CONSENSUS_GAIN,
+                                                GAIN_CONST, GAMMA_CONST,
+                                                data_weighting=d_f, DT=DT,
+                                                render_agents=RENDER_A,
+                                                iters=ITERS,
+                                                consensus=CONSENSUS, lw=LW,
+                                                posdef_check=PDEF)
 
     # plot agent positions and means corresponding to highest a_opt values
+    plt.figure(2)
+    plt.title("Agent Positions (Circles) and Gaussian Centers (Xs)")
+    plt.xlabel('X')
+    plt.ylabel('Y')
     plt.scatter(agents[0].means[0][0], agents[0].means[0][1], s=50, c='r',
                 marker='x')
     plt.scatter(agents[0].means[len(agents[0].means) - 1][0],
@@ -261,7 +291,7 @@ if __name__ == "__main__":
     print_agent_params(agents)
 
     # plot the dist from centroids per iteration
-    plt.figure(2)
+    plt.figure(4)
     plt.title("Dist from True and Estimated Centroids")
     plt.xlabel('Iterations')
     plt.ylabel('Dist')

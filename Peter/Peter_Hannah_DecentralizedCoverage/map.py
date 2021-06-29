@@ -119,7 +119,7 @@ class Map:
         a_mean = 0
         for agent in agents:
             a_mean += np.linalg.norm((agent.a_opt - agent.a_est))
-        print((a_mean / len(agents)))
+        # print((a_mean / len(agents)))
         return (a_mean / len(agents))
 
     def coord_to_gcell(self, coord):
