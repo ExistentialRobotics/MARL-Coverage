@@ -3,6 +3,8 @@ Implementation of Decentralized, Adaptive Coverage Control for Networked Robots
 
 
 
+<u>**Experiments Using Consensus**</u>
+
 Experiment 1: Tests whether or not Agent parameters can converge to optimal when using parameter consensus with weighting according to Remark 5 
 
 - Hyperparameter Overview: 
@@ -55,5 +57,7 @@ Experiment 4: Tests the effects of increasing consensus gain
 
 
 
-Experiment 5: 
+<u>**Experiments Not Using Consensus**</u>
+
+Experiment 1: 
 

@@ -17,11 +17,13 @@ from agent import *
 from utils import *
 import matplotlib.colors as mcolors
 
-CONFIG = 'Experiment_4/config.json' # which config file to load hyperparameters
+# path to config file used to load hyperparameters
+CONFIG = 'Consensus_Experiments/Experiment_4/config.json'
 
-def adaptive_coverage(map, agents, a_opt, lr_gain, c_gain, gain_const, gamma_const,
-                      data_weighting=None, DT=1, render_agents=False,
-                      iters=100, consensus=False, lw=False, posdef_check=False):
+def adaptive_coverage(map, agents, a_opt, lr_gain, c_gain, gain_const,
+                      gamma_const, data_weighting=None, DT=1,
+                      render_agents=False, iters=100, consensus=False, lw=False,
+                      posdef_check=False):
     """
     adaptive_coverage implements the central algorithm produced by the paper:
     Decentralized, Adaptive Coverage Control for Networked Robots. It controls a
