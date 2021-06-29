@@ -17,7 +17,7 @@ from agent import *
 from utils import *
 import matplotlib.colors as mcolors
 
-CONFIG = 'Experiment_2/config.json' # which config file to load hyperparameters
+CONFIG = 'Experiment_4/config.json' # which config file to load hyperparameters
 
 def adaptive_coverage(map, agents, a_opt, lr_gain, c_gain, gain_const, gamma_const,
                       data_weighting=None, DT=1, render_agents=False,
