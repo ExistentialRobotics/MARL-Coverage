@@ -6,7 +6,7 @@ class CoverageEnvironment(object):
     Class CoverageEnvironment represents a 2d multi agent environment where
     a number of robots have to maximize their cumulative sensing reward.
     """
-    def __init__(self, numrobot, numobstacles, dt):
+    def __init__(self, map_width, map_height, cell_size, numrobot, numobstacles, dt, seed=None):
         #TODO incorporate sensing function in environment
         #TODO include random seed???
         super().__init__()
@@ -15,9 +15,30 @@ class CoverageEnvironment(object):
         self._numobstacles = numobstacles
         self._dt = dt
 
-        #setting random initial robot and obstacle positions
+        # create seed if user specifies it
+        if seed is not None:
+            np.random.seed(seed)
+
+        # set map specific instance vars
+        self.map_width = map_width
+        self.map_height = map_height
+        self.cell_size = cell_size
+
+        # create numpy map
+        self.map = np.zeros((map_height, map_width))
+        self.grows, self.gcols = np.mgrid[0:map_height, 0:map_width]
+        self.grows = self.grows.ravel()
+        self.gcols = self.gcols.ravel()
+
+        # setting random initial robot and obstacle positions
         self.reset()
 
+    def coord_to_gcell(self, coord):
+        return int((coord[1] / self.cell_size)), int((coord[0] /
+                    self.cell_size))
+
+    def gcell_to_coord(self, cell):
+        return int(cell[1] * self.cell_size), int(cell[0] * self.cell_size)
 
     def step(self, U):
         #euler integrating the controls forward
