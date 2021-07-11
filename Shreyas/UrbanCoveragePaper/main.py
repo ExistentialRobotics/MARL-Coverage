@@ -8,7 +8,7 @@ numsteps = 1000
 numrobot = 9
 qcoor = np.array([[0,0], [8,8]],dtype=float) #defines rectangular region
 res = (40,40) #resolution tells us how many regions to divide each axis into
-gain = 10
+gain = 1
 
 #setting the random seed so that this code is deterministic
 np.random.seed(420)
@@ -32,8 +32,8 @@ for i in range(numobstacles):
     obstlist.append(plt.Circle((xcoor, ycoor), obstradius, color = 'r'))
 
 #making the controller
-c = VoronoiController(qlis, qcoor, res, gain)
-# c = GridController(qlis, qcoor, res, gain)
+# c = VoronoiController(qlis, qcoor, res, gain)
+c = GridController(qlis, qcoor, res, gain)
 
 
 #simulation loop and graphing
