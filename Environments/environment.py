@@ -8,7 +8,6 @@ class CoverageEnvironment(object):
     """
     def __init__(self, map_width, map_height, cell_size, numrobot, numobstacles, dt, seed=None):
         #TODO incorporate sensing function in environment
-        #TODO include random seed???
         super().__init__()
 
         self._numrobot = numrobot
@@ -54,7 +53,6 @@ class CoverageEnvironment(object):
         #populating robot position list
         self._robot_coordinates = []
         for i in range(self._numrobot):
-            #TODO make this for coordinates other than unit square
             xcoor = np.random.random_sample()
             ycoor = np.random.random_sample()
             self._robot_coordinates.append(np.array([[xcoor], [ycoor]]))
@@ -62,9 +60,8 @@ class CoverageEnvironment(object):
         #populating obstacle position list
         self._obst_coordinates = []
         for i in range(self._numobstacles):
-            #TODO make this for coordinates other than unit square
-            xcoor = np.random.random_sample()
-            ycoor = np.random.random_sample()
+            xcoor = self.map_width*self.cell_size*np.random.random_sample()
+            ycoor = self.map_height*self.cell_size*np.random.random_sample()
             self._obst_coordinates.append(np.array([[xcoor], [ycoor]]))
 
     #TODO need to figure out a good way to do this, my previous way

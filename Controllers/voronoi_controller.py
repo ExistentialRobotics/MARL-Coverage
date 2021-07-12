@@ -1,15 +1,28 @@
 import numpy as np
 from scipy.spatial import KDTree
+from controller import Controller
 
-class VoronoiController(object):
-    def __init__(self, qlis, qcoor, res, gain):
-        super().__init__()
-        self._qlis = qlis
-        self._numrobot = len(qlis)
-        self._res = res
-        self._qcoor = qcoor
+class VoronoiController(Controller):
+    """
+    Voronoi Controller takes the list of robot positions as the observation,
+    and splits the region defined by qcoor into grid cells specified by res,
+    and integrates over these cells to find the centroid of each voronoi
+    region. It then sends each robot toward the centroid of its voronoi
+    region.
+    """
+    def __init__(self, numrobot, qcoor, res, gain):
+        super().__init__(numrobot)
 
+        #gain matrix
         self._K = gain*np.eye(2)
+
+        #res[0] determines how many cells to split x-axis into
+        #res[1] determines how many cells to split y-axis into
+        self._res = res
+
+        #q[0] is the coordinates of the lower left hand corner of the rectangular region
+        #q[1] is the delta to get the coordinates of the upper right hand corner
+        self._qcoor = qcoor
 
         #creating list of arrays to store intermediate computations needed for update/control
         self._CV = []
@@ -19,19 +32,21 @@ class VoronoiController(object):
             self._CV.append(np.zeros((2,1)))
             self._MV.append(0)
 
-    def step(self, dt):
-        qlis_modshape = np.array(self._qlis).reshape(self._numrobot, 2)
+    def getControls(self, observation):
+        #observation should be a list of robot positions
+        qlis_modshape = np.array(observation).reshape(self._numrobot, 2)
         self._kdtree = KDTree(qlis_modshape)
 
         self.computeVoronoiIntegrals()
 
-        #apply control input and update state
+        #compute all control input
+        U = []
         for i in range(self._numrobot):
-            u_i = self._K @ (self._CV[i]-self._qlis[i])
-            self._qlis[i] += u_i*dt
+            u_i = self._K @ (self._CV[i]-observation[i])
+            U.append(u_i)
 
-        #returning the current state
-        return self._qlis
+        #returning the list of controls
+        return U
 
     def computeVoronoiIntegrals(self):
         '''
