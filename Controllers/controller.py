@@ -12,9 +12,11 @@ class Controller(object):
     def __init__(self, numrobot):
         self._numrobot = numrobot
 
+    def run(self):
+        pass
+        
     def getControls(self, observation):
         """
         should return a list of controls for each agent
         """
         raise NotImplementedError()
-
