@@ -16,7 +16,9 @@ class ErgodicController(Controller):
     #TODO fix: right now xcoor needs to be based at (0,0) because we aren't
     #          translating the fourier basis functions
 
-    def __init__(self, numrobot, xcoor, res, numbasis, dt, coverage_dist=None,  klis=None, umax=10):
+    #TODO make the target distribution(uniform case) zero at points in the obst.
+
+    def __init__(self, numrobot, xcoor, res, numbasis, dt, coverage_dist=None,  klis=None, umax=5):
         super().__init__(numrobot)
 
         #defining region and grid for fourier projection
@@ -78,7 +80,7 @@ class ErgodicController(Controller):
 
         #normalizing B and scaling by -umax
         for i in range(self._numrobot):
-            B[i] = -self._umax/np.sqrt(B[i].dot(B[i])) * B[i]
+            B[i] = -self._umax/np.sqrt(np.transpose(B[i]) @ B[i]) * B[i]
 
         #B is now the list of controls 
         return B
@@ -91,28 +93,28 @@ class ErgodicController(Controller):
 
         #finding the h_k constant that makes the basis orthonormal
         #we don't need to check the zero case because gradient of constant is 0
-        h_k = np.sqrt(res[0]*res[1])/2
+        h_k = np.sqrt(self._res[0]*self._res[1])/2
 
         #calculating each term of the gradient
-        r1 = -k[0][0] / xcoor[1][0] * np.pi *np.sin(k[0][0] * np.pi * x[0][0] / xcoor[1][0]) * np.cos(k[1][0] * np.pi * x[1][0] / xcoor[1][1])
-        r2 = -k[1][0] / xcoor[1][1] * np.pi * np.cos(k[0][0] * np.pi * x[0][0] / xcoor[1][0]) * np.sin(k[1][0] * np.pi * x[1][0] / xcoor[1][1])
+        r1 = -k[0][0] / self._xcoor[1][0] * np.pi *np.sin(k[0][0] * np.pi * x[0][0] / self._xcoor[1][0]) * np.cos(k[1][0] * np.pi * x[1][0] / self._xcoor[1][1])
+        r2 = -k[1][0] / self._xcoor[1][1] * np.pi * np.cos(k[0][0] * np.pi * x[0][0] / self._xcoor[1][0]) * np.sin(k[1][0] * np.pi * x[1][0] / self._xcoor[1][1])
 
         result = 1.0/h_k * np.array([[r1], [r2]])
         return result
 
     def computeBasis(self, k, x):
         #finding the h_k constant that makes the basis orthonormal
-        h_k = np.sqrt(res[0]*res[1])
+        h_k = np.sqrt(self._res[0]*self._res[1])
         if(k[0][0] != 0 or k[1][0] != 0):
             h_k = h_k/2
 
-        result = np.cos(k[0][0] * np.pi * x[0][0] / xcoor[1][0]) * np.cos(
-            k[1][0] * np.pi * x[1][0] / xcoor[1][1])
+        result = np.cos(k[0][0] * np.pi * x[0][0] / self._xcoor[1][0]) * np.cos(
+            k[1][0] * np.pi * x[1][0] / self._xcoor[1][1])
         return 1.0/h_k * result
 
     def projectCoverageDist(self):
         A = self._xcoor[1][0] * self._xcoor[1][1]
-        dA = A/(res[0]*res[1])
+        dA = A/(self._res[0]*self._res[1])
 
         #looping over all squares in X
         for i in range(self._res[0]):
@@ -132,7 +134,7 @@ class ErgodicController(Controller):
 
     def calculateLambda(self, k):
         #computes the weighting based on lambda
-        Lambda = (1+k.dot(k))**((self._n + 1)/2)
+        Lambda = (1+np.transpose(k) @ k)**((self._n + 1)/2)
         Lambda = 1/Lambda
         return Lambda
 
@@ -141,7 +143,7 @@ class ErgodicController(Controller):
         we are assuming x and y are not in the image coordinate system, just
         array coordinates with the same standard orientation as R^2
         '''
-        newx = self._qcoor[0][0] + (float(x)/self._res[0])*self._qcoor[1][0]
-        newy = self._qcoor[0][1] + (float(y)/self._res[1])*self._qcoor[1][1]
+        newx = self._xcoor[0][0] + (float(x)/self._res[0])*self._xcoor[1][0]
+        newy = self._xcoor[0][1] + (float(y)/self._res[1])*self._xcoor[1][1]
         return np.array([[newx], [newy]])
 

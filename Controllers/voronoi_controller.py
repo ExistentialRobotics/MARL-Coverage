@@ -35,7 +35,7 @@ class VoronoiController(Controller):
     def getControls(self, observation):
         #observation should be a list of robot positions
         qlis_modshape = np.array(observation).reshape(self._numrobot, 2)
-        self._kdtree = KDTree(qlis_modshape)
+        self._kdtree = KDTree(qli_modshape)
 
         self.computeVoronoiIntegrals()
 
