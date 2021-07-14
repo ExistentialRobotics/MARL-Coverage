@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from environment import Environment
+from scipy.spatial import KDTree, Voronoi, voronoi_plot_2d
+from . environment import Environment
 
 class Grid_Environment(Environment):
 
@@ -35,6 +36,16 @@ class Grid_Environment(Environment):
 
         # reset each agent's voronoi grid cells
         self.reset()
+
+        # assign grid cells to each agent's voronoi partition
+        for i in range(inds.shape[0]):
+            for j in range(inds.shape[1]):
+                x, y = self.gcell_to_coord((i, j))
+                self.agents[inds[i, j]].v_part_list.append((x, y))
+
+        # convert each agent's voronoi partition to a numpy array
+        for agent in self.agents:
+            agent.update_v_part()
 
     def calc_agent_voronoi(self):
         for agent in self.agents:

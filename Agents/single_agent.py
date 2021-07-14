@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from agent import Agent
+from . agent import Agent
 
 class Single_Agent(Agent):
     """

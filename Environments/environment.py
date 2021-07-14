@@ -10,6 +10,7 @@ class Environment(object):
         #TODO incorporate sensing function in environment
         super().__init__()
 
+        self.agents = agents 
         self._numobstacles = numobstacles
         self._dt = dt
 

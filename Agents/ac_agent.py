@@ -1,9 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import multivariate_normal
-from single_agent import Single_Agent
+from . single_agent import Single_Agent
 
-class Ac_Agent(Single_Agent):
+class AC_Agent(Single_Agent):
     """
     Class Ac_Agent is an agent used for the Adaptive Coverage Algorithm.
     """
@@ -98,17 +98,15 @@ class Ac_Agent(Single_Agent):
         # calc I according to eq 15
         for i in range(a_pre.shape[0]):
             j = 1
-            if self.a_est[i] > self.min:
+            if self.a_est[i] > self.min_a:
                 j = 0
-            if self.a_est[i] == self.min and a_pre[i] >= 0:
+            if self.a_est[i] == self.min_a and a_pre[i] >= 0:
                 j = 0
             I[i, i] = j
 
         return I
 
     def reset(self):
-        super().reset()
-
         # reset grid cells in voronoi region
         self.v_part_list = []
         self.v_part = np.zeros((1, self.pos_dim))

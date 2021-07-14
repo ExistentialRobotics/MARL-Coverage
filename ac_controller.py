@@ -1,19 +1,20 @@
-# import sys
-# sys.path.append("../")
-# print(dir())
-
-from __future__ import print_function, absolute_import, division
-
 import numpy as np
+import json
+from scipy.stats import multivariate_normal
+import matplotlib.pyplot as plt
 
-from MARL_Coverage.Environments.ac_grid_environment import AC_Grid_Environment
+from controller import Controller
+from Environments.ac_grid_environment import AC_Grid_Environment
+from Agents.ac_agent import AC_Agent
 
 # path to config file used to load hyperparameters
-CONFIG = 'Consensus_Experiments/Experiment_4/config.json'
+CONFIG = 'Consensus_Experiments/Experiment_1/config.json'
 
 class AC_Controller(Controller):
 
     def __init__(self, env_vars):
+        super().__init__(env_vars)
+
         # agent color options
         self.colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
 
@@ -89,19 +90,18 @@ class AC_Controller(Controller):
 
         # init gain and gamma matricies
         self.gain_matrix = self.gain_const * np.eye(2)
-        self.gamma_matrix = self.gamma_const * np.eye(a_opt.shape[0])
-
-        # instantiate map
-        self.map = self.map(self.map_width, self.map_height, self.grid_cell_size)
+        self.gamma_matrix = self.gamma_const * np.eye(self.opt_a.shape[0])
 
         # create agents with random initial positions
         self.agents = []
         for i in range(self.num_agents):
-            agents.append(Agent(np.random.randint(self.map_width),
+            self.agents.append(AC_Agent(np.random.randint(self.map_width),
                                 np.random.randint(self.map_height), self.basis_f, self.means,
-                                self.min_a, self.opt_a, self.pos_dim, color=self.COLORS[2]))
+                                self.min_a, self.opt_a, self.pos_dim, color=self.colors[2]))
 
-        self.map = AC_Grid_Environment(self.agents, 0, self.dt, self.map_width, self.map_height, self.grid_cell_size, self.gain_matrix)
+        self.map = AC_Grid_Environment(self.agents, 0, self.dt, self.map_width, self.map_height, self.grid_cell_size, self.d_f,
+                                       self.gain_matrix, self.gamma_matrix,
+                                       self.consensus, self.lr_gain, self.consensus_gain, seed=2)
 
     def run(self):
         # print agent coordinates for debugging purposes
@@ -110,7 +110,7 @@ class AC_Controller(Controller):
         est_errors = []
         true_errors = []
         a_errors = []
-        for _ in range(iters):
+        for _ in range(self.iters):
             if (_ + 1) % 5 == 0:
                 print("-----------------ITER: " + str(_ + 1) + "------------------")
 
@@ -135,7 +135,7 @@ class AC_Controller(Controller):
             # average estimated position errors, true position errors, and a error
             est_errors.append(e_mean)
             true_errors.append(t_mean)
-            a_errors.append(self.map.a_error(self.agents))
+            a_errors.append(self.map.a_error())
 
             # verify if corollary 2 holds on each iteration
             if self.pdef:
@@ -143,7 +143,7 @@ class AC_Controller(Controller):
                 print("Positive definite basis functions: " + str(p))
 
         # plot final voronoi diagram
-        self.map.plot_voronoi(self.agents)
+        self.map.plot_voronoi()
 
         # print final agent paramters
         self.print_agent_params()
@@ -162,32 +162,18 @@ class AC_Controller(Controller):
                     self.agents[0].means[len(self.agents[0].means) - 1][1], s=50,
                     c='r', marker='x')
         for agent in self.agents:
-            agent.render_self()
+            agent.render()
             agent.render_centroid()
         plt.draw()
         plt.pause(0.02)
 
     def print_agent_coords(self):
-        """
-        print_agent_coords prints each agent's position to the console window.
-
-        Parameter
-        ---------
-        agents : list of agents who's positions need printing
-        """
         print("-----------------------Printing Agent Coords-----------------------")
         for a in self.agents:
             print("x: " + str(a.pos[0]) + " y: " + str(a.pos[1]))
         print("-------------------------------------------------------------------")
 
-    def print_agent_params(agents):
-        """
-        print_agent_params prints each agent's estimated parameters.
-
-        Parameter
-        ---------
-        agents : list of agents to print the parameters of
-        """
+    def print_agent_params(self):
         print("----------------Printing Agent Estimated Parameters----------------")
         for agent in self.agents:
             print("Agent: x = " + str(agent.pos[0]) + " y = " + str(agent.pos[1]))
@@ -205,17 +191,17 @@ if __name__ == "__main__":
         print("---------------------------------------------------------------")
         env_vars = json.load(f)
 
-    # print env vars for debugging purposes
-    # print_env_vars(env_vars)
-
     # instanciate controller
     controller = AC_Controller(env_vars)
+
+    # print env vars for debugging purposes
+    controller.print_env_vars()
 
     # run algorithm
     est_errors, true_errors, a_errors = controller.run()
 
     # plot the dist from centroids per iteration
-    plt.figure(4)
+    plt.figure(3)
     plt.title("Dist from True and Estimated Centroids")
     plt.xlabel('Iterations')
     plt.ylabel('Dist')
@@ -225,7 +211,7 @@ if __name__ == "__main__":
     plt.show()
 
     # plot the mean parameter error per interation
-    plt.figure(3)
+    plt.figure(4)
     plt.title("Mean Agent Parameter Error")
     plt.xlabel('Iterations')
     plt.ylabel('Error')
