@@ -1,4 +1,5 @@
 import numpy as np
+from MARL-Coverage.Environments.grid_environment
 
 # path to config file used to load hyperparameters
 CONFIG = 'Consensus_Experiments/Experiment_4/config.json'
@@ -10,111 +11,163 @@ class AC_Controller(Controller):
         self.colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
 
         # set environment variables as controller instance variables
-        self.NUM_AGENTS = env_vars["num_agents"]
-        self.NUM_BASIS_FX = env_vars["num_basis_functions"]
-        self.BASIS_SIGMA = env_vars["basis_sigma"]
-        self.MAP_WIDTH = env_vars["map_width"]
-        self.MAP_HEIGHT = env_vars["map_height"]
-        self.GRID_CELL_SIZE = env_vars["grid_cell_size"]
-        self.MIN_A = env_vars["min_a"]
-        self.GAIN_CONST = env_vars["gain_const"]
-        self.GAMMA_CONST = env_vars["gamma_const"]
-        self.LR_GAIN = env_vars["lr_gain"]
-        selfl.CONSENSUS_GAIN = env_vars["positive_consensus_gain"]
-        self.POS_DIM = env_vars["pos_dim"]
-        self.DT = env_vars["dt"]
-        self.ITERS = env_vars["iters"]
+        self.num_agents = env_vars["num_agents"]
+        self.num_basis_fx = env_vars["num_basis_functions"]
+        self.basis_sigma = env_vars["basis_sigma"]
+        self.map_width = env_vars["map_width"]
+        self.map_height = env_vars["map_height"]
+        self.grid_cell_size = env_vars["grid_cell_size"]
+        self.min_a = env_vars["min_a"]
+        self.gain_const = env_vars["gain_const"]
+        self.gamma_const = env_vars["gamma_const"]
+        self.lr_gain = env_vars["lr_gain"]
+        self.consensus_gain = env_vars["positive_consensus_gain"]
+        self.pos_dim = env_vars["pos_dim"]
+        self.dt = env_vars["dt"]
+        self.iters = env_vars["iters"]
 
         # determine whether or not to use consensus
-        self.CONSENSUS = False
+        self.consensus = False
         if env_vars["consensus"] == 1:
-            self.CONSENSUS = True
+            self.consensus = True
 
         # determine whether or not to weight consensus parameters by length
-        self.LW = False
+        self.lw = False
         if env_vars["length_w"] == 1:
-            self.LW = True
+            self.lw = True
 
         # determine whether or not to render agents
-        self.RENDER_A = False
+        self.render_a = False
         if env_vars["render_a"] == 1:
-            self.RENDER_A = True
+            self.render_a = True
 
         # determine whether or not to check gaussian basis positive definiteness
-        self.PDEF = False
+        self.pdef = False
         if env_vars["posdef_check"] == 1:
-            self.PDEF = True
+            self.pdef = True
 
         # determine whether or not to use a data weighting function
         if env_vars["data_weighting"] == -1:
-            self.D_F = 1
+            self.d_f = 1
         else:
-            self.D_F = env_vars["data_weighting"]
+            self.d_f = env_vars["data_weighting"]
 
         # set a (change this to be in config later)
-        self.OPT_A = np.array([100, 100])
-        if self.NUM_BASIS_FX == 9:
-            self.OPT_A = np.array([100, self.MIN_A, self.MIN_A, self.MIN_A, self.MIN_A, self.MIN_A, self.MIN_A, self.MIN_A,
+        self.opt_a = np.array([100, 100])
+        if self.num_basis_fx == 9:
+            self.opt_a = np.array([100, self.min_a, self.min_a, self.min_a, self.min_a, self.min_a, self.min_a, self.min_a,
                               100])
 
         # set gaussian basis functions and their means
-        self.COV_M = self.BASIS_SIGMA * np.eye(2)
-        self.MEANS = np.array([(25, 25), (75, 75)])
-        self.BASIS_F = [multivariate_normal(mean=np.array([25, 25]), cov=self.COV_M),
-                   multivariate_normal(mean=np.array([75, 75]), cov=self.COV_M)]
-        if self.NUM_BASIS_FX == 9:
+        self.cov_m = self.basis_sigma * np.eye(2)
+        self.means = np.array([(25, 25), (75, 75)])
+        self.basis_f = [multivariate_normal(mean=np.array([25, 25]), cov=self.cov_m),
+                   multivariate_normal(mean=np.array([75, 75]), cov=self.cov_m)]
+        if self.num_basis_fx == 9:
             # calc basis centers assuming they're in the center of each quadrant
-            self.BASIS_F = []
-            self.MEANS = []
-            for i in range(int(np.sqrt(self.NUM_BASIS_FX))):
-                y = (self.MAP_HEIGHT / (np.sqrt(self.NUM_BASIS_FX) * 2)) + i * (self.MAP_HEIGHT /
-                     np.sqrt(self.NUM_BASIS_FX))
-                for j in range(int(np.sqrt(self.NUM_BASIS_FX))):
-                    x = (self.MAP_WIDTH / (np.sqrt(self.NUM_BASIS_FX) * 2)) + j * (self.MAP_WIDTH /
-                         np.sqrt(self.NUM_BASIS_FX))
-                    self.MEANS.append((x, y))
+            self.basis_f = []
+            self.means = []
+            for i in range(int(np.sqrt(self.num_basis_fx))):
+                y = (self.map_height / (np.sqrt(self.num_basis_fx) * 2)) + i * (self.map_height /
+                     np.sqrt(self.num_basis_fx))
+                for j in range(int(np.sqrt(self.num_basis_fx))):
+                    x = (self.map_width / (np.sqrt(self.num_basis_fx) * 2)) + j * (self.map_width /
+                         np.sqrt(self.num_basis_fx))
+                    self.means.append((x, y))
 
                     # add multivariate normals as each basis function
-                    self.BASIS_F.append(multivariate_normal(mean=np.array([x, y]),
-                                   cov=self.COV_M))
+                    self.basis_f.append(multivariate_normal(mean=np.array([x, y]),
+                                   cov=self.cov_m))
 
 
         # init gain and gamma matricies
-        gain_matrix = self.GAIN_CONST * np.eye(2)
-        gamma_matrix = self.GAMMA_CONST * np.eye(a_opt.shape[0])
+        self.gain_matrix = self.gain_const * np.eye(2)
+        self.gamma_matrix = self.gamma_const * np.eye(a_opt.shape[0])
 
-    def run(self):
         # instantiate map
-        map = Map(self.MAP_WIDTH, self.MAP_HEIGHT, self.GRID_CELL_SIZE)
+        self.map = self.map(self.map_width, self.map_height, self.grid_cell_size)
 
         # create agents with random initial positions
-        agents = []
-        for i in range(self.NUM_AGENTS):
-            agents.append(Agent(np.random.randint(self.MAP_WIDTH),
-                                np.random.randint(self.MAP_HEIGHT), self.BASIS_F, self.MEANS,
-                                self.MIN_A, self.OPT_A, self.POS_DIM, color=self.COLORS[2]))
+        self.agents = []
+        for i in range(self.num_agents):
+            agents.append(Agent(np.random.randint(self.map_width),
+                                np.random.randint(self.map_height), self.basis_f, self.means,
+                                self.min_a, self.opt_a, self.pos_dim, color=self.COLORS[2]))
 
+        self.map = AC_Grid_Environment(self.agents, 0, self.dt, self.map_width, self.map_height, self.grid_cell_size, self.gain_matrix)
+
+    def run(self):
         # print agent coordinates for debugging purposes
-        print_agent_coords(agents)
+        self.print_agent_coords()
 
-    def render_agents(self, agents):
+        est_errors = []
+        true_errors = []
+        a_errors = []
+        for _ in range(iters):
+            if (_ + 1) % 5 == 0:
+                print("-----------------ITER: " + str(_ + 1) + "------------------")
+
+            # potentially render agents
+            if self.render_a:
+                self.render_agents()
+
+            # reset KDTree used to compute Voronoi regions
+            self.map.set_tree()
+
+            # calc centroid, mass, and moment for each agent
+            self.map.set_agent_voronoi()
+            self.map.calc_agent_voronoi()
+
+            # calculate consensus terms if using consensus
+            if self.consensus:
+                self.map.set_consensus(length_w=lw)
+
+            # step world
+            self.map.step()
+
+            # average estimated position errors, true position errors, and a error
+            est_errors.append()
+            true_errors.append()
+            a_errors.append(self.map.a_error(self.agents))
+
+            # verify if corollary 2 holds on each iteration
+            if self.pdef:
+                p = self.map.pdef_check()
+                print("Positive definite basis functions: " + str(p))
+
+        # plot final voronoi diagram
+        self.map.plot_voronoi(self.agents)
+
+        # print final agent paramters
+        self.print_agent_params()
+
+        # reset KDTree used to compute Voronoi regions
+        self.map.set_tree(self.agents)
+
+        # calc centroid, mass, and moment for each agent
+        self.map.set_agent_voronoi(self.agents)
+        self.map.calc_agent_voronoi(self.agents)
+
+    return est_errors, true_errors, a_errors
+
+    def render_agents(self):
         plt.clf()
         plt.title("Agent Positions (Circles) and Gaussian Centers (Xs)")
         plt.xlabel('X')
         plt.ylabel('Y')
-        # render areas that agents should be moving towards
-        plt.scatter(agents[0].means[0][0], agents[0].means[0][1], s=50,
+        # render areas that self.agents should be moving towards
+        plt.scatter(self.agents[0].means[0][0], self.agents[0].means[0][1], s=50,
                     c='r', marker='x')
-        plt.scatter(agents[0].means[len(agents[0].means) - 1][0],
-                    agents[0].means[len(agents[0].means) - 1][1], s=50,
+        plt.scatter(self.agents[0].means[len(self.agents[0].means) - 1][0],
+                    self.agents[0].means[len(self.agents[0].means) - 1][1], s=50,
                     c='r', marker='x')
-        for agent in agents:
+        for agent in self.agents:
             agent.render_self()
             agent.render_centroid()
         plt.draw()
         plt.pause(0.02)
 
-    def print_agent_coords(self, agents):
+    def print_agent_coords(self):
         """
         print_agent_coords prints each agent's position to the console window.
 
@@ -123,9 +176,23 @@ class AC_Controller(Controller):
         agents : list of agents who's positions need printing
         """
         print("-----------------------Printing Agent Coords-----------------------")
-        for a in agents:
+        for a in self.agents:
             print("x: " + str(a.pos[0]) + " y: " + str(a.pos[1]))
         print("-------------------------------------------------------------------")
+
+    def print_agent_params(agents):
+        """
+        print_agent_params prints each agent's estimated parameters.
+
+        Parameter
+        ---------
+        agents : list of agents to print the parameters of
+        """
+        print("----------------Printing Agent Estimated Parameters----------------")
+        for agent in self.agents:
+            print("Agent: x = " + str(agent.pos[0]) + " y = " + str(agent.pos[1]))
+            print("a: " + str(agent.a_est))
+            print("---------------------------------------------------------------")
 
 if __name__ == "__main__":
     # prevent decimal printing
@@ -145,37 +212,7 @@ if __name__ == "__main__":
     controller = AC_Controller(env_vars)
 
     # run algorithm
-    controller.run()
-
-    # run adaptive coverage algorithm
-    est_errors, true_errors, a_errors = adaptive_coverage(map, agents, opt_a,
-                                                LR_GAIN, CONSENSUS_GAIN,
-                                                GAIN_CONST, GAMMA_CONST,
-                                                data_weighting=d_f, DT=DT,
-                                                render_agents=RENDER_A,
-                                                iters=ITERS,
-                                                consensus=CONSENSUS, lw=LW,
-                                                posdef_check=PDEF)
-
-    # plot agent positions and means corresponding to highest a_opt values
-    plt.figure(2)
-    plt.title("Agent Positions (Circles) and Gaussian Centers (Xs)")
-    plt.xlabel('X')
-    plt.ylabel('Y')
-    plt.scatter(agents[0].means[0][0], agents[0].means[0][1], s=50, c='r',
-                marker='x')
-    plt.scatter(agents[0].means[len(agents[0].means) - 1][0],
-                agents[0].means[len(agents[0].means) - 1][1], s=50, c='r',
-                marker='x')
-    for agent in agents:
-        agent.render_self()
-        agent.render_centroid()
-
-    # plot final voronoi diagram
-    map.plot_voronoi(agents)
-
-    # print final agent paramters
-    print_agent_params(agents)
+    est_errors, true_errors, a_errors = controller.run()
 
     # plot the dist from centroids per iteration
     plt.figure(4)

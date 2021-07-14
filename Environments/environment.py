@@ -6,7 +6,7 @@ class Environment(object):
     Class Environment represents a 2d multi agent environment where
     a number of agents have to maximize their cumulative sensing reward.
     """
-    def __init__(self, agent, numobstacles, dt, seed=None):
+    def __init__(self, agents, numobstacles, dt, seed=None):
         #TODO incorporate sensing function in environment
         super().__init__()
 
@@ -20,23 +20,29 @@ class Environment(object):
         # setting random initial agent and obstacle positions
         self.reset()
 
-    def step(self, U):
+    def step(self):
+        for agent in self.agents:
+            agent.odom_command()
+
         #euler integrating the controls forward
-        for i in range(len(U)):
+        # for i in range(len(U)):
             #TODO handle obstacle 'collisions'
-            self._agent_coordinates[i] += U[i] * self._dt
+            # self._agent_coordinates[i] += U[i] * self._dt
 
         #returning current agent and obstacle positions
         #TODO add reward (negative coverage cost)
-        return self._agent_coordinates, self._obst_coordinates
+        # return self._agent_coordinates, self._obst_coordinates
 
     def reset(self):
+        for agent in self.agents:
+            agent.reset()
+
         #populating agent position list
-        self._agent_coordinates = []
-        for i in range(self._numagent):
-            xcoor = np.random.random_sample()
-            ycoor = np.random.random_sample()
-            self._agent_coordinates.append(np.array([[xcoor], [ycoor]]))
+        # self._agent_coordinates = []
+        # for i in range(self._numagent):
+        #     xcoor = np.random.random_sample()
+        #     ycoor = np.random.random_sample()
+        #     self._agent_coordinates.append(np.array([[xcoor], [ycoor]]))
 
         #populating obstacle position list
         # self._obst_coordinates = []
@@ -49,4 +55,5 @@ class Environment(object):
     #TODO need to figure out a good way to do this, my previous way
     #doesn't work well for obstacles
     def render(self):
-        pass
+        for agent in agents:
+            agent.render()

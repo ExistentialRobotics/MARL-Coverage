@@ -68,19 +68,3 @@ def print_agent_voronoi(agent):
     for v in agent.v_part_list:
         print("x: " + str(v[0]) + " y: " + str(v[1]))
     print("-------------------------------------------------------------------")
-
-
-def print_agent_params(agents):
-    """
-    print_agent_params prints each agent's estimated parameters.
-
-    Parameter
-    ---------
-    agents : list of agents to print the parameters of
-    """
-    np.set_printoptions(suppress=True)
-    print("----------------Printing Agent Estimated Parameters----------------")
-    for agent in agents:
-        print("Agent: x = " + str(agent.pos[0]) + " y = " + str(agent.pos[1]))
-        print("a: " + str(agent.a_est))
-        print("---------------------------------------------------------------")

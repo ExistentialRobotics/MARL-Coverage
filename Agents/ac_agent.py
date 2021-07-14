@@ -12,10 +12,10 @@ class Ac_Agent(Single_Agent):
         super().__init__(init_x, init_y, color='r')
 
         # min parameter, optimal parameter vector, robot's parameter vector est
-        self.MIN_A = min_a
+        self.min_a = min_a
         self.a_opt = a_opt.reshape(a_opt.shape[0], 1)
-        self.a_est = np.full((len(basis_f), 1), self.MIN_A)
-        self.POS_DIM = pos_dim
+        self.a_est = np.full((len(basis_f), 1), self.min_a)
+        self.pos_dim = pos_dim
 
         # basis functions and mean of the basis functions
         self.basis_f = basis_f
@@ -23,17 +23,17 @@ class Ac_Agent(Single_Agent):
 
         # grid cells corresponding to the agent's voronoi partition
         self.v_part_list = []
-        self.v_part = np.zeros((1, self.POS_DIM))
+        self.v_part = np.zeros((1, self.pos_dim))
 
         # Eq 7: est mass, moment, and centroid of agent's voronoi partition
         self.e_mass = 0
-        self.e_moment = np.zeros((self.POS_DIM, 1))
-        self.e_centroid = np.zeros((self.POS_DIM, 1))
+        self.e_moment = np.zeros((self.pos_dim, 1))
+        self.e_centroid = np.zeros((self.pos_dim, 1))
 
         # true mass, moment, and centroid of agent's voronoi partition
         self.t_mass = 0
-        self.t_moment = np.zeros((self.POS_DIM, 1))
-        self.t_centroid = np.zeros((self.POS_DIM, 1))
+        self.t_moment = np.zeros((self.pos_dim, 1))
+        self.t_centroid = np.zeros((self.pos_dim, 1))
 
         # from equation 11
         self.la = np.zeros((a_opt.shape[0], a_opt.shape[0])) # capital lambda
@@ -98,9 +98,9 @@ class Ac_Agent(Single_Agent):
         # calc I according to eq 15
         for i in range(a_pre.shape[0]):
             j = 1
-            if self.a_est[i] > self.MIN_A:
+            if self.a_est[i] > self.min:
                 j = 0
-            if self.a_est[i] == self.MIN_A and a_pre[i] >= 0:
+            if self.a_est[i] == self.min and a_pre[i] >= 0:
                 j = 0
             I[i, i] = j
 
@@ -111,17 +111,17 @@ class Ac_Agent(Single_Agent):
 
         # reset grid cells in voronoi region
         self.v_part_list = []
-        self.v_part = np.zeros((1, self.POS_DIM))
+        self.v_part = np.zeros((1, self.pos_dim))
 
         # reset estimated centroid calculations
         self.e_mass = 0
-        self.e_moment = np.zeros((self.POS_DIM, 1))
-        self.e_centroid = np.zeros((self.POS_DIM, 1))
+        self.e_moment = np.zeros((self.pos_dim, 1))
+        self.e_centroid = np.zeros((self.pos_dim, 1))
 
         # reset true centroid calculations
         self.t_mass = 0
-        self.t_moment = np.zeros((self.POS_DIM, 1))
-        self.t_centroid = np.zeros((self.POS_DIM, 1))
+        self.t_moment = np.zeros((self.pos_dim, 1))
+        self.t_centroid = np.zeros((self.pos_dim, 1))
 
         # reset consensus term
         self.c_term = 0
