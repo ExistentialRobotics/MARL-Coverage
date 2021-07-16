@@ -57,13 +57,17 @@ class ErgodicController(Controller):
 
 
     def getControls(self, observation):
+        #decomposing observation
+        xlis = observation[0]
+        obst_lis = observation[1]
+
         #incrementing time
         self._totaltime += self._dt
 
         #update c_klis
         for i in range(self._numbasis):
             for j in  range(self._numrobot):
-                self._c_k[i][0] += self.computeBasis(self._klis[i], observation[j])*self._dt
+                self._c_k[i][0] += self.computeBasis(self._klis[i], xlis[j])*self._dt
 
         #creating Blist to store control directions
         B = []
@@ -77,14 +81,22 @@ class ErgodicController(Controller):
         for i in range(self._numbasis):
             b = self.calculateLambda(self._klis[i]) * S_k[i][0]
             for j in range(self._numrobot):
-                B[j] += b*self.computeBasisGradient(self._klis[i], observation[j])
+                B[j] += b*self.computeBasisGradient(self._klis[i], xlis[j])
 
-        #normalizing B and scaling by -umax
+        #normalizing B
         for i in range(self._numrobot):
-            B[i] = -self._umax/np.sqrt(np.transpose(B[i]) @ B[i]) * B[i]
+            B[i] = -B[i]/np.sqrt((np.transpose(B[i]) @ B[i])[0][0])
 
+        #adding obstacle avoid vector field
         if(self._avoid_obst):
-            pass
+            for i in range(self._numrobot):
+                for obst in obst_lis:
+                    alpha = self.linearBumpFunction(xlis[i], obst)
+                    B[i] = alpha*B[i] + (1-alpha)*self.obstacleField(xlis[i], obst, B[i])
+
+        #normalizing B and scaling by umax
+        for i in range(self._numrobot):
+            B[i] = self._umax/np.sqrt((np.transpose(B[i]) @ B[i])[0][0]) * B[i]
 
         #B is now the list of controls 
         return B
@@ -138,17 +150,36 @@ class ErgodicController(Controller):
 
     def calculateLambda(self, k):
         #computes the weighting based on lambda
-        Lambda = (1+np.transpose(k) @ k)**((self._n + 1)/2)
+        Lambda = (1 + (np.transpose(k) @ k)[0][0])**((self._n + 1)/2)
         Lambda = 1/Lambda
         return Lambda
 
-    def obstacleField(self, x, obstacle):
+    def obstacleField(self, x, obstacle, p):
         """
         function takes in x - current position, obstacle is
         a tuple containing the obstacle coordinate as a numpy array,
         and a real number representing the obstacle radius.
+
+        p specifies the orientation of the vector field - (2d vector)
         """
-        pass
+
+        #Equation 23 from paper
+        r = x - obstacle[0]
+        l = 0
+        if(np.transpose(p) @ r >= 0):
+            l = 1
+        return l*(np.transpose(p) @ r)[0][0] * r - p * (np.transpose(r) @ r)[0][0]
+
+    def linearBumpFunction(self, x, obstacle):
+        """
+        Function that returns alpha \in [0,1] which
+        takes 1 far from obstacle, and 0 on the boundary.
+        """
+        r = x - obstacle[0]
+        diff = np.linalg.norm(r) - obstacle[1]
+        if(diff < 0):
+            print("robot inside obstacle")
+        return np.clip(diff, 0, 1)
 
     def grid2World(self, x, y):
         '''
