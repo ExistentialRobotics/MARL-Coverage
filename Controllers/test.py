@@ -59,7 +59,7 @@ for i in range(numsteps):
     #graphing obstacles
     # for obstacle in obstlist:
     #     plt.gca().add_patch(obstacle)
-    plt.xlim([qcoor[0][0], qcoor[0][0] + qcoor[1][0]])
-    plt.ylim([qcoor[0][1], qcoor[0][1] + qcoor[1][1]])
+    # plt.xlim([qcoor[0][0], qcoor[0][0] + qcoor[1][0]])
+    # plt.ylim([qcoor[0][1], qcoor[0][1] + qcoor[1][1]])
     plt.draw()
     plt.pause(0.02)

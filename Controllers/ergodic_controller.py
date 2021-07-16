@@ -18,7 +18,7 @@ class ErgodicController(Controller):
 
     #TODO make the target distribution(uniform case) zero at points in the obst.
 
-    def __init__(self, numrobot, xcoor, res, numbasis, dt, coverage_dist=None,  klis=None, umax=5):
+    def __init__(self, numrobot, xcoor, res, numbasis, dt, coverage_dist=None,  klis=None, umax=5, avoidobstacles=False):
         super().__init__(numrobot)
 
         #defining region and grid for fourier projection
@@ -44,6 +44,7 @@ class ErgodicController(Controller):
         self._totaltime = 0
 
         self._umax = umax
+        self._avoid_obst = avoidobstacles
 
         #if the wave-number list isn't provided we will generate one
         if(self._klis == None):
@@ -82,6 +83,9 @@ class ErgodicController(Controller):
         for i in range(self._numrobot):
             B[i] = -self._umax/np.sqrt(np.transpose(B[i]) @ B[i]) * B[i]
 
+        if(self._avoid_obst):
+            pass
+
         #B is now the list of controls 
         return B
 
@@ -93,7 +97,7 @@ class ErgodicController(Controller):
 
         #finding the h_k constant that makes the basis orthonormal
         #we don't need to check the zero case because gradient of constant is 0
-        h_k = np.sqrt(self._res[0]*self._res[1])/2
+        h_k = np.sqrt(self._xcoor[1][0]*self._xcoor[1][1])/2
 
         #calculating each term of the gradient
         r1 = -k[0][0] / self._xcoor[1][0] * np.pi *np.sin(k[0][0] * np.pi * x[0][0] / self._xcoor[1][0]) * np.cos(k[1][0] * np.pi * x[1][0] / self._xcoor[1][1])
@@ -104,7 +108,7 @@ class ErgodicController(Controller):
 
     def computeBasis(self, k, x):
         #finding the h_k constant that makes the basis orthonormal
-        h_k = np.sqrt(self._res[0]*self._res[1])
+        h_k = np.sqrt(self._xcoor[1][0]*self._xcoor[1][1])
         if(k[0][0] != 0 or k[1][0] != 0):
             h_k = h_k/2
 
@@ -137,6 +141,14 @@ class ErgodicController(Controller):
         Lambda = (1+np.transpose(k) @ k)**((self._n + 1)/2)
         Lambda = 1/Lambda
         return Lambda
+
+    def obstacleField(self, x, obstacle):
+        """
+        function takes in x - current position, obstacle is
+        a tuple containing the obstacle coordinate as a numpy array,
+        and a real number representing the obstacle radius.
+        """
+        pass
 
     def grid2World(self, x, y):
         '''
