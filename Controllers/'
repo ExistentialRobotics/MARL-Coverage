@@ -1,5 +1,4 @@
 import numpy as np
-import math
 from controller import Controller
 
 class ErgodicController(Controller):
@@ -50,12 +49,12 @@ class ErgodicController(Controller):
         #if the wave-number list isn't provided we will generate one
         if(self._klis == None):
             #changing numbasis to smallest square number less than it
-            rt = int(math.sqrt(numbasis))
-            self._numbasis = rt**2
+            self._numbasis =
+
+
             self._klis = []
-            for i in range(rt):
-                for j in range(rt):
-                    self._klis.append(np.array([[i], [j]]))
+            for i in range(numbasis):
+                self._klis.append(i*np.array([[1.], [1.]]))
 
         #computing mu fourier coefficients
         self.projectCoverageDist()
