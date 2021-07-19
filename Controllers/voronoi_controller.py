@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.spatial import KDTree
-from controller import Controller
+from . controller import Controller
 
 class VoronoiController(Controller):
     """
@@ -33,9 +33,12 @@ class VoronoiController(Controller):
             self._MV.append(0)
 
     def getControls(self, observation):
+        #discarding obstacle information
+        observation = observation[0]
+
         #observation should be a list of robot positions
         qlis_modshape = np.array(observation).reshape(self._numrobot, 2)
-        self._kdtree = KDTree(qli_modshape)
+        self._kdtree = KDTree(qlis_modshape)
 
         self.computeVoronoiIntegrals()
 

@@ -1,6 +1,6 @@
 import numpy as np
 import math
-from controller import Controller
+from . controller import Controller
 
 class ErgodicController(Controller):
     """
@@ -71,7 +71,7 @@ class ErgodicController(Controller):
 
         #update c_klis
         for i in range(self._numbasis):
-            for j in  range(self._numrobot):
+            for j in range(self._numrobot):
                 self._c_k[i][0] += self.computeBasis(self._klis[i], xlis[j])*self._dt
 
         #creating Blist to store control directions
@@ -110,7 +110,9 @@ class ErgodicController(Controller):
             B[i] = self._umax/np.sqrt((np.transpose(B[i]) @ B[i])[0][0]) * B[i]
 
         #B is now the list of controls 
-        return B, phi
+        #TODO make a way to log/graph phi without returning it to agent
+        # return B, phi
+        return B
 
 
     def computeBasisGradient(self, k, x):

@@ -1,18 +1,25 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from Agents.swarm_agent import Swarm_Agent
+from Agents.agent import Agent
 
 class Environment(object):
     """
     Class Environment represents a 2d multi agent environment where
     a number of agents have to maximize their cumulative sensing reward.
     """
-    def __init__(self, agents, numobstacles, dt, seed=None):
-        #TODO incorporate sensing function in environment
+    def __init__(self, agents, numrobot, numobstacles, obstradius, region, dt, seed=None):
         super().__init__()
 
-        self.agents = agents 
+        self.agents = agents
         self._numobstacles = numobstacles
+        self._obstradius = obstradius
+        self._numrobot = numrobot
         self._dt = dt
+
+        #assume region is a rectangle in R^2 defined by a lower right coordinate
+        #and a sidelength in each direction
+        self._region = region
 
         # create seed if user specifies it
         if seed is not None:
@@ -23,38 +30,67 @@ class Environment(object):
 
     def step(self):
         for agent in self.agents:
-            agent.odom_command()
-
-        #euler integrating the controls forward
-        # for i in range(len(U)):
-            #TODO handle obstacle 'collisions'
-            # self._agent_coordinates[i] += U[i] * self._dt
-
-        #returning current agent and obstacle positions
-        #TODO add reward (negative coverage cost)
-        # return self._agent_coordinates, self._obst_coordinates
+            agent.step(self._obstlist, self._dt)
 
     def reset(self):
+        #reset all agents
         for agent in self.agents:
             agent.reset()
 
-        #populating agent position list
-        # self._agent_coordinates = []
-        # for i in range(self._numagent):
-        #     xcoor = np.random.random_sample()
-        #     ycoor = np.random.random_sample()
-        #     self._agent_coordinates.append(np.array([[xcoor], [ycoor]]))
+        #to save some typing
+        region = self._region
 
         #populating obstacle position list
-        # self._obst_coordinates = []
-        # for i in range(self._numobstacles):
-        #     xcoor = self.map_width*self.cell_size*np.random.random_sample()
-        #     ycoor = self.map_height*self.cell_size*np.random.random_sample()
-        #     self._obst_coordinates.append(np.array([[xcoor], [ycoor]]))
+        self._obstlist = []
+        for i in range(self._numobstacles):
+            xcoor = region[1][0]*np.random.random_sample() + region[0][0]
+            ycoor = region[1][1]*np.random.random_sample() + region[0][1]
+            self._obstlist.append((np.array([[xcoor], [ycoor]]), self._obstradius))
+
+        #generating robot positions
+        #TODO add check that robots aren't generated within obstacle
+        xlis = []
+        for i in range(self._numrobot):
+            xcoor = region[1][0]*np.random.random_sample() + region[0][0]
+            ycoor = region[1][1]*np.random.random_sample() + region[0][1]
+            xlis.append(np.array([[xcoor], [ycoor]]))
+
+        #swarm agent
+        if isinstance(self.agents[0], Swarm_Agent):
+            self.agents[0].setPositions(xlis)
+
+        #single agents
+        else:
+            for agent, x in zip(self.agents, xlis):
+                agent.setPos(x)
 
 
-    #TODO need to figure out a good way to do this, my previous way
-    #doesn't work well for obstacles
     def render(self):
-        for agent in agents:
+        '''
+        renders the environment, including obstacles and robots
+        '''
+
+        #clear canvas
+        plt.clf()
+
+        #renders all agents
+        for agent in self.agents:
             agent.render()
+
+        #render all obstacles
+        #TODO make an obstacle class
+        for o in self._obstlist:
+            coor = o[0]
+            rad = o[1]
+            plt.gca().add_patch(plt.Circle((coor[0][0], coor[1][0]), rad, color = 'r'))
+
+        #some useful display options
+        region = self._region
+        plt.gca().set_aspect('equal', adjustable='box')
+        plt.xlim([region[0][0], region[0][0] + region[1][0]])
+        plt.ylim([region[0][1], region[0][1] + region[1][1]])
+
+        #drawing everything
+        plt.draw()
+        plt.pause(0.02)
+

@@ -1,5 +1,5 @@
 import numpy as np
-from controller import Controller
+from . controller import Controller
 
 class GridController(Controller):
     def __init__(self, numrobot, qcoor, res, gain):
@@ -20,6 +20,9 @@ class GridController(Controller):
             self._targets.append(np.array([[xtarg], [ytarg]]))
 
     def getControls(self, observation):
+        #discarding obstacle information
+        observation = observation[0]
+
         #compute all controls
         U = []
         for i in range(self._numrobot):

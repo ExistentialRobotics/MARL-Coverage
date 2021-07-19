@@ -3,14 +3,18 @@ import matplotlib.pyplot as plt
 
 class Agent(object):
     """
-    Interface Agent represents the autonomous entities that preform actions
+    Interface Agent represents the autonomous entities that perform actions
     in an environment.
     """
 
-    def __init__(self):
+    def __init__(self, controller):
         super().__init__()
+        self._controller = controller
 
-    def odom_command(self):
+    def step(self):
+        raise NotImplementedError()
+
+    def setControls(self, u, dt):
         raise NotImplementedError()
 
     def sense(self):
