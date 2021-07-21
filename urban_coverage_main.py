@@ -25,7 +25,7 @@ colorlist = list(np.random.rand(numrobot))
 
 #logging parameters
 makevid = True
-testname = "ergodic_simple"
+testname = "voronoi_control"
 output_dir = "./tests/{}/".format(testname)
 
 #checking if output directory exists and making it if it doesn't
@@ -35,9 +35,9 @@ else:
     os.makedirs(output_dir)
 
 '''Making the Controller for the Swarm Agent'''
-# c = VoronoiController(numrobot, region, res, gain)
+c = VoronoiController(numrobot, region, res, gain)
 # c = GridController(numrobot, region, res, gain)
-c = ErgodicController(numrobot, region, res, numbasis, dt, avoidobstacles=False)
+# c = ErgodicController(numrobot, region, res, numbasis, dt, avoidobstacles=False)
 
 '''Making the Swarm Agent'''
 agents = [Swarm_Agent(numrobot, c, colorlist)]
@@ -52,7 +52,6 @@ if(makevid):
     writer = ani.FFMpegWriter(fps= int(1/dt))
     writer.setup(plt.gcf(), output_dir + testname + ".mp4", dpi=100)
 
-e.reset()
 numsteps = 1000
 for i in range(numsteps):
     e.step()

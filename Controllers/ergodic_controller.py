@@ -62,8 +62,8 @@ class ErgodicController(Controller):
 
 
     def getControls(self, observation):
-        #decomposing observation
-        xlis = observation[0]
+        #decomposing observation so it has shape (N, 2, 1) where N is num robot
+        xlis = np.expand_dims(observation[0], axis=2)
         obst_lis = observation[1]
 
         #incrementing time
@@ -111,6 +111,10 @@ class ErgodicController(Controller):
 
         #B is now the list of controls 
         #TODO make a way to log/graph phi without returning it to agent
+
+        #repacking B so that it is an np.array with shape (N, 2)
+        B = np.squeeze(np.array(B), axis=2)
+
         # return B, phi
         return B
 
