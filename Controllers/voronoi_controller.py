@@ -33,8 +33,8 @@ class VoronoiController(Controller):
             self._MV.append(0)
 
     def getControls(self, observation):
-        #discarding obstacle information
-        observation = observation[0]
+        #decomposing observation so it has shape (N, 2, 1) where N is num robot
+        observation = np.expand_dims(observation[0], axis=2)
 
         #observation should be a list of robot positions
         qlis_modshape = np.array(observation).reshape(self._numrobot, 2)
@@ -47,6 +47,9 @@ class VoronoiController(Controller):
         for i in range(self._numrobot):
             u_i = self._K @ (self._CV[i]-observation[i])
             U.append(u_i)
+
+        #making U a np.array with shape (N, 2)
+        U = np.squeeze(np.array(U), axis=2)
 
         #returning the list of controls
         return U
