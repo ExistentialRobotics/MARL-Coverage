@@ -1,6 +1,6 @@
 {
   "render_a" : 1,
-  "consensus" : 0,
+  "consensus" : 1,
   "length_w" : 0,
   "num_agents" : 6,
   "num_basis_functions" : 2,

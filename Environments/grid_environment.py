@@ -26,7 +26,8 @@ class Grid_Environment(Environment):
         inds = inds.reshape(self.map_height, self.map_width)
 
         for agent in self.agents:
-            agent.step(dists, inds, self._dt)
+            est_mean, true_mean, a_mean, a_est = agent.step(dists, inds, self._dt)
+        return est_mean, true_mean, a_mean, a_est
 
     def coord_to_gcell(self, coords):
         coords[:, [1, 0]] = coords[:, [0, 1]]

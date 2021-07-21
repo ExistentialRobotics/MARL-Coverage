@@ -10,9 +10,10 @@ class AC_Swarm_Agent(Swarm_Agent):
 
      def step(self, dists, inds, dt):
           observation = (self._xlis, dists, inds, self.a_est)
-          controls, a_est = self._controller.getControls(observation)
+          controls, a_est, est_mean, true_mean, a_mean = self._controller.getControls(observation)
           super().setControls(controls, dt)
           self.a_est = a_est
+          return est_mean, true_mean, a_mean, a_est
 
      #used to set positions sampled in environment on reset
      def setPositions(self, xlis):

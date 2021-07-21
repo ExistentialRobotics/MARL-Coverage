@@ -11,7 +11,6 @@ class Swarm_Agent(Agent):
           self._colorlis = colorlis
           self._xlis = np.zeros((numrobot, 2))
 
-
      def step(self, obstlist, dt):
           observation = (self._xlis, obstlist)
           controls = self._controller.getControls(observation)

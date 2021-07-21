@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from Controllers.ac_controller import AC_Controller
 from Agents.ac_swarm_agent import AC_Swarm_Agent
 from Environments.grid_environment import Grid_Environment
+from time import time
 
 DASH = "-----------------------------------------------------------------------"
 
@@ -99,6 +100,43 @@ agents = [AC_Swarm_Agent(num_agents, c, colorlist, min_a, num_basis_fx)]
 env = Grid_Environment(agents, num_agents, num_obstacles, obstacle_radius, region, dt, map_width, map_height, grid_cell_size)
 
 """ Main loop """
+s = time()
+est_errors = []
+true_errors = []
+a_errors = []
 for i in range(iters):
-    env.step()
+    if (i + 1) % 5 == 0:
+        print("-----------------iteration: " + str(i + 1) + "------------------")
+
+    est_mean, true_mean, a_mean, a_est = env.step()
     env.render()
+
+    # track metrics to display
+    est_errors.append(est_mean)
+    true_errors.append(true_mean)
+    a_errors.append(a_mean)
+print("time elapsed: " + str(time() - s))
+
+""" Display results figures """
+print(DASH)
+print("Final agent parameters: " + str(a_est))
+print(DASH)
+
+# plot the dist from centroids per iteration
+plt.figure(2)
+plt.title("Dist from True and Estimated Centroids")
+plt.xlabel('Iterations')
+plt.ylabel('Dist')
+line_e, = plt.plot(est_errors, label="Est Centroid")
+line_t, = plt.plot(true_errors, label="True Centroid")
+plt.legend(handles=[line_e, line_t])
+plt.show()
+
+# plot the mean parameter error per interation
+plt.figure(3)
+plt.title("Mean Agent Parameter Error")
+plt.xlabel('Iterations')
+plt.ylabel('Error')
+line_a, = plt.plot(a_errors, label="||a_tilde - a||")
+plt.legend(handles=[line_a])
+plt.show()

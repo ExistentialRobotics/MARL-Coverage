@@ -1,6 +1,7 @@
 import numpy as np
 import json
 from scipy.stats import multivariate_normal
+from scipy.spatial import Delaunay
 import matplotlib.pyplot as plt
 from . controller import Controller
 
@@ -19,7 +20,7 @@ class AC_Controller(Controller):
         self.gain_const = gain_const
         self.gamma_const = gamma_const
         self.lr_gain = lr_gain
-        self.consensus_gain = consensus_gain
+        self.c_gain = consensus_gain
         self.pos_dim = pos_dim
         self.consensus = consensus
         self.lw = lw
@@ -100,17 +101,24 @@ class AC_Controller(Controller):
         self.e_centroid = self.e_moment / self.e_mass
         self.t_centroid = self.t_moment / self.t_mass
 
+        # get agent consensus terms if necessary
+        c_terms = None
+        if self.consensus:
+            c_terms = self.consensus_terms(agent_pos, a_est, length_w=self.lw)
+
         # calc updated params and get the controls for each agent
         u = np.zeros((self._numrobot, 2))
+        est_mean = 0
+        true_mean = 0
+        a_mean = 0
         for i in range(self._numrobot):
             F = (num[i] @ self.gain_matrix @ num[i].T) / self.e_mass[i]
-
             # use parameter update based on if consensus is used or not
             a_temp = a_est[i].reshape(a_est[i].shape[0], -1)
             if self.consensus:
-                # a_pre = (F @ a_est[i]) - self.lr_gain * (self.la[i] @ a_est[i] -
-                #          self.lb[i]) - self.c_gain * agent.c_term # eq 20
-                pass
+                c_temp = c_terms[i].reshape(c_terms[i].shape[0], 1)
+                a_pre = (F @ a_temp) - self.lr_gain * (self.la[i] @ a_temp -
+                         self.lb[i]) - self.c_gain * c_temp # eq 20
             else:
                 a_pre = (F @ a_temp) - self.lr_gain * (self.la[i] @ a_temp -
                          self.lb[i]) # eq 13
@@ -126,16 +134,36 @@ class AC_Controller(Controller):
             self.la[i] += self.d_f * (basis @ basis.T) # eq 11
             self.lb[i] += self.d_f * (basis * (basis.T @ self.a_opt.reshape(self.a_opt.shape[0], -1))) # eq 11
 
-            # inc estimated and true position errors
-            # est_mean += np.linalg.norm((agent.e_centroid - agent.pos))
-            # true_mean += np.linalg.norm((agent.t_centroid - agent.pos))
+            # get estimated and true position errors
+            est_mean += np.linalg.norm((self.e_centroid[i] - agent_pos[i]))
+            true_mean += np.linalg.norm((self.t_centroid[i] - agent_pos[i]))
+            a_mean += np.linalg.norm(a_est[i] - self.a_opt)
 
-            # apply control input
+            # generate control input
             u[i] = self.gain_matrix @ (self.e_centroid[i] - agent_pos[i]) # eq 10
+        return u, a_est, (est_mean / self._numrobot), (true_mean / self._numrobot), (a_mean / self._numrobot)
 
-        return u, a_est
+    def consensus_terms(self, agent_pos, a_est, length_w=False):
+        tri = Delaunay(agent_pos).simplices
+        c_terms = np.zeros((agent_pos.shape[0], 2))
+        for t in tri:
+            # get dists between self.agents
+            d_01 = 1
+            d_02 = 1
+            d_12 = 1
+            if length_w:
+                d_01 = np.linalg.norm((agent_pos[t[0]] - agent_pos[t[1]]))
+                d_02 = np.linalg.norm((agent_pos[t[0]] - agent_pos[t[2]]))
+                d_12 = np.linalg.norm((agent_pos[t[1]] - agent_pos[t[2]]))
 
-
+            # inc consensus terms for self.agents in the triangle
+            c_terms[t[0]] += d_01 * (a_est[t[0]] - a_est[t[1]]) +\
+                             d_02 * (a_est[t[0]] - a_est[t[2]])
+            c_terms[t[1]] += d_01 * (a_est[t[1]] - a_est[t[0]]) +\
+                             d_12 * (a_est[t[1]] - a_est[t[2]])
+            c_terms[t[2]] += d_12 * (a_est[t[2]] - a_est[t[1]]) +\
+                             d_02 * (a_est[t[2]] - a_est[t[0]])
+        return c_terms
 
     def calc_I(self, a_pre, a_est):
         I = np.zeros((a_pre.shape[0], a_pre.shape[0]))
@@ -148,7 +176,6 @@ class AC_Controller(Controller):
             if a_est[i] == self.min_a and a_pre[i] >= 0:
                 j = 0
             I[i, i] = j
-
         return I
 
     def sense_approx(self, q, a_est, opt=False):
