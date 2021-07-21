@@ -9,9 +9,8 @@ class Swarm_Agent(Agent):
           #list of robot positions
           self._numrobot = numrobot
           self._colorlis = colorlis
-          self._xlis = []
-          for i in range(numrobot):
-               self._xlis.append(np.zeros((2,1)))
+          self._xlis = np.zeros((numrobot, 2))
+
 
      def step(self, obstlist, dt):
           observation = (self._xlis, obstlist)
@@ -19,12 +18,12 @@ class Swarm_Agent(Agent):
           self.setControls(controls, dt)
 
      def setControls(self, ulis, dt):
-          for i in range(len(ulis)):
-               self._xlis[i] += ulis[i] * dt
+          self._xlis = self._xlis + ulis * dt
 
      #used to set positions sampled in environment on reset
      def setPositions(self, xlis):
           self._xlis = xlis
+          # print(self._xlis)
 
      def sense(self):
           pass

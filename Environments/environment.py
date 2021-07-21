@@ -54,6 +54,9 @@ class Environment(object):
             xcoor = region[1][0]*np.random.random_sample() + region[0][0]
             ycoor = region[1][1]*np.random.random_sample() + region[0][1]
             xlis.append(np.array([[xcoor], [ycoor]]))
+        xlis = np.squeeze(np.array(xlis), axis=2)
+
+        print(xlis)
 
         #swarm agent
         if isinstance(self.agents[0], Swarm_Agent):
@@ -93,4 +96,3 @@ class Environment(object):
         #drawing everything
         plt.draw()
         plt.pause(0.02)
-
