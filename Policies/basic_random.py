@@ -7,10 +7,7 @@ class Basic_Random(Base_Policy):
         super().__init__(num_output, action_space)
 
     def step(self, state):
-        ulis = []
-        for i in range(self.num_output):
-            ulis.append(self.action_space[np.random.randint(4)])
-        return ulis
+        return self.action_space.sample(s=self.num_output)
 
     def update(self):
         pass

@@ -3,16 +3,20 @@ import matplotlib.pyplot as plt
 
 from Environments.super_grid_rl import SuperGridRL
 from Controllers.grid_rl_random_controller import GridRLRandomController
+from Action_Spaces.discrete import Discrete
 from Policies.basic_random import Basic_Random
 
 
 '''Environment Parameters'''
-numrobot = 6
-gridwidth = 25
-gridlen = 25
-seed = 420
-action_space = ['l', 'r', 'u', 'd']
-num_output = 6
+numrobot    = 6
+gridwidth   = 25
+gridlen     = 25
+seed        = 420
+num_output  = 6
+num_actions = 4
+
+'''Init action space'''
+action_space = Discrete(num_actions)
 
 '''Init policy'''
 policy = Basic_Random(num_output, action_space)

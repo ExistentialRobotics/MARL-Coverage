@@ -68,8 +68,9 @@ class SuperGridRL(object):
         #TODO fix movement switching bugs(dependent on order)
         for i in range(len(ulis)):
             u = ulis[i]
+
             #left
-            if(u == 'l'):
+            if(u == 0):
                 x = self._xinds[i] - 1
                 y = self._yinds[i]
 
@@ -78,7 +79,7 @@ class SuperGridRL(object):
                 else:
                     reward -= self._collision_penalty
             #right
-            elif(u == 'r'):
+            elif(u == 1):
                 x = self._xinds[i] + 1
                 y = self._yinds[i]
 
@@ -87,7 +88,7 @@ class SuperGridRL(object):
                 else:
                     reward -= self._collision_penalty
             #up
-            elif(u == 'u'):
+            elif(u == 2):
                 x = self._xinds[i]
                 y = self._yinds[i] + 1
 
@@ -96,7 +97,7 @@ class SuperGridRL(object):
                 else:
                     reward -= self._collision_penalty
             #down
-            elif(u == 'd'):
+            elif(u == 3):
                 x = self._xinds[i]
                 y = self._yinds[i] - 1
 
@@ -148,4 +149,3 @@ class SuperGridRL(object):
         #drawing everything
         plt.draw()
         plt.pause(0.02)
-
