@@ -5,6 +5,7 @@ from Environments.super_grid_rl import SuperGridRL
 from Controllers.grid_rl_random_controller import GridRLRandomController
 from Action_Spaces.discrete import Discrete
 from Policies.basic_random import Basic_Random
+from Policies.grid_rl_policy import Grid_RL_Policy
 
 
 '''Environment Parameters'''
@@ -16,19 +17,20 @@ num_output  = 6
 num_actions = 4
 numsteps    = 20
 render      = True
+lr          = 0.01
 
 '''Init action space'''
 action_space = Discrete(num_actions)
 
 '''Init policy'''
 policy = Basic_Random(num_output, action_space)
+# policy = Grid_RL_Policy(num_output, action_space, lr)
 
 '''Making the Controller for the Swarm Agent'''
 c = GridRLRandomController(numrobot, policy)
 
 '''Making the Environment'''
 e = SuperGridRL(c, numrobot, gridlen, gridwidth, seed=seed)
-
 
 #tracking rewards
 rewardlis = []

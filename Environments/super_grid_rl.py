@@ -29,6 +29,8 @@ class SuperGridRL(object):
 
         #visited array
         self._visited = np.full((gridwidth, gridlen), False)
+        # self._visited = np.ones((gridwidth, gridlen))
+
 
         # create seed if user specifies it
         if seed is not None:
@@ -59,6 +61,8 @@ class SuperGridRL(object):
         #calculate current observation
         #TODO decide on observation format
         observation = None
+        # print(self._visited)
+
 
 
         #calculate controls from observation
