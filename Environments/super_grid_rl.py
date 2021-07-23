@@ -6,7 +6,7 @@ class SuperGridRL(object):
     """
     A Multi-Agent Grid Environment with a discrete action space for RL testing.
     """
-    def __init__(self, controller, numrobot, gridlen, gridwidth, collision_penalty=10, sensesize=1, grid=None, seed=None):
+    def __init__(self, controller, numrobot, gridlen, gridwidth, collision_penalty=5, sensesize=1, grid=None, seed=None):
         super().__init__()
 
         self._numrobot = numrobot
@@ -139,6 +139,11 @@ class SuperGridRL(object):
         plt.gca().set_aspect('equal', adjustable='box')
         plt.xlim([0, self._gridwidth])
         plt.ylim([0, self._gridlen])
+
+        #setting gridlines to be every 1
+        plt.gca().set_xticks(np.arange(0, self._gridwidth, 1))
+        plt.gca().set_yticks(np.arange(0, self._gridlen, 1))
+        plt.grid()
 
         #drawing everything
         plt.draw()

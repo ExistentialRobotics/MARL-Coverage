@@ -21,7 +21,7 @@ e = SuperGridRL(c, numrobot, gridlen, gridwidth, seed=seed)
 #tracking rewards
 rewardlis = []
 
-numsteps = 200
+numsteps = 500
 for i in range(numsteps):
     r = e.step()
     rewardlis.append(r)
@@ -29,4 +29,3 @@ for i in range(numsteps):
 
 plt.clf()
 plt.plot(np.array(rewardlis))
-plt.show()
