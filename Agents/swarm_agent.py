@@ -22,7 +22,6 @@ class Swarm_Agent(Agent):
      #used to set positions sampled in environment on reset
      def setPositions(self, xlis):
           self._xlis = xlis
-          # print(self._xlis)
 
      def sense(self):
           pass
