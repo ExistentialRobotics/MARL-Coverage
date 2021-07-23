@@ -26,7 +26,7 @@ colorlist = list(np.random.rand(numrobot))
 #logging parameters
 makevid = True
 testname = "voronoi_control"
-output_dir = "./tests/{}/".format(testname)
+output_dir = "./experiments/{}/".format(testname)
 
 #checking if output directory exists and making it if it doesn't
 if os.path.isdir(output_dir):
