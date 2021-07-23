@@ -14,6 +14,8 @@ gridlen     = 25
 seed        = 420
 num_output  = 6
 num_actions = 4
+numsteps    = 20
+render      = True
 
 '''Init action space'''
 action_space = Discrete(num_actions)
@@ -31,12 +33,20 @@ e = SuperGridRL(c, numrobot, gridlen, gridwidth, seed=seed)
 #tracking rewards
 rewardlis = []
 
-numsteps = 200
+# main loop
 for i in range(numsteps):
+    if (i + 1) % 5 == 0:
+        print("-----------------iteration: " + str(i + 1) + "-----------------")
     r = e.step()
     rewardlis.append(r)
-    e.render()
+    if render:
+        e.render()
 
-plt.clf()
-plt.plot(np.array(rewardlis))
+# plot rewards
+plt.figure(2)
+plt.title("Reward per Iteration")
+plt.xlabel('Iterations')
+plt.ylabel('Reward')
+line_r, = plt.plot(rewardlis, label="Reward")
+plt.legend(handles=[line_r])
 plt.show()
