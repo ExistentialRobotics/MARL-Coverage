@@ -2,17 +2,9 @@ import numpy as np
 from . controller import Controller
 
 class GridRLRandomController(Controller):
-    def __init__(self, numrobot):
-        super().__init__(numrobot)
-        self._controls = ['l', 'r', 'u', 'd']
-
+    def __init__(self, numrobot, policy):
+        super().__init__(numrobot, policy)
 
     def getControls(self, observation):
-        #TODO: decomposing observation
-        ulis = []
-        for i in range(self._numrobot):
-            ulis.append(self._controls[np.random.randint(4)])
-        return ulis
-
-
-
+        # #TODO: decomposing observation
+        return self._policy.step(observation)

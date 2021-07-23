@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class Controller(object):
     """
     Abstract Controller class provides framework for making a controller that
@@ -9,8 +10,9 @@ class Controller(object):
     #one agent is more realistic, but then we have to include extra information
     #in the observation, multiple agents is much easier to code but less realistic
 
-    def __init__(self, numrobot):
+    def __init__(self, numrobot, policy=None):
         self._numrobot = numrobot
+        self._policy = policy
 
     def getControls(self, observation):
         """
