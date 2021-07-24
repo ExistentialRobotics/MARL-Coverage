@@ -28,8 +28,8 @@ class SuperGridRL(object):
             self._grid = grid
 
         #visited array
-        self._visited = np.full((gridwidth, gridlen), False)
-        # self._visited = np.ones((gridwidth, gridlen))
+        # self._visited = np.full((gridwidth, gridlen), False)
+        self._visited = np.ones((gridwidth, gridlen))
 
 
         # create seed if user specifies it
@@ -50,20 +50,25 @@ class SuperGridRL(object):
                 for k in range(y - self._sensesize, y + self._sensesize + 1):
 
                     #checking if cell is not visited, in bounds, not an obstacle
-                    if(self.isInBounds(j,k) and self._grid[j][k]>=0 and not
-                       self._visited[j][k]):
+                    # if(self.isInBounds(j,k) and self._grid[j][k]>=0 and not
+                    #    self._visited[j][k]):
+                    if(self.isInBounds(j,k) and self._grid[j][k]>=0 and
+                       self._visited[j][k] == 1):
 
                         #adding reward and marking as visited
-                        reward += self._grid[j][k]
-                        self._visited[j][k] = True
+                        # reward += self._grid[j][k]
+                        # self._visited[j][k] = True
+
+                        reward += self._visited[j][k]
+                        self._visited[j][k] = 0
 
 
         #calculate current observation
         #TODO decide on observation format
-        observation = None
-        # print(self._visited)
+        # observation = None
 
-
+        arrays = np.array([self._visited, self.get_pos_image()])
+        observation = np.expand_dims(np.stack(arrays, axis=0), axis=0)
 
         #calculate controls from observation
         ulis = self._controller.getControls(observation)
@@ -126,6 +131,12 @@ class SuperGridRL(object):
                 return True
 
         return False
+
+    def get_pos_image(self):
+        ret = np.zeros((self._gridwidth, self._gridlen))
+        for i, j in zip(self._xinds, self._yinds):
+            ret[i, j] = 1
+        return ret
 
     def reset(self):
         #generating random robot positions

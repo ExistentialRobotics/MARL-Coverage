@@ -7,7 +7,7 @@ class Grid_RL_Conv(nn.Module):
     def __init__(self, classes):
         super(Grid_RL_Conv, self).__init__()
         self.c1 = nn.Sequential(
-            nn.Conv2d(1, 10, 1),
+            nn.Conv2d(2, 10, 3),
             nn.BatchNorm2d(10),
             nn.ReLU(inplace=True)
         )

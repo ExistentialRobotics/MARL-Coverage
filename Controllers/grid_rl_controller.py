@@ -1,7 +1,7 @@
 import numpy as np
 from . controller import Controller
 
-class GridRLRandomController(Controller):
+class GridRLController(Controller):
     def __init__(self, numrobot, policy):
         super().__init__(numrobot, policy)
 
