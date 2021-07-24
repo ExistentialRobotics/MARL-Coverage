@@ -18,9 +18,6 @@ class SuperGridRL(object):
         #sensing radius using chess metric(like how a king moves) -> "Chebyshev distance"
         self._sensesize = sensesize
 
-        #generating robot positions
-        self.reset()
-
         #blank/uniform grid by default
         if grid is None:
             self._grid = np.ones((gridwidth, gridlen))
@@ -31,6 +28,8 @@ class SuperGridRL(object):
         # self._visited = np.full((gridwidth, gridlen), False)
         self._visited = np.ones((gridwidth, gridlen))
 
+        #generating robot positions
+        self.reset()
 
         # create seed if user specifies it
         if seed is not None:
@@ -50,22 +49,15 @@ class SuperGridRL(object):
                 for k in range(y - self._sensesize, y + self._sensesize + 1):
 
                     #checking if cell is not visited, in bounds, not an obstacle
-                    # if(self.isInBounds(j,k) and self._grid[j][k]>=0 and not
-                    #    self._visited[j][k]):
                     if(self.isInBounds(j,k) and self._grid[j][k]>=0 and
                        self._visited[j][k] == 1):
-
                         #adding reward and marking as visited
-                        # reward += self._grid[j][k]
-                        # self._visited[j][k] = True
-
                         reward += self._visited[j][k]
                         self._visited[j][k] = 0
 
 
         #calculate current observation
         #TODO decide on observation format
-        # observation = None
 
         arrays = np.array([self._visited, self.get_pos_image()])
         observation = np.expand_dims(np.stack(arrays, axis=0), axis=0)
@@ -74,7 +66,8 @@ class SuperGridRL(object):
         ulis = self._controller.getControls(observation)
 
         #update robot positions using controls
-        #TODO fix movement switching bugs(dependent on order)
+        newx = self._xinds
+        newy = self._yinds
         for i in range(len(ulis)):
             u = ulis[i]
 
@@ -83,8 +76,8 @@ class SuperGridRL(object):
                 x = self._xinds[i] - 1
                 y = self._yinds[i]
 
-                if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
-                    self._xinds[i] = x
+                if(self.isInBounds(x,y) and self._grid[x][y]>=0):
+                    newx[i] = x
                 else:
                     reward -= self._collision_penalty
             #right
@@ -92,8 +85,8 @@ class SuperGridRL(object):
                 x = self._xinds[i] + 1
                 y = self._yinds[i]
 
-                if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
-                    self._xinds[i] = x
+                if(self.isInBounds(x,y) and self._grid[x][y]>=0):
+                    newx[i] = x
                 else:
                     reward -= self._collision_penalty
             #up
@@ -101,8 +94,8 @@ class SuperGridRL(object):
                 x = self._xinds[i]
                 y = self._yinds[i] + 1
 
-                if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
-                    self._yinds[i] = y
+                if(self.isInBounds(x,y) and self._grid[x][y]>=0):
+                    newy[i] = y
                 else:
                     reward -= self._collision_penalty
             #down
@@ -110,10 +103,28 @@ class SuperGridRL(object):
                 x = self._xinds[i]
                 y = self._yinds[i] - 1
 
-                if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
-                    self._yinds[i] = y
+                if(self.isInBounds(x,y) and self._grid[x][y]>=0):
+                    newy[i]= y
                 else:
                     reward -= self._collision_penalty
+
+        #checking if any robots are at same position
+        coord_dict = {}
+        for i in range(self._numrobot):
+            if (newx[i], newy[i]) in coord_dict:
+                coord_dict[(newx[i], newy[i])].append(i)
+            else:
+                coord_dict[(newx[i], newy[i])] = [i]
+
+        #only updating positions of robots that ended in a unique position
+        for coord in coord_dict:
+            robots = coord_dict[coord]
+            if(len(robots) == 1):
+                self._xinds[robots[0]] = newx[robots[0]]
+                self._yinds[robots[0]] = newy[robots[0]]
+            else:
+                #penalizing all robots that tried to end up in the same place
+                reward -= (len(robots) - 1)*self._collision_penalty
 
         return reward
 
@@ -140,9 +151,23 @@ class SuperGridRL(object):
 
     def reset(self):
         #generating random robot positions
-        #TODO make sure none are spawned on obstacles/other robots
-        self._xinds = np.random.randint(self._gridwidth, size=self._numrobot)
-        self._yinds = np.random.randint(self._gridlen, size=self._numrobot)
+        self._xinds = np.zeros(self._numrobot, dtype=int)
+        self._yinds = np.zeros(self._numrobot, dtype=int)
+
+        #repeatedly trying to insert robots
+        coord_dict = {}
+        count = 0
+        while(count != self._numrobot):
+            #generating random coordinate
+            x = np.random.randint(self._gridwidth)
+            y = np.random.randint(self._gridlen)
+
+            #testing if coordinate is not an obstacle or other robot
+            if(self._grid[x][y] >= 0 and (x,y) not in coord_dict):
+                coord_dict[(x,y)] = 1
+                self._xinds[count] = x
+                self._yinds[count] = y
+                count += 1
 
     def render(self):
         #clear canvas

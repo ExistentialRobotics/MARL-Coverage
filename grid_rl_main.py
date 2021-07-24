@@ -16,7 +16,7 @@ gridlen     = 25
 seed        = 420
 num_output  = 6
 num_actions = 4
-numsteps    = 20
+numsteps    = 50
 render      = True
 lr          = 0.01
 
@@ -24,8 +24,8 @@ lr          = 0.01
 action_space = Discrete(num_actions)
 
 '''Init policy'''
-# policy = Basic_Random(num_output, action_space)
-policy = Grid_RL_Policy(num_output, action_space, lr)
+policy = Basic_Random(num_output, action_space)
+# policy = Grid_RL_Policy(num_output, action_space, lr)
 
 '''Making the Controller for the Swarm Agent'''
 # c = GridRLRandomController(numrobot, policy)
