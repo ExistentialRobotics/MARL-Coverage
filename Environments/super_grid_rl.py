@@ -144,6 +144,17 @@ class SuperGridRL(object):
         return False
 
     def get_pos_image(self):
+        """
+        get_pos_image uses the list of robot positions to generate an image of
+        the size of the overall map, where 1 denotes a space that a robot
+        occupies and 0 denotes a free space. It uses only info determined from
+        the current timestep.
+
+        Return
+        ------
+        Image encoding the robot positions
+        """
+        #TODO: Vectorize this method 
         ret = np.zeros((self._gridwidth, self._gridlen))
         for i, j in zip(self._xinds, self._yinds):
             ret[i, j] = 1

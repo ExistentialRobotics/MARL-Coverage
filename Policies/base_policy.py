@@ -6,7 +6,7 @@ class Base_Policy(object):
     Base class for policies.
     """
 
-    def __init__(self, num_output, action_space):
+    def __init__(self, numrobot, action_space):
         """
         Constructor for class Base Policy.
 
@@ -17,7 +17,7 @@ class Base_Policy(object):
         """
 
         super().__init__()
-        self.num_output   = num_output
+        self.numrobot     = numrobot
         self.action_space = action_space
 
     def step(self, state):

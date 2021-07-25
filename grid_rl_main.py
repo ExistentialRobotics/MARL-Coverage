@@ -8,13 +8,16 @@ from Action_Spaces.discrete import Discrete
 from Policies.basic_random import Basic_Random
 from Policies.grid_rl_policy import Grid_RL_Policy
 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
 
 '''Environment Parameters'''
 numrobot    = 6
 gridwidth   = 25
 gridlen     = 25
 seed        = 420
-num_output  = 6
 num_actions = 4
 numsteps    = 50
 render      = True
@@ -24,8 +27,8 @@ lr          = 0.01
 action_space = Discrete(num_actions)
 
 '''Init policy'''
-policy = Basic_Random(num_output, action_space)
-# policy = Grid_RL_Policy(num_output, action_space, lr)
+# policy = Basic_Random(numrobot, action_space)
+policy = Grid_RL_Policy(numrobot, action_space, lr)
 
 '''Making the Controller for the Swarm Agent'''
 # c = GridRLRandomController(numrobot, policy)
