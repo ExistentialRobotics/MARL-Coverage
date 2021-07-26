@@ -133,7 +133,7 @@ class SuperGridRL(object):
         #calculate current state
         state = self.get_state()
 
-        return reward, state
+        return state, reward
 
     def isInBounds(self, x, y):
         return x >= 0 and x < self._gridwidth and y >= 0 and y < self._gridlen

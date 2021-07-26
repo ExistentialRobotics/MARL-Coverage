@@ -35,7 +35,7 @@ controller = GridRLController(numrobot, policy)
 env = SuperGridRL(numrobot, gridlen, gridwidth, seed=seed)
 
 # test generating an episode
-# episode = generate_episode()
+episode, steps = generate_episode(env, controller, iters=10)
 
 #tracking rewards
 rewardlis = []
@@ -48,7 +48,7 @@ for i in range(numsteps):
 
     # get action and advance environment
     action = controller.getControls(state)
-    reward, state = env.step(action)
+    state, reward = env.step(action)
 
     # track reward
     rewardlis.append(reward)
