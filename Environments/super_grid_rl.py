@@ -24,9 +24,14 @@ class SuperGridRL(object):
         else:
             self._grid = grid
 
-        #visited array
-        # self._visited = np.full((gridwidth, gridlen), False)
-        self._visited = np.ones((gridwidth, gridlen))
+        # history of observed cells
+        self._observed_cells = np.zeros((gridwidth, gridlen))
+
+        # history of observed values
+        self._observed_values = np.zeros((gridwidth, gridlen))
+
+        # history of free cells
+        self._free = np.ones((gridwidth, gridlen))
 
         #generating robot positions
         self.reset()
@@ -50,16 +55,25 @@ class SuperGridRL(object):
 
                     #checking if cell is not visited, in bounds, not an obstacle
                     if(self.isInBounds(j,k) and self._grid[j][k]>=0 and
-                       self._visited[j][k] == 1):
+                       self._observed_cells[j][k] == 1):
                         #adding reward and marking as visited
-                        reward += self._visited[j][k]
-                        self._visited[j][k] = 0
+                        # add reward
+                        reward += self._grid[j][k]
+
+                        # mark as observed
+                        self._observed_cells[j][k] = 1
+
+                        # track value of observed
+                        self._observed_values[j][k] += self._grid[j][k]
+
+                        # mark as not fre
+                        self._free[j][k] = 0
 
 
         #calculate current observation
         #TODO decide on observation format
 
-        arrays = np.array([self._visited, self.get_pos_image()])
+        arrays = np.array([self.get_pos_image(), self._observed_cells, self._observed_values, self._free])
         observation = np.expand_dims(np.stack(arrays, axis=0), axis=0)
 
         #calculate controls from observation
@@ -154,7 +168,7 @@ class SuperGridRL(object):
         ------
         Image encoding the robot positions
         """
-        #TODO: Vectorize this method 
+        #TODO: Vectorize this method
         ret = np.zeros((self._gridwidth, self._gridlen))
         for i, j in zip(self._xinds, self._yinds):
             ret[i, j] = 1
