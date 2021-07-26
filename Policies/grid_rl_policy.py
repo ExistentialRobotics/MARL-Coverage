@@ -23,5 +23,13 @@ class Grid_RL_Policy(Base_Policy):
             ulis.append(m.sample())
         return ulis
 
-    def update(self, trajectory):
-        pass
+    def update(self, state):
+        probs = self.policy_net(state)
+        m = Categorical(probs)
+
+        # calculate gradient'
+        loss = 0
+        for i in range(self.numrobot):
+            m = Categorical(probs[i * self.num_actions: (i + 1) * self.num_actions])
+            loss -= m.log_prob(action) * r_return
+        loss.backward()

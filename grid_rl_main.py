@@ -7,10 +7,7 @@ from Controllers.grid_rl_controller import GridRLController
 from Action_Spaces.discrete import Discrete
 from Policies.basic_random import Basic_Random
 from Policies.grid_rl_policy import Grid_RL_Policy
-
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+from Utils.utils import generate_episode
 
 
 '''Environment Parameters'''
@@ -31,23 +28,34 @@ action_space = Discrete(num_actions)
 policy = Grid_RL_Policy(numrobot, action_space, lr)
 
 '''Making the Controller for the Swarm Agent'''
-# c = GridRLRandomController(numrobot, policy)
-c = GridRLController(numrobot, policy)
+# controller = GridRLRandomController(numrobot, policy)
+controller = GridRLController(numrobot, policy)
 
 '''Making the Environment'''
-e = SuperGridRL(c, numrobot, gridlen, gridwidth, seed=seed)
+env = SuperGridRL(numrobot, gridlen, gridwidth, seed=seed)
+
+# test generating an episode
+# episode = generate_episode()
 
 #tracking rewards
 rewardlis = []
 
 # main loop
+state = env.reset()
 for i in range(numsteps):
     if (i + 1) % 5 == 0:
         print("-----------------iteration: " + str(i + 1) + "-----------------")
-    r = e.step()
-    rewardlis.append(r)
+
+    # get action and advance environment
+    action = controller.getControls(state)
+    reward, state = env.step(action)
+
+    # track reward
+    rewardlis.append(reward)
+
+    # render agents if necessary
     if render:
-        e.render()
+        env.render()
 
 # plot rewards
 plt.figure(2)

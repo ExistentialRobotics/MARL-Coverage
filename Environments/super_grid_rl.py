@@ -6,13 +6,12 @@ class SuperGridRL(object):
     """
     A Multi-Agent Grid Environment with a discrete action space for RL testing.
     """
-    def __init__(self, controller, numrobot, gridlen, gridwidth, collision_penalty=5, sensesize=1, grid=None, seed=None):
+    def __init__(self, numrobot, gridlen, gridwidth, collision_penalty=5, sensesize=1, grid=None, seed=None):
         super().__init__()
 
         self._numrobot = numrobot
         self._gridlen = gridlen
         self._gridwidth = gridwidth
-        self._controller = controller
         self._collision_penalty = collision_penalty
 
         #sensing radius using chess metric(like how a king moves) -> "Chebyshev distance"
@@ -27,7 +26,7 @@ class SuperGridRL(object):
         # history of observed cells
         self._observed_cells = np.zeros((gridwidth, gridlen))
 
-        # history of observed values
+        # history of observed obstacles
         self._observed_obstacles = np.zeros((gridwidth, gridlen))
 
         # history of free cells
@@ -40,42 +39,9 @@ class SuperGridRL(object):
         if seed is not None:
             np.random.seed(seed)
 
-    def step(self):
+    def step(self, ulis):
         #initialize reward for this step
         reward = 0
-
-        #sense from all the current robot positions
-        for i in range(self._numrobot):
-            x = self._xinds[i]
-            y = self._yinds[i]
-
-            #looping over all grid cells to sense
-            for j in range(x - self._sensesize, x + self._sensesize + 1):
-                for k in range(y - self._sensesize, y + self._sensesize + 1):
-
-                    #checking if cell is not visited, in bounds, not an obstacle
-                    if(self.isInBounds(j,k) and self._grid[j][k]>=0 and
-                       self._observed_cells[j][k] == 0):
-                        #adding reward and marking as visited
-                        # add reward
-                        reward += self._grid[j][k]
-
-                        # mark as observed
-                        self._observed_cells[j][k] = self._grid[j][k]
-
-                        # mark as not fre
-                        self._free[j][k] = 0
-                    elif(self.isInBounds(j,k) and self._grid[j][k]<0 and
-                         self._observed_obstacles[j][k] == 0):
-                         # track observed obstacles
-                         self._observed_obstacles[j][k] = self._grid[j][k]
-
-        #calculate current observation
-        arrays = np.array([self.get_pos_image(), self._observed_cells, self._observed_obstacles, self._free])
-        observation = np.expand_dims(np.stack(arrays, axis=0), axis=0)
-
-        #calculate controls from observation
-        ulis = self._controller.getControls(observation)
 
         #update robot positions using controls
         newx = self._xinds
@@ -138,7 +104,36 @@ class SuperGridRL(object):
                 #penalizing all robots that tried to end up in the same place
                 reward -= (len(robots) - 1)*self._collision_penalty
 
-        return reward
+        #sense from all the current robot positions
+        for i in range(self._numrobot):
+            x = self._xinds[i]
+            y = self._yinds[i]
+
+            #looping over all grid cells to sense
+            for j in range(x - self._sensesize, x + self._sensesize + 1):
+                for k in range(y - self._sensesize, y + self._sensesize + 1):
+
+                    #checking if cell is not visited, in bounds, not an obstacle
+                    if(self.isInBounds(j,k) and self._grid[j][k]>=0 and
+                       self._observed_cells[j][k] == 0):
+                        #adding reward and marking as visited
+                        # add reward
+                        reward += self._grid[j][k]
+
+                        # mark as observed
+                        self._observed_cells[j][k] = self._grid[j][k]
+
+                        # mark as not free
+                        self._free[j][k] = 0
+                    elif(self.isInBounds(j,k) and self._grid[j][k]<0 and
+                         self._observed_obstacles[j][k] == 0):
+                         # track observed obstacles
+                         self._observed_obstacles[j][k] = self._grid[j][k]
+
+        #calculate current state
+        state = self.get_state()
+
+        return reward, state
 
     def isInBounds(self, x, y):
         return x >= 0 and x < self._gridwidth and y >= 0 and y < self._gridlen
@@ -154,6 +149,10 @@ class SuperGridRL(object):
                 return True
 
         return False
+
+    def get_state(self):
+        arrays = np.array([self.get_pos_image(), self._observed_cells, self._observed_obstacles, self._free])
+        return np.expand_dims(np.stack(arrays, axis=0), axis=0)
 
     def get_pos_image(self):
         """
@@ -191,6 +190,8 @@ class SuperGridRL(object):
                 self._xinds[count] = x
                 self._yinds[count] = y
                 count += 1
+
+        return self.get_state()
 
     def render(self):
         #clear canvas
