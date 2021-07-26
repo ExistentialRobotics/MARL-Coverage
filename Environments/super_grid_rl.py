@@ -28,7 +28,7 @@ class SuperGridRL(object):
         self._observed_cells = np.zeros((gridwidth, gridlen))
 
         # history of observed values
-        self._observed_values = np.zeros((gridwidth, gridlen))
+        self._observed_obstacles = np.zeros((gridwidth, gridlen))
 
         # history of free cells
         self._free = np.ones((gridwidth, gridlen))
@@ -55,25 +55,23 @@ class SuperGridRL(object):
 
                     #checking if cell is not visited, in bounds, not an obstacle
                     if(self.isInBounds(j,k) and self._grid[j][k]>=0 and
-                       self._observed_cells[j][k] == 1):
+                       self._observed_cells[j][k] == 0):
                         #adding reward and marking as visited
                         # add reward
                         reward += self._grid[j][k]
 
                         # mark as observed
-                        self._observed_cells[j][k] = 1
-
-                        # track value of observed
-                        self._observed_values[j][k] += self._grid[j][k]
+                        self._observed_cells[j][k] = self._grid[j][k]
 
                         # mark as not fre
                         self._free[j][k] = 0
-
+                    elif(self.isInBounds(j,k) and self._grid[j][k]<0 and
+                         self._observed_obstacles[j][k] == 0):
+                         # track observed obstacles
+                         self._observed_obstacles[j][k] = self._grid[j][k]
 
         #calculate current observation
-        #TODO decide on observation format
-
-        arrays = np.array([self.get_pos_image(), self._observed_cells, self._observed_values, self._free])
+        arrays = np.array([self.get_pos_image(), self._observed_cells, self._observed_obstacles, self._free])
         observation = np.expand_dims(np.stack(arrays, axis=0), axis=0)
 
         #calculate controls from observation
