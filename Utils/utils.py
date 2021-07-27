@@ -44,12 +44,13 @@ def train_RLalg(env, controller, episodes=1000, iters=100):
         # track reward per episode
         reward_per_episode.append(total_reward)
 
-        # update policy using the episode
-        controller.update_policy(episode)
-
         # save the best policy
         if total_reward > best_reward:
+            print("New best reward on episode " + str(_) + ": " + str(total_reward) + "! Saving policy!")
             best_reward = total_reward
             controller.save_policy()
+
+        # update policy using the episode
+        controller.update_policy(episode)
 
     return reward_per_episode
