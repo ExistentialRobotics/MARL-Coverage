@@ -231,6 +231,9 @@ class SuperGridRL(object):
     def done(self):
         return np.all(self._free)
 
+    def percent_covered(self):
+        return (np.count_nonzero(self._free < 1) / (self._gridlen * self._gridwidth))
+
     def render(self):
         #clear canvas
         plt.clf()

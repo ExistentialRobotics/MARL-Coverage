@@ -18,11 +18,13 @@ gridwidth      = 25
 gridlen        = 25
 seed           = 420
 num_actions    = 4
-render         = True
+render_test    = False
+render_train   = False
 lr             = 0.01
 train_episodes = 100
 test_episodes  = 100
 iters          = 100
+collision_p    = 5
 
 '''Init action space'''
 action_space = Discrete(num_actions)
@@ -34,7 +36,7 @@ policy = PolicyGradient(numrobot, action_space, lr)
 controller = GridRLController(numrobot, policy)
 
 '''Making the environment'''
-env = SuperGridRL(numrobot, gridlen, gridwidth, seed=seed)
+env = SuperGridRL(numrobot, gridlen, gridwidth, collision_penalty=collision_p, seed=seed)
 
 #logging parameters
 makevid = False
@@ -49,8 +51,12 @@ train_rewardlis = train_RLalg(env, controller, episodes=train_episodes, iters=it
 print("-----------------------------Testing Policy----------------------------")
 test_rewardlis = []
 success = 0
+percent_covered = 0
 for _ in range(test_episodes):
+    render = False
     if _ % 10 == 0:
+        if render_test:
+            render = True
         print("Testing Episode: " + str(_) + " out of " + str(test_episodes))
 
     # reset env at the start of each episode
@@ -76,11 +82,12 @@ for _ in range(test_episodes):
         done = env.done()
         if done:
             success += 1
+    percent_covered += env.percent_covered()
     test_rewardlis.append(total_reward)
 
 '''Display results'''
 print(DASH)
-print("Trained policy successfully covered the environment " + str((success / test_episodes) * 100) + " percent of the time!")
+print("Trained policy covered " + str((percent_covered / test_episodes) * 100) + " percent of the environment on average!")
 print(DASH)
 
 #closing logger

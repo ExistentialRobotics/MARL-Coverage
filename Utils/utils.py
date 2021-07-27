@@ -28,18 +28,21 @@ def generate_episode(env, controller, iters=100, render=False):
 
     return episode, total_reward, steps
 
-def train_RLalg(env, controller, episodes=1000, iters=100):
+def train_RLalg(env, controller, episodes=1000, iters=100, render=False):
     # reset environment
     state = env.reset()
 
     reward_per_episode = []
     best_reward = 0
     for _ in range(episodes):
+        r = False
         if _ % 10 == 0:
+            if render:
+                r = True
             print("Training Episode: " + str(_) + " out of " + str(episodes))
 
         # generate episode
-        episode, total_reward, steps = generate_episode(env, controller, iters=iters)
+        episode, total_reward, steps = generate_episode(env, controller, iters=iters, render=r)
 
         # track reward per episode
         reward_per_episode.append(total_reward)
