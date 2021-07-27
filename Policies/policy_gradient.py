@@ -4,7 +4,7 @@ from . base_policy import Base_Policy
 from . Networks.grid_rl_conv import Grid_RL_Conv
 from torch.distributions.categorical import Categorical
 
-class Grid_RL_Policy(Base_Policy):
+class PolicyGradient(Base_Policy):
 
     def __init__(self, numrobot, action_space, learning_rate):
         super().__init__(numrobot, action_space)

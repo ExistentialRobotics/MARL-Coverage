@@ -6,9 +6,9 @@ from Controllers.grid_rl_random_controller import GridRLRandomController
 from Controllers.grid_rl_controller import GridRLController
 from Action_Spaces.discrete import Discrete
 from Policies.basic_random import Basic_Random
-from Policies.grid_rl_policy import Grid_RL_Policy
+from Policies.policy_gradient import PolicyGradient
 from Logger.logger import Logger
-from RL_Algorithms.policy_gradient import policy_gradient
+from Utils.utils import train_RLalg
 
 DASH = "-----------------------------------------------------------------------"
 
@@ -28,7 +28,7 @@ iters          = 100
 action_space = Discrete(num_actions)
 
 '''Init policy'''
-policy = Grid_RL_Policy(numrobot, action_space, lr)
+policy = PolicyGradient(numrobot, action_space, lr)
 
 '''Making the Controller for the Swarm Agent'''
 controller = GridRLController(numrobot, policy)
@@ -43,7 +43,7 @@ logger = Logger(testname, makevid, 0.02)
 
 '''Train policy'''
 print("----------Running PG for " + str(test_episodes) + " episodes-----------")
-train_rewardlis = policy_gradient(env, controller, episodes=train_episodes, iters=iters)
+train_rewardlis = train_RLalg(env, controller, episodes=train_episodes, iters=iters)
 
 '''Test policy'''
 print("-----------------------------Testing Policy----------------------------")
