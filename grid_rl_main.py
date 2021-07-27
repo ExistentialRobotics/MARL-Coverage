@@ -36,7 +36,7 @@ controller = GridRLController(numrobot, policy)
 env = SuperGridRL(numrobot, gridlen, gridwidth, seed=seed)
 
 #logging parameters
-makevid = True
+makevid = False
 testname = "grid_rl"
 logger = Logger(testname, makevid, 0.02)
 

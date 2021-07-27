@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from . environment import Environment
+from queue import PriorityQueue
 
 class SuperGridRL(object):
     """
@@ -57,43 +58,53 @@ class SuperGridRL(object):
         #update robot positions using controls
         newx = self._xinds
         newy = self._yinds
+
+        #making pq for sorting by minimum scan score
+        pq = PriorityQueue()
+        for i in range(self._numrobot):
+            score = self._xinds[i] + self._yinds[i]*self._gridwidth
+            pq.put((score, i))
+
         for i in range(len(ulis)):
             u = ulis[i]
 
+            #z is the robot index we are assigning controls to
+            z = pq.get()[1]
+
             #left
             if(u == 0):
-                x = self._xinds[i] - 1
-                y = self._yinds[i]
+                x = self._xinds[z] - 1
+                y = self._yinds[z]
 
                 if(self.isInBounds(x,y) and self._grid[x][y]>=0):
-                    newx[i] = x
+                    newx[z] = x
                 else:
                     reward -= self._collision_penalty
             #right
             elif(u == 1):
-                x = self._xinds[i] + 1
-                y = self._yinds[i]
+                x = self._xinds[z] + 1
+                y = self._yinds[z]
 
                 if(self.isInBounds(x,y) and self._grid[x][y]>=0):
-                    newx[i] = x
+                    newx[z] = x
                 else:
                     reward -= self._collision_penalty
             #up
             elif(u == 2):
-                x = self._xinds[i]
-                y = self._yinds[i] + 1
+                x = self._xinds[z]
+                y = self._yinds[z] + 1
 
                 if(self.isInBounds(x,y) and self._grid[x][y]>=0):
-                    newy[i] = y
+                    newy[z] = y
                 else:
                     reward -= self._collision_penalty
             #down
             elif(u == 3):
-                x = self._xinds[i]
-                y = self._yinds[i] - 1
+                x = self._xinds[z]
+                y = self._yinds[z] - 1
 
                 if(self.isInBounds(x,y) and self._grid[x][y]>=0):
-                    newy[i]= y
+                    newy[z]= y
                 else:
                     reward -= self._collision_penalty
 

@@ -11,7 +11,7 @@ class Logger(object):
         super().__init__()
         self._output_dir = "./experiments/{}/".format(experiment_name)
         self._dt = dt
-        self._make_vid
+        self._make_vid = make_video
 
         #checking if output directory exists and making it if it doesn't
         if os.path.isdir(self._output_dir):
