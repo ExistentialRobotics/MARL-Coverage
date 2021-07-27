@@ -8,6 +8,7 @@ from Action_Spaces.discrete import Discrete
 from Policies.basic_random import Basic_Random
 from Policies.grid_rl_policy import Grid_RL_Policy
 from Utils.utils import generate_episode
+from Logger.logger import Logger
 
 
 '''Environment Parameters'''
@@ -34,6 +35,11 @@ controller = GridRLController(numrobot, policy)
 '''Making the Environment'''
 env = SuperGridRL(numrobot, gridlen, gridwidth, seed=seed)
 
+#logging parameters
+makevid = True
+testname = "grid_rl"
+logger = Logger(testname, makevid, 0.02)
+
 # test generating an episode
 episode, steps = generate_episode(env, controller, iters=10)
 
@@ -56,6 +62,10 @@ for i in range(numsteps):
     # render agents if necessary
     if render:
         env.render()
+        logger.update()
+
+#closing logger
+logger.close()
 
 # plot rewards
 plt.figure(2)
