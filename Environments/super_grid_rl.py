@@ -214,6 +214,18 @@ class SuperGridRL(object):
                 self._yinds[count] = y
                 count += 1
 
+        # history of observed cells (their values)
+        self._observed_cells = []
+        #making one layer for each sensing level
+        for i in range(self._discrete_grid_values - 1): #-1 is there because we don't want to include a grid for zero value
+            self._observed_cells.append(np.zeros((self._gridwidth, self._gridlen)))
+
+        # history of observed obstacles
+        self._observed_obstacles = np.zeros((self._gridwidth, self._gridlen))
+
+        # history of free cells
+        self._free = np.ones((self._gridwidth, self._gridlen))
+
         return self.get_state()
 
     def done(self):
@@ -236,6 +248,7 @@ class SuperGridRL(object):
         plt.gca().set_yticks(np.arange(0, self._gridlen, 1))
         plt.grid()
 
+        plt.imshow(self._free)
         #drawing everything
         plt.draw()
         plt.pause(0.02)
