@@ -4,13 +4,12 @@ import torch.nn as nn
 from torch.distributions.categorical import Categorical
 from torch.distributions import Bernoulli
 
-def generate_episode(env, controller, iters=100):
-    print("------------------------Generating Episode-------------------------")
+def generate_episode(env, controller, iters=100, render=False):
     episode = []
-
-    done = False
     state = env.reset()
     steps = 0
+    total_reward = 0
+    done = False
     while not done and steps != iters:
         # determine action
         action = controller.getControls(state)
@@ -21,5 +20,10 @@ def generate_episode(env, controller, iters=100):
 
         state = next_state
         steps += 1
+        total_reward += reward
+        done = env.done()
 
-    return episode, steps
+        if render:
+            env.render()
+
+    return episode, total_reward, steps

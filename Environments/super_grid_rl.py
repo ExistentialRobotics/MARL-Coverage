@@ -216,6 +216,9 @@ class SuperGridRL(object):
 
         return self.get_state()
 
+    def done(self):
+        return np.all(self._free)
+
     def render(self):
         #clear canvas
         plt.clf()
