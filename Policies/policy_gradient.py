@@ -36,3 +36,13 @@ class PolicyGradient(Base_Policy):
             m = Categorical(probs[i * self.num_actions: (i + 1) * self.num_actions])
             loss -= m.log_prob(action[i]) * r_return
         loss.backward()
+
+    def set_train(self):
+        self.policy_net.train()
+
+    def set_eval(self):
+        self.policy_net.eval()
+
+    def print_weights(self):
+        for name, param in self.policy_net.named_parameters():
+            print(param.detach().numpy())

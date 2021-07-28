@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 
 def generate_episode(env, controller, iters=100, render=False):
     episode = []
@@ -28,8 +29,11 @@ def train_RLalg(env, controller, episodes=1000, iters=100, render=False):
     # reset environment
     state = env.reset()
 
+    # set policy network to train mode 
+    controller.set_train()
+
     reward_per_episode = []
-    best_reward = 0
+    best_reward = -sys.maxsize - 1
     for _ in range(episodes):
         r = False
         if _ % 10 == 0:

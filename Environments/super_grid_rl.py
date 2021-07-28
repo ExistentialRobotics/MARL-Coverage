@@ -228,8 +228,8 @@ class SuperGridRL(object):
 
         return self.get_state()
 
-    def done(self):
-        return np.all(self._free)
+    def done(self, thres=0.85):
+        return thres < self.percent_covered()
 
     def percent_covered(self):
         return (np.count_nonzero(self._free < 1) / (self._gridlen * self._gridwidth))

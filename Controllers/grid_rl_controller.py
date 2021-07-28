@@ -1,5 +1,6 @@
 import numpy as np
 from . controller import Controller
+from copy import deepcopy
 
 class GridRLController(Controller):
     def __init__(self, numrobot, policy):
@@ -32,4 +33,16 @@ class GridRLController(Controller):
         self._policy.optimizer.step()
 
     def save_policy(self):
-        self._best_policy = self._policy
+        self._best_policy = deepcopy(self._policy)
+
+    def set_train(self):
+        self._policy.set_train()
+
+    def set_eval(self):
+        self._best_policy.set_eval()
+
+    def print_weights(self, best=False):
+        if best:
+            self._best_policy.print_weights()
+        else:
+            self._policy.print_weights()

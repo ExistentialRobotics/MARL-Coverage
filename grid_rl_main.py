@@ -59,6 +59,9 @@ train_rewardlis = train_RLalg(env, controller, episodes=train_episodes, iters=it
 
 '''Test policy'''
 print("-----------------------------Testing Policy----------------------------")
+# set policy network to eval mode
+controller.set_eval()
+
 test_rewardlis = []
 success = 0
 percent_covered = 0
