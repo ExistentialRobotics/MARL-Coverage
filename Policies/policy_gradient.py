@@ -8,9 +8,10 @@ class PolicyGradient(Base_Policy):
 
     def __init__(self, numrobot, action_space, learning_rate, obs_dim,
                  conv_channels, conv_filters, conv_activation, hidden_sizes,
-                 hidden_activation, output_activation):
+                 hidden_activation, output_activation, deterministic=False):
         super().__init__(numrobot, action_space)
         self.num_actions = action_space.num_actions
+        self._deterministic = deterministic
         action_dim = numrobot * self.num_actions
 
         # init policy network and optimizer
@@ -23,8 +24,12 @@ class PolicyGradient(Base_Policy):
         # sample from each set of probabilities to get the actions
         ulis = []
         for i in range(self.numrobot):
-            m = Categorical(probs[i * self.num_actions: (i + 1) * self.num_actions])
-            ulis.append(m.sample())
+            if(not self._deterministic):
+                m = Categorical(probs[i * self.num_actions: (i + 1) * self.num_actions])
+                ulis.append(m.sample())
+            else:
+                u = torch.argmax(probs[i * self.num_actions: (i + 1) * self.num_actions])
+                ulis.append(u)
         return ulis
 
     def calc_gradient(self, state, action, r_return):
@@ -46,3 +51,7 @@ class PolicyGradient(Base_Policy):
     def print_weights(self):
         for name, param in self.policy_net.named_parameters():
             print(param.detach().numpy())
+
+class pgBuffer(object):
+    def __init__(self):
+        pass
