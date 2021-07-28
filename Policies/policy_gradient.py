@@ -6,11 +6,15 @@ from torch.distributions.categorical import Categorical
 
 class PolicyGradient(Base_Policy):
 
-    def __init__(self, numrobot, action_space, learning_rate):
+    def __init__(self, numrobot, action_space, learning_rate, obs_dim,
+                 conv_channels, conv_filters, conv_activation, hidden_sizes,
+                 hidden_activation, output_activation):
         super().__init__(numrobot, action_space)
-        # init policy network and optimizer
         self.num_actions = action_space.num_actions
-        self.policy_net = Grid_RL_Conv(numrobot * self.num_actions)
+        action_dim = numrobot * self.num_actions
+
+        # init policy network and optimizer
+        self.policy_net = Grid_RL_Conv(action_dim, obs_dim, conv_channels, conv_filters, conv_activation, hidden_sizes, hidden_activation, output_activation)
         self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=learning_rate)
 
     def step(self, state):
@@ -25,7 +29,6 @@ class PolicyGradient(Base_Policy):
 
     def calc_gradient(self, state, action, r_return):
         probs = self.policy_net(torch.from_numpy(state).float())
-        m = Categorical(probs)
 
         # calculate gradient
         loss = 0

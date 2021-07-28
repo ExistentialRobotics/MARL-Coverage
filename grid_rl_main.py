@@ -9,34 +9,44 @@ from Policies.basic_random import Basic_Random
 from Policies.policy_gradient import PolicyGradient
 from Logger.logger import Logger
 from Utils.utils import train_RLalg
+import torch.nn as nn
 
 DASH = "-----------------------------------------------------------------------"
 
 '''Environment Parameters'''
-numrobot       = 6
-gridwidth      = 25
-gridlen        = 25
-seed           = 420
-num_actions    = 4
-render_test    = False
-render_train   = False
-lr             = 0.01
-train_episodes = 100
-test_episodes  = 100
-iters          = 100
-collision_p    = 5
+numrobot          = 6
+gridwidth         = 25
+gridlen           = 25
+seed              = 420
+num_actions       = 4
+render_test       = False
+render_train      = False
+lr                = 0.01
+train_episodes    = 100
+test_episodes     = 100
+iters             = 100
+collision_p       = 5
+conv_channels     = [10, 10]
+conv_filters      = [(5, 5), (5, 5)]
+conv_activation   = nn.ReLU
+hidden_sizes      = [500, 100]
+hidden_activation = nn.ReLU
+output_activation = nn.Sigmoid
+
+'''Making the environment'''
+env = SuperGridRL(numrobot, gridlen, gridwidth, collision_penalty=collision_p, seed=seed)
 
 '''Init action space'''
 action_space = Discrete(num_actions)
 
 '''Init policy'''
-policy = PolicyGradient(numrobot, action_space, lr)
+obs_dim = np.squeeze(env.get_state(), axis=0).shape
+policy = PolicyGradient(numrobot, action_space, lr, obs_dim, conv_channels,
+                        conv_filters, conv_activation, hidden_sizes,
+                        hidden_activation, output_activation)
 
 '''Making the Controller for the Swarm Agent'''
 controller = GridRLController(numrobot, policy)
-
-'''Making the environment'''
-env = SuperGridRL(numrobot, gridlen, gridwidth, collision_penalty=collision_p, seed=seed)
 
 #logging parameters
 makevid = False

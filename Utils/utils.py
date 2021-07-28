@@ -1,8 +1,4 @@
 import numpy as np
-import torch
-import torch.nn as nn
-from torch.distributions.categorical import Categorical
-from torch.distributions import Bernoulli
 
 def generate_episode(env, controller, iters=100, render=False):
     episode = []
