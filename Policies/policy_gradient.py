@@ -52,6 +52,3 @@ class PolicyGradient(Base_Policy):
         for name, param in self.policy_net.named_parameters():
             print(param.detach().numpy())
 
-class pgBuffer(object):
-    def __init__(self):
-        pass

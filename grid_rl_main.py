@@ -19,11 +19,11 @@ gridwidth         = 25
 gridlen           = 25
 seed              = 420
 num_actions       = 4
-render_test       = False
+render_test       = True
 render_train      = False
 lr                = 0.01
-train_episodes    = 100
-test_episodes     = 100
+train_episodes    = 10
+test_episodes     = 10
 iters             = 100
 collision_p       = 5
 conv_channels     = [10, 10]
@@ -38,7 +38,6 @@ env = SuperGridRL(numrobot, gridlen, gridwidth, collision_penalty=collision_p, s
 
 '''Init action space'''
 action_space = Discrete(num_actions)
-
 '''Init policy'''
 obs_dim = np.squeeze(env.get_state(), axis=0).shape
 policy = PolicyGradient(numrobot, action_space, lr, obs_dim, conv_channels,
@@ -49,7 +48,7 @@ policy = PolicyGradient(numrobot, action_space, lr, obs_dim, conv_channels,
 controller = GridRLController(numrobot, policy)
 
 #logging parameters
-makevid = False
+makevid = True
 testname = "grid_rl"
 logger = Logger(testname, makevid, 0.02)
 
