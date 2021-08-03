@@ -14,6 +14,8 @@ def generate_episode(env, controller, iters=100, render=False):
         # step environment and save episode results
         next_state, reward = env.step(action)
         episode.append((state, action, reward))
+        if controller._replay_buffer is not None:
+            controller._replay_buffer.addtransition(state, action, reward, next_state)
 
         state = next_state
         steps += 1
@@ -25,11 +27,11 @@ def generate_episode(env, controller, iters=100, render=False):
 
     return episode, total_reward, steps
 
-def train_RLalg(env, controller, episodes=1000, iters=100, render=False):
+def train_RLalg(env, controller, episodes=1000, iters=100, use_buf=False, render=False):
     # reset environment
     state = env.reset()
 
-    # set policy network to train mode 
+    # set policy network to train mode
     controller.set_train()
 
     reward_per_episode = []
@@ -41,8 +43,11 @@ def train_RLalg(env, controller, episodes=1000, iters=100, render=False):
                 r = True
             print("Training Episode: " + str(_) + " out of " + str(episodes))
 
-        # generate episode
         episode, total_reward, steps = generate_episode(env, controller, iters=iters, render=r)
+
+        # sample transitions from replay buffer to update the policy
+        if use_buf:
+            episode = controller._replay_buffer.sampleepisode(steps=steps)
 
         # track reward per episode
         reward_per_episode.append(total_reward)
@@ -52,7 +57,7 @@ def train_RLalg(env, controller, episodes=1000, iters=100, render=False):
         if total_reward > best_reward:
             print("New best reward on episode " + str(_) + ": " + str(total_reward) + "! Saving policy!")
             best_reward = total_reward
-            # controller.save_policy()
+            controller.save_policy()
 
         # update policy using the episode
         controller.update_policy(episode)

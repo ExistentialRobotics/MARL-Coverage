@@ -3,9 +3,10 @@ from . controller import Controller
 from copy import deepcopy
 
 class GridRLController(Controller):
-    def __init__(self, numrobot, policy):
+    def __init__(self, numrobot, policy, replay_buffer=None):
         super().__init__(numrobot, policy)
         self._best_policy = self._policy
+        self._replay_buffer = replay_buffer
 
     def getControls(self, observation, testing=False):
         if testing:
