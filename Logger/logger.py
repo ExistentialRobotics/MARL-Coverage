@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as ani
 import os
+import torch
 
 class Logger(object):
     """
@@ -25,6 +26,9 @@ class Logger(object):
 
         self._timeseries = {}
 
+        #checkpoint for model saving
+        self._current_checkpoint = 1
+
     def update(self):
         if(self._make_vid):
             #getting current simulation frame
@@ -43,9 +47,19 @@ class Logger(object):
         figure should be a matplotlib figure that has already been populated,
         name is the what it will be stored as.
         '''
-        pass
+        figure.savefig(self._output_dir + name + ".png")
+
+    def saveModelWeights(self, model):
+        '''
+        save a pytorch model state_dict
+        '''
+        torch.save(model.state_dict(), self._output_dir + 'models/checkpoint'
+                   + str(self._current_checkpoint) + '.pt')
+        self._current_checkpoint += 1
 
     def close(self):
+        '''
+        '''
         if self._make_vid:
             #saving video
             self._writer.finish()
