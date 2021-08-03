@@ -39,6 +39,8 @@ class PolicyGradient(Base_Policy):
         loss = 0
         for i in range(self.numrobot):
             m = Categorical(probs[i * self.num_actions: (i + 1) * self.num_actions])
+
+            #TODO use a better approximation of the action value function instead of r_return
             loss -= m.log_prob(action[i]) * r_return
         loss.backward()
 
@@ -51,4 +53,29 @@ class PolicyGradient(Base_Policy):
     def print_weights(self):
         for name, param in self.policy_net.named_parameters():
             print(param.detach().numpy())
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

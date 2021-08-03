@@ -22,8 +22,8 @@ num_actions       = 4
 render_test       = True
 render_train      = False
 lr                = 0.01
-train_episodes    = 10
-test_episodes     = 10
+train_episodes    = 200
+test_episodes     = 100
 iters             = 100
 collision_p       = 5
 conv_channels     = [10, 10]
@@ -34,7 +34,7 @@ hidden_activation = nn.ReLU
 output_activation = nn.Sigmoid
 
 '''Making the environment'''
-env = SuperGridRL(numrobot, gridlen, gridwidth, collision_penalty=collision_p, seed=seed)
+env = SuperGridRL(numrobot, gridlen, gridwidth, collision_penalty=collision_p)
 
 '''Init action space'''
 action_space = Discrete(num_actions)

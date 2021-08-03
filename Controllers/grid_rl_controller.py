@@ -5,7 +5,7 @@ from copy import deepcopy
 class GridRLController(Controller):
     def __init__(self, numrobot, policy):
         super().__init__(numrobot, policy)
-        self._best_policy = None
+        self._best_policy = self._policy
 
     def getControls(self, observation, testing=False):
         if testing:
@@ -33,6 +33,7 @@ class GridRLController(Controller):
         self._policy.optimizer.step()
 
     def save_policy(self):
+        #TODO change this to save copy of parameters in a folder
         self._best_policy = deepcopy(self._policy)
 
     def set_train(self):
