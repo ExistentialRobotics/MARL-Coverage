@@ -39,3 +39,10 @@ class ReplayBuffer(object):
         #returns a random transition in the replay buffer
         index = np.random.randint(self._size)
         return self._state[index], self._action[index], self._reward[index], self._nextstate[index]
+
+    def sampleepisode(self, steps):
+        episode = []
+        for i in range(steps):
+            state, action, reward, next_state = self.sampletransition()
+            episode.append((state, action, reward, next_state))
+        return episode

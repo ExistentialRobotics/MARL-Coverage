@@ -7,6 +7,7 @@ from Controllers.grid_rl_controller import GridRLController
 from Action_Spaces.discrete import Discrete
 from Policies.basic_random import Basic_Random
 from Policies.policy_gradient import PolicyGradient
+from Policies.replaybuffer import ReplayBuffer
 from Logger.logger import Logger
 from Utils.utils import train_RLalg
 import torch.nn as nn
@@ -32,23 +33,31 @@ conv_activation   = nn.ReLU
 hidden_sizes      = [500, 100]
 hidden_activation = nn.ReLU
 output_activation = nn.Sigmoid
+buffer = True
+buffer_maxsize = 500
 
 '''Making the environment'''
 env = SuperGridRL(numrobot, gridlen, gridwidth, collision_penalty=collision_p)
 
 '''Init action space'''
 action_space = Discrete(num_actions)
+
 '''Init policy'''
 obs_dim = np.squeeze(env.get_state(), axis=0).shape
 policy = PolicyGradient(numrobot, action_space, lr, obs_dim, conv_channels,
                         conv_filters, conv_activation, hidden_sizes,
                         hidden_activation, output_activation)
 
+'''Init replay buffer'''
+buff = None
+if buffer:
+    buff = ReplayBuffer(buffer_maxsize)
+
 '''Making the Controller for the Swarm Agent'''
-controller = GridRLController(numrobot, policy)
+controller = GridRLController(numrobot, policy, replay_buffer=buff)
 
 #logging parameters
-makevid = True
+makevid = False
 testname = "grid_rl"
 logger = Logger(testname, makevid, 0.02)
 
