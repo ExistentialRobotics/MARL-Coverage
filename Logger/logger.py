@@ -21,8 +21,8 @@ class Logger(object):
             os.makedirs(self._output_dir)
 
         if make_video:
-            self._writer = ani.FFMpegWriter(fps= int(1/dt))
             print(self._output_dir + experiment_name + ".mp4")
+            self._writer = ani.FFMpegWriter(fps= int(1/dt))
             self._writer.setup(plt.gcf(), self._output_dir + experiment_name + ".mp4", dpi=100)
 
         self._timeseries = {}
@@ -54,6 +54,13 @@ class Logger(object):
         '''
         save a pytorch model state_dict
         '''
+
+        #checking if models directory exists
+        if os.path.isdir(self._output_dir + 'models/'):
+            print("past models exist, overwriting them")
+        else:
+            os.makedirs(self._output_dir + 'models/')
+
         torch.save(model.state_dict(), self._output_dir + 'models/checkpoint'
                    + str(self._current_checkpoint) + '.pt')
         self._current_checkpoint += 1

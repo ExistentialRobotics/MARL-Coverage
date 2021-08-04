@@ -186,8 +186,6 @@ print(DASH)
 print("Trained policy covered " + str((percent_covered / test_episodes) * 100) + " percent of the environment on average!")
 print(DASH)
 
-#closing logger
-logger.close()
 
 # plot testing rewards
 plt.figure(2)
@@ -196,6 +194,7 @@ plt.xlabel('Episodes')
 plt.ylabel('Reward')
 line_r, = plt.plot(train_rewardlis, label="Training Reward")
 plt.legend(handles=[line_r])
+logger.savefig(plt.gcf(), 'TrainingReward')
 plt.show()
 
 # plot training rewards
@@ -205,4 +204,8 @@ plt.xlabel('Episodes')
 plt.ylabel('Reward')
 line_r, = plt.plot(test_rewardlis, label="Testing Reward")
 plt.legend(handles=[line_r])
+logger.savefig(plt.gcf(), 'TestingReward')
 plt.show()
+
+#closing logger
+logger.close()
