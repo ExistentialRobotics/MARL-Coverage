@@ -25,10 +25,10 @@ num_actions       = 4
 render_test       = True
 render_train      = True
 lr                = 0.00001
-train_episodes    = 1000
+train_episodes    = 200
 test_episodes     = 100
-train_iters       = 100
-test_iters        = 100
+train_iters       = 50
+test_iters        = 50
 collision_p       = 5
 conv_channels     = [20, 10]
 conv_filters      = [(5, 5), (3, 3)]
@@ -36,7 +36,7 @@ conv_activation   = nn.ReLU
 hidden_sizes      = [500, 100]
 hidden_activation = nn.ReLU
 output_activation = nn.Sigmoid
-buffer            = True
+buffer            = False
 buffer_maxsize    = (train_episodes * train_iters) / 4
 
 # # prevent decimal printing
@@ -98,7 +98,7 @@ if buffer:
 controller = GridRLController(numrobot, policy, replay_buffer=buff)
 
 #logging parameters
-makevid = False
+makevid = True
 testname = "grid_rl"
 logger = Logger(testname, makevid, 0.02)
 
@@ -106,7 +106,7 @@ logger = Logger(testname, makevid, 0.02)
 train_rewardlis = []
 if not random_policy:
     print("----------Running PG for " + str(test_episodes) + " episodes-----------")
-    train_rewardlis = train_RLalg(env, controller, episodes=train_episodes, iters=train_iters, use_buf=buffer, render=render_train)
+    train_rewardlis = train_RLalg(env, controller, logger, episodes=train_episodes, iters=train_iters, use_buf=buffer, render=render_train)
 else:
     print("-----------------------Running Random Policy-----------------------")
 
@@ -157,8 +157,6 @@ print(DASH)
 print("Trained policy covered " + str((percent_covered / test_episodes) * 100) + " percent of the environment on average!")
 print(DASH)
 
-#closing logger
-logger.close()
 
 # plot testing rewards
 plt.figure(2)
@@ -167,6 +165,7 @@ plt.xlabel('Episodes')
 plt.ylabel('Reward')
 line_r, = plt.plot(train_rewardlis, label="Training Reward")
 plt.legend(handles=[line_r])
+logger.savefig(plt.gcf(), 'TrainingReward')
 plt.show()
 
 # plot training rewards
@@ -176,4 +175,8 @@ plt.xlabel('Episodes')
 plt.ylabel('Reward')
 line_r, = plt.plot(test_rewardlis, label="Testing Reward")
 plt.legend(handles=[line_r])
+logger.savefig(plt.gcf(), 'TestingReward')
 plt.show()
+
+#closing logger
+logger.close()

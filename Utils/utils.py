@@ -27,7 +27,7 @@ def generate_episode(env, controller, iters=100, render=False):
 
     return episode, total_reward, steps
 
-def train_RLalg(env, controller, episodes=1000, iters=100, use_buf=False, render=False):
+def train_RLalg(env, controller, logger, episodes=1000, iters=100, use_buf=False, render=False):
     h = episodes // 2
 
     # reset environment
@@ -55,17 +55,20 @@ def train_RLalg(env, controller, episodes=1000, iters=100, use_buf=False, render
         # track reward per episode
         reward_per_episode.append(total_reward)
 
-        # save the best policy
-        #TODO fix this, reward is super noisy, better metric might be a moving average, or just save at a fixed interval
+        # letting us know when we beat previous best
         if total_reward > best_reward:
-            print("New best reward on episode " + str(_) + ": " + str(total_reward) + "! Saving policy!")
+            print("New best reward on episode " + str(_) + ": " + str(total_reward))
             best_reward = total_reward
-            controller.save_policy()
+
+
+        #saving policy at fixed checkpoints
+        if _ % 500 == 0:
+            logger.saveModelWeights(controller._policy.policy_net)
 
         # update policy using the episode
         controller.update_policy(episode)
 
     #saving final policy
-    controller.save_policy()
+    logger.saveModelWeights(controller._policy.policy_net)
 
     return reward_per_episode

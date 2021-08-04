@@ -258,8 +258,7 @@ class SuperGridRL(object):
         plt.gca().set_yticks(np.arange(0, self._gridlen, 1))
         plt.grid()
 
-        #TODO correct the 0.5 offset where half a grid cell is being filled
-        plt.imshow(np.transpose(self._free))
+        plt.imshow(np.transpose(self._free), extent=[0, self._gridwidth, self._gridlen, 0])
 
         #drawing everything
         plt.draw()
