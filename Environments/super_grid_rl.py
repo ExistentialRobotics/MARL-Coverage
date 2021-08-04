@@ -190,8 +190,10 @@ class SuperGridRL(object):
         """
         #TODO: Vectorize this method
         ret = np.zeros((self._gridwidth, self._gridlen))
+        ind = 1
         for i, j in zip(self._xinds, self._yinds):
             ret[i, j] = 1
+            ind += 1
         return ret
 
     def reset(self):
