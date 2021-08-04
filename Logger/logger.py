@@ -10,7 +10,7 @@ class Logger(object):
     """
     def __init__(self, experiment_name, make_video, dt=None):
         super().__init__()
-        self._output_dir = "./experiments/{}/".format(experiment_name)
+        self._output_dir = "./Experiments/grid_rl/{}/".format(experiment_name)
         self._dt = dt
         self._make_vid = make_video
 
@@ -22,6 +22,7 @@ class Logger(object):
 
         if make_video:
             self._writer = ani.FFMpegWriter(fps= int(1/dt))
+            print(self._output_dir + experiment_name + ".mp4")
             self._writer.setup(plt.gcf(), self._output_dir + experiment_name + ".mp4", dpi=100)
 
         self._timeseries = {}
@@ -66,8 +67,3 @@ class Logger(object):
 
         #check if there is any timeseries data and save to text file
         #TODO
-
-
-
-
-

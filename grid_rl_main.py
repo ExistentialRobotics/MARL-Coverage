@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
+import json
 
 from Environments.super_grid_rl import SuperGridRL
 from Controllers.grid_rl_random_controller import GridRLRandomController
@@ -15,64 +16,97 @@ import torch.nn as nn
 
 DASH = "-----------------------------------------------------------------------"
 
+# prevent decimal printing
+np.set_printoptions(suppress=True)
+
+'''Read config file'''
+if len(sys.argv) != 2:
+    print(DASH)
+    print("No config file specified.")
+    print(DASH)
+    sys.exit(1)
+
+# check if config path is valid
+config_path = sys.argv[1]
+try:
+    config_file = open(config_path)
+except OSError:
+    print(DASH)
+    print(str(config_path) + " does not exit.")
+    print(DASH)
+    sys.exit(1)
+
+# load json file
+try:
+    exp_parameters = json.load(config_file)
+except:
+    print(DASH)
+    print(str(config_path) + " is an invalid json file.")
+    print(DASH)
+    sys.exit(1)
+
 '''Environment Parameters'''
-random_policy     = False
-numrobot          = 6
-gridwidth         = 25
-gridlen           = 25
-seed              = 420
-num_actions       = 4
-render_test       = True
-render_train      = True
-lr                = 0.00001
-train_episodes    = 1000
-test_episodes     = 100
-train_iters       = 100
-test_iters        = 100
-collision_p       = 5
-conv_channels     = [20, 10]
-conv_filters      = [(5, 5), (3, 3)]
-conv_activation   = nn.ReLU
-hidden_sizes      = [500, 100]
-hidden_activation = nn.ReLU
-output_activation = nn.Sigmoid
-buffer            = True
-buffer_maxsize    = (train_episodes * train_iters) / 4
+exp_name       = exp_parameters["experiment_name"]
+numrobot       = exp_parameters["numrobot"]
+gridwidth      = exp_parameters["gridwidth"]
+gridlen        = exp_parameters["gridlen"]
+seed           = exp_parameters["seed"]
+num_actions    = exp_parameters["num_actions"]
+lr             = exp_parameters["lr"]
+train_episodes = exp_parameters["train_episodes"]
+test_episodes  = exp_parameters["test_episodes"]
+train_iters    = exp_parameters["train_iters"]
+test_iters     = exp_parameters["test_iters"]
+collision_p    = exp_parameters["collision_p"]
+buffer_maxsize = (train_episodes * train_iters) / exp_parameters["buf_divisor"]
 
-# # prevent decimal printing
-# np.set_printoptions(suppress=True)
-#
-#
-# '''Read config file'''
-# if len(sys.argv) != 2:
-#     print(DASH)
-#     print("No config file specified.")
-#     print(DASH)
-#     sys.exit(1)
-#
-# # check if config path is valid
-# config_path = sys.argv[1]
-# try:
-#     config_file = open(config_path)
-# except OSError:
-#     print(DASH)
-#     print(str(config_path) + " does not exit.")
-#     print(DASH)
-#     sys.exit(1)
-#
-# # load json file
-# try:
-#     hyperparams = json.load(config_file)
-# except:
-#     print(DASH)
-#     print(str(config_path) + " is an invalid json file.")
-#     print(DASH)
-#     sys.exit(1)
-#
-# print(DASH)
-# print("Running experiement using: " + str(config_path))
-# print(DASH)
+makevid = False
+if exp_parameters["makevid"] == 1:
+    makevid = True
 
+random_policy = False
+if exp_parameters["random_policy"] == 1:
+    random_policy = True
+
+render_test = False
+if exp_parameters["render_test"] == 1:
+    render_test = True
+
+render_train = False
+if exp_parameters["render_train"] == 1:
+    render_train = True
+
+buffer = False
+if exp_parameters["buffer"] == 1:
+    buffer = True
+
+conv_channels = []
+for channel in exp_parameters["conv_channels"]:
+    conv_channels.append(channel["_"])
+
+conv_filters = []
+for filter in exp_parameters["conv_filters"]:
+    conv_filters.append((filter["_"], filter["_"]))
+
+hidden_sizes = []
+for size in exp_parameters["hidden_sizes"]:
+    hidden_sizes.append(size["_"])
+
+if exp_parameters["conv_activation"] == "relu":
+    conv_activation = nn.ReLU
+
+if exp_parameters["hidden_activation"] == "relu":
+    hidden_activation = nn.ReLU
+
+if exp_parameters["output_activation"] == "sigmoid":
+    output_activation = nn.Sigmoid
+
+print(DASH)
+print("Running experiement using: " + str(config_path))
+print(DASH)
+
+'''Init logger'''
+logger = Logger(exp_name, makevid, 0.02)
 
 '''Making the environment'''
 env = SuperGridRL(numrobot, gridlen, gridwidth, collision_penalty=collision_p)
@@ -97,15 +131,10 @@ if buffer:
 '''Making the Controller for the Swarm Agent'''
 controller = GridRLController(numrobot, policy, replay_buffer=buff)
 
-#logging parameters
-makevid = False
-testname = "grid_rl"
-logger = Logger(testname, makevid, 0.02)
-
 '''Train policy'''
 train_rewardlis = []
 if not random_policy:
-    print("----------Running PG for " + str(test_episodes) + " episodes-----------")
+    print("----------Running PG for " + str(train_episodes) + " episodes-----------")
     train_rewardlis = train_RLalg(env, controller, episodes=train_episodes, iters=train_iters, use_buf=buffer, render=render_train)
 else:
     print("-----------------------Running Random Policy-----------------------")

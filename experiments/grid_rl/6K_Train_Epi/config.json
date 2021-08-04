@@ -1,0 +1,47 @@
+{
+  "experiment_name"   : "6K_Train_Epi",
+  "makevid"           : 1,
+  "random_policy"     : 0,
+  "numrobot"          : 6,
+  "gridwidth"         : 25,
+  "gridlen"           : 25,
+  "seed"              : 420,
+  "num_actions"       : 4,
+  "render_test"       : 1,
+  "render_train"      : 1,
+  "lr"                : 0.0001,
+  "train_episodes"    : 6000,
+  "test_episodes"     : 100,
+  "train_iters"       : 200,
+  "test_iters"        : 100,
+  "collision_p"       : 5,
+  "conv_channels"     : [
+    {
+      "_" : 10
+    },
+    {
+      "_" : 10
+    }
+  ],
+  "conv_filters"      : [
+    {
+      "_" : 5
+    },
+    {
+      "_" : 5
+    }
+  ],
+  "conv_activation"   : "relu",
+  "hidden_sizes"      : [
+    {
+      "_" : 500
+    },
+    {
+      "_" : 100
+    }
+  ],
+  "hidden_activation" : "relu",
+  "output_activation" : "sigmoid",
+  "buffer"            : 1,
+  "buf_divisor" : 4
+}
