@@ -15,17 +15,19 @@ import torch.nn as nn
 DASH = "-----------------------------------------------------------------------"
 
 '''Environment Parameters'''
+random_policy     = False
 numrobot          = 6
 gridwidth         = 25
 gridlen           = 25
 seed              = 420
 num_actions       = 4
-render_test       = True
+render_test       = False
 render_train      = False
 lr                = 0.0001
 train_episodes    = 200
 test_episodes     = 100
-iters             = 100
+train_iters       = 200
+test_iters        = 100
 collision_p       = 5
 conv_channels     = [10, 10]
 conv_filters      = [(5, 5), (5, 5)]
@@ -33,8 +35,8 @@ conv_activation   = nn.ReLU
 hidden_sizes      = [500, 100]
 hidden_activation = nn.ReLU
 output_activation = nn.Sigmoid
-buffer = True
-buffer_maxsize = 500
+buffer            = True
+buffer_maxsize    = 500
 
 '''Making the environment'''
 env = SuperGridRL(numrobot, gridlen, gridwidth, collision_penalty=collision_p)
@@ -44,9 +46,12 @@ action_space = Discrete(num_actions)
 
 '''Init policy'''
 obs_dim = np.squeeze(env.get_state(), axis=0).shape
-policy = PolicyGradient(numrobot, action_space, lr, obs_dim, conv_channels,
-                        conv_filters, conv_activation, hidden_sizes,
-                        hidden_activation, output_activation)
+if random_policy:
+    policy = Basic_Random(numrobot, action_space)
+else:
+    policy = PolicyGradient(numrobot, action_space, lr, obs_dim, conv_channels,
+                            conv_filters, conv_activation, hidden_sizes,
+                            hidden_activation, output_activation)
 
 '''Init replay buffer'''
 buff = None
@@ -62,13 +67,18 @@ testname = "grid_rl"
 logger = Logger(testname, makevid, 0.02)
 
 '''Train policy'''
-print("----------Running PG for " + str(test_episodes) + " episodes-----------")
-train_rewardlis = train_RLalg(env, controller, episodes=train_episodes, iters=iters)
+train_rewardlis = []
+if not random_policy:
+    print("----------Running PG for " + str(test_episodes) + " episodes-----------")
+    train_rewardlis = train_RLalg(env, controller, episodes=train_episodes, iters=train_iters)
+else:
+    print("-----------------------Running Random Policy-----------------------")
 
 '''Test policy'''
 print("-----------------------------Testing Policy----------------------------")
 # set policy network to eval mode
-controller.set_eval()
+if not random_policy:
+    controller.set_eval()
 
 test_rewardlis = []
 success = 0
@@ -85,7 +95,7 @@ for _ in range(test_episodes):
     steps = 0
     total_reward = 0
     done = False
-    while not done and steps != iters:
+    while not done and steps != test_iters:
         # determine action
         action = controller.getControls(state, testing=True)
 

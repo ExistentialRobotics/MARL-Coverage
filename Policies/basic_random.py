@@ -7,7 +7,7 @@ class Basic_Random(Base_Policy):
         super().__init__(num_output, action_space)
 
     def step(self, state):
-        return self.action_space.sample(s=self.num_output)
+        return self.action_space.sample(s=self.numrobot)
 
     def update(self):
         pass

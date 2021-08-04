@@ -55,7 +55,7 @@ def train_RLalg(env, controller, episodes=1000, iters=100, use_buf=False, render
         # save the best policy
         #TODO fix this, reward is super noisy, better metric might be a moving average, or just save at a fixed interval
         if total_reward > best_reward:
-            # print("New best reward on episode " + str(_) + ": " + str(total_reward) + "! Saving policy!")
+            print("New best reward on episode " + str(_) + ": " + str(total_reward) + "! Saving policy!")
             best_reward = total_reward
             controller.save_policy()
 
