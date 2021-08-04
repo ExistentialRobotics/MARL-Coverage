@@ -135,7 +135,7 @@ controller = GridRLController(numrobot, policy, replay_buffer=buff)
 train_rewardlis = []
 if not random_policy:
     print("----------Running PG for " + str(train_episodes) + " episodes-----------")
-    train_rewardlis = train_RLalg(env, controller, episodes=train_episodes, iters=train_iters, use_buf=buffer, render=render_train)
+    train_rewardlis = train_RLalg(env, controller, logger, episodes=train_episodes, iters=train_iters, use_buf=buffer, render=render_train)
 else:
     print("-----------------------Running Random Policy-----------------------")
 
