@@ -7,13 +7,14 @@ class SuperGridRL(object):
     """
     A Multi-Agent Grid Environment with a discrete action space for RL testing.
     """
-    def __init__(self, numrobot, gridlen, gridwidth, discrete_grid_values=2, collision_penalty=5, sensesize=1, grid=None, seed=None):
+    def __init__(self, numrobot, gridlen, gridwidth, discrete_grid_values=2, collision_penalty=5, sensesize=1, grid=None, seed=None, free_penalty=0):
         super().__init__()
 
         self._numrobot = numrobot
         self._gridlen = gridlen
         self._gridwidth = gridwidth
         self._collision_penalty = collision_penalty
+        self._free_penalty = free_penalty
 
         #sensing radius using chess metric(like how a king moves) -> "Chebyshev distance"
         self._sensesize = sensesize
@@ -147,6 +148,10 @@ class SuperGridRL(object):
 
                         # mark as not free
                         self._free[j][k] = 0
+
+                    elif(self.isInBounds(j,k) and self._grid[j][k]>=0 and
+                       self._free[j][k] == 0):
+                       reward -= self._free_penalty
 
                     elif(self.isInBounds(j,k) and self._grid[j][k]<0 and
                          self._observed_obstacles[j][k] == 0):

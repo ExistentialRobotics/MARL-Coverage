@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
 
 from Environments.super_grid_rl import SuperGridRL
 from Controllers.grid_rl_random_controller import GridRLRandomController
@@ -21,22 +22,57 @@ gridwidth         = 25
 gridlen           = 25
 seed              = 420
 num_actions       = 4
-render_test       = False
-render_train      = False
-lr                = 0.0001
-train_episodes    = 200
+render_test       = True
+render_train      = True
+lr                = 0.00001
+train_episodes    = 1000
 test_episodes     = 100
-train_iters       = 200
+train_iters       = 100
 test_iters        = 100
 collision_p       = 5
-conv_channels     = [10, 10]
-conv_filters      = [(5, 5), (5, 5)]
+conv_channels     = [20, 10]
+conv_filters      = [(5, 5), (3, 3)]
 conv_activation   = nn.ReLU
 hidden_sizes      = [500, 100]
 hidden_activation = nn.ReLU
 output_activation = nn.Sigmoid
 buffer            = True
-buffer_maxsize    = 500
+buffer_maxsize    = (train_episodes * train_iters) / 4
+
+# # prevent decimal printing
+# np.set_printoptions(suppress=True)
+#
+#
+# '''Read config file'''
+# if len(sys.argv) != 2:
+#     print(DASH)
+#     print("No config file specified.")
+#     print(DASH)
+#     sys.exit(1)
+#
+# # check if config path is valid
+# config_path = sys.argv[1]
+# try:
+#     config_file = open(config_path)
+# except OSError:
+#     print(DASH)
+#     print(str(config_path) + " does not exit.")
+#     print(DASH)
+#     sys.exit(1)
+#
+# # load json file
+# try:
+#     hyperparams = json.load(config_file)
+# except:
+#     print(DASH)
+#     print(str(config_path) + " is an invalid json file.")
+#     print(DASH)
+#     sys.exit(1)
+#
+# print(DASH)
+# print("Running experiement using: " + str(config_path))
+# print(DASH)
+
 
 '''Making the environment'''
 env = SuperGridRL(numrobot, gridlen, gridwidth, collision_penalty=collision_p)
@@ -70,7 +106,7 @@ logger = Logger(testname, makevid, 0.02)
 train_rewardlis = []
 if not random_policy:
     print("----------Running PG for " + str(test_episodes) + " episodes-----------")
-    train_rewardlis = train_RLalg(env, controller, episodes=train_episodes, iters=train_iters)
+    train_rewardlis = train_RLalg(env, controller, episodes=train_episodes, iters=train_iters, use_buf=buffer, render=render_train)
 else:
     print("-----------------------Running Random Policy-----------------------")
 

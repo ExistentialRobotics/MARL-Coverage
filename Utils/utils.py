@@ -28,6 +28,8 @@ def generate_episode(env, controller, iters=100, render=False):
     return episode, total_reward, steps
 
 def train_RLalg(env, controller, episodes=1000, iters=100, use_buf=False, render=False):
+    h = episodes // 2
+
     # reset environment
     state = env.reset()
 
@@ -38,9 +40,10 @@ def train_RLalg(env, controller, episodes=1000, iters=100, use_buf=False, render
     best_reward = -sys.maxsize - 1
     for _ in range(episodes):
         r = False
-        if _ % 10 == 0:
+        if _ == h:
             if render:
                 r = True
+        if _ % 10 == 0:
             print("Training Episode: " + str(_) + " out of " + str(episodes))
 
         episode, total_reward, steps = generate_episode(env, controller, iters=iters, render=r)
