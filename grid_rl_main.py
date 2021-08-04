@@ -186,7 +186,6 @@ print(DASH)
 print("Trained policy covered " + str((percent_covered / test_episodes) * 100) + " percent of the environment on average!")
 print(DASH)
 
-
 # plot testing rewards
 plt.figure(2)
 plt.title("Training Reward per Episode")
