@@ -9,6 +9,7 @@ from Controllers.grid_rl_controller import GridRLController
 from Action_Spaces.discrete import Discrete
 from Policies.basic_random import Basic_Random
 from Policies.policy_gradient import PolicyGradient
+from Policies.dqn import DQN
 from Policies.replaybuffer import ReplayBuffer
 from Logger.logger import Logger
 from Utils.utils import train_RLalg
@@ -64,9 +65,6 @@ makevid = False
 if exp_parameters["makevid"] == 1:
     makevid = True
 
-random_policy = False
-if exp_parameters["random_policy"] == 1:
-    random_policy = True
 
 render_test = False
 if exp_parameters["render_test"] == 1:
@@ -116,26 +114,31 @@ action_space = Discrete(num_actions)
 
 '''Init policy'''
 obs_dim = np.squeeze(env.get_state(), axis=0).shape
-if random_policy:
+random_policy = False
+if exp_parameters["random_policy"] == "random":
     policy = Basic_Random(numrobot, action_space)
-else:
+    random_policy = True
+elif exp_parameters["random_policy"] == "pg":
     policy = PolicyGradient(numrobot, action_space, lr, obs_dim, conv_channels,
                             conv_filters, conv_activation, hidden_sizes,
                             hidden_activation, output_activation)
+elif exp_parameters["random_policy"] == "dqn":
+    #TODO add other DQN parameters into config
+    policy = DQN(numrobot, action_space, lr, obs_dim, conv_channels, conv_filters, conv_activation, hidden_sizes, hidden_activation, output_activation)
 
-'''Init replay buffer'''
-buff = None
-if buffer:
-    buff = ReplayBuffer(buffer_maxsize)
+# '''Init replay buffer'''
+# buff = None
+# if buffer:
+#     buff = ReplayBuffer(buffer_maxsize)
 
 '''Making the Controller for the Swarm Agent'''
-controller = GridRLController(numrobot, policy, replay_buffer=buff)
+controller = GridRLController(numrobot, policy)
 
 '''Train policy'''
 train_rewardlis = []
 if not random_policy:
     print("----------Running PG for " + str(train_episodes) + " episodes-----------")
-    train_rewardlis = train_RLalg(env, controller, logger, episodes=train_episodes, iters=train_iters, use_buf=buffer, render=render_train)
+    train_rewardlis = train_RLalg(env, controller, logger, episodes=train_episodes, iters=train_iters, render=render_train)
 else:
     print("-----------------------Running Random Policy-----------------------")
 

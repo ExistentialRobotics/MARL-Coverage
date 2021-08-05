@@ -35,6 +35,10 @@ class ReplayBuffer(object):
         #incrementing size
         self._size += 1
 
+    def addepisode(self, episode):
+        for i in range(len(episode)):
+            self.addtransition(episode[i][0], episode[i][1], episode[i][2], episode[i][3])
+
     def sampletransition(self):
         #returns a random transition in the replay buffer
         index = np.random.randint(self._size)

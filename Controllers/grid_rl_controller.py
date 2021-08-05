@@ -3,52 +3,20 @@ from . controller import Controller
 from copy import deepcopy
 
 class GridRLController(Controller):
-    def __init__(self, numrobot, policy, replay_buffer=None):
+    def __init__(self, numrobot, policy):
         super().__init__(numrobot, policy)
-        # self._best_policy = self._policy
-        self._replay_buffer = replay_buffer
 
     def getControls(self, observation, testing=False):
-        # if testing:
-        #     return self._best_policy.step(observation)
-        # else:
-        #     return self._policy.step(observation)
         return self._policy.step(observation)
 
     def update_policy(self, episode):
-         #TODO this method will not work for buffer since transitions may be from different trajectories
-
-        # reset gradients to zero
-        self._policy.optimizer.zero_grad()
-
-        for i in range(len(episode)):
-            state = episode[i][0]
-            action = episode[i][1]
-
-            # sum return
-            r_return = 0
-            for j in range(i, len(episode)):
-                r_return += episode[i][2]
-
-            # increment gradient
-            self._policy.calc_gradient(state, action, r_return)
-
-        # update parameters
-        self._policy.optimizer.step()
-
-    # def save_policy(self):
-    #     self._best_policy = deepcopy(self._policy)
+        self._policy.update_policy(episode)
 
     def set_train(self):
         self._policy.set_train()
 
     def set_eval(self):
-        # self._best_policy.set_eval()
         self._policy.set_eval()
 
-    def print_weights(self, best=False):
-        # if best:
-        #     self._best_policy.print_weights()
-        # else:
-        #     self._policy.print_weights()
+    def print_weights(self):
         self._policy.print_weights()

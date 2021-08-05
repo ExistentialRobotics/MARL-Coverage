@@ -13,10 +13,7 @@ def generate_episode(env, controller, iters=100, render=False):
 
         # step environment and save episode results
         next_state, reward = env.step(action)
-        episode.append((state, action, reward))
-        if controller._replay_buffer is not None:
-            controller._replay_buffer.addtransition(state, action, reward, next_state)
-
+        episode.append((state, action, reward, next_state))
         state = next_state
         steps += 1
         total_reward += reward
@@ -27,7 +24,7 @@ def generate_episode(env, controller, iters=100, render=False):
 
     return episode, total_reward, steps
 
-def train_RLalg(env, controller, logger, episodes=1000, iters=100, use_buf=False, render=False):
+def train_RLalg(env, controller, logger, episodes=1000, iters=100,  render=False):
     h = episodes // 2
 
     # reset environment
@@ -48,10 +45,6 @@ def train_RLalg(env, controller, logger, episodes=1000, iters=100, use_buf=False
 
         episode, total_reward, steps = generate_episode(env, controller, iters=iters, render=r)
 
-        # sample transitions from replay buffer to update the policy
-        if use_buf:
-            episode = controller._replay_buffer.sampleepisode(steps=steps)
-
         # track reward per episode
         reward_per_episode.append(total_reward)
 
@@ -60,15 +53,14 @@ def train_RLalg(env, controller, logger, episodes=1000, iters=100, use_buf=False
             print("New best reward on episode " + str(_) + ": " + str(total_reward))
             best_reward = total_reward
 
-
         #saving policy at fixed checkpoints
         if _ % 500 == 0:
-            logger.saveModelWeights(controller._policy.policy_net)
+            logger.saveModelWeights(controller._policy.getnet())
 
         # update policy using the episode
         controller.update_policy(episode)
 
     #saving final policy
-    logger.saveModelWeights(controller._policy.policy_net)
+    logger.saveModelWeights(controller._policy.getnet())
 
     return reward_per_episode

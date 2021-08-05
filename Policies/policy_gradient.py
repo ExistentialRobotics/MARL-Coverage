@@ -8,15 +8,17 @@ class PolicyGradient(Base_Policy):
 
     def __init__(self, numrobot, action_space, learning_rate, obs_dim,
                  conv_channels, conv_filters, conv_activation, hidden_sizes,
-                 hidden_activation, output_activation, deterministic=False):
+                 hidden_activation, output_activation, gamma=0.9):
         super().__init__(numrobot, action_space)
         self.num_actions = action_space.num_actions
-        self._deterministic = deterministic
         action_dim = numrobot * self.num_actions
 
         # init policy network and optimizer
         self.policy_net = Grid_RL_Conv(action_dim, obs_dim, conv_channels, conv_filters, conv_activation, hidden_sizes, hidden_activation, output_activation)
         self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=learning_rate)
+
+        #reward discounting
+        self._gamma = gamma
 
     def step(self, state):
         probs = self.policy_net(torch.from_numpy(state).float())
@@ -24,13 +26,30 @@ class PolicyGradient(Base_Policy):
         # sample from each set of probabilities to get the actions
         ulis = []
         for i in range(self.numrobot):
-            if(not self._deterministic):
-                m = Categorical(probs[i * self.num_actions: (i + 1) * self.num_actions])
-                ulis.append(m.sample())
-            else:
-                u = torch.argmax(probs[i * self.num_actions: (i + 1) * self.num_actions])
-                ulis.append(u)
+            m = Categorical(probs[i * self.num_actions: (i + 1) * self.num_actions])
+            ulis.append(m.sample())
         return ulis
+
+    def update_policy(self, episode):
+        self.optimizer.zero_grad()
+
+        #calculate all r_returns efficiently (with discounting)
+        d_rewards = []
+        d_rewards.append(episode[len(episode) - 1][2])
+        for i in range(len(episode) - 1):
+            d_rewards.insert(0, self._gamma*d_rewards[0]
+                            + episode[len(episode) - 2 - i][2])
+
+        #calculating gradients for each step of episode 
+        for i in range(len(episode)):
+            state = episode[i][0]
+            action = episode[i][1]
+
+            # increment gradient
+            self.calc_gradient(state, action, d_rewards[i])
+
+        # update parameters
+        self.optimizer.step()
 
     def calc_gradient(self, state, action, r_return):
         probs = self.policy_net(torch.from_numpy(state).float())
@@ -39,8 +58,6 @@ class PolicyGradient(Base_Policy):
         loss = 0
         for i in range(self.numrobot):
             m = Categorical(probs[i * self.num_actions: (i + 1) * self.num_actions])
-
-            #TODO use a better approximation of the action value function instead of r_return
             loss -= m.log_prob(action[i]) * r_return
         loss.backward()
 
@@ -53,6 +70,9 @@ class PolicyGradient(Base_Policy):
     def print_weights(self):
         for name, param in self.policy_net.named_parameters():
             print(param.detach().numpy())
+
+    def getnet(self):
+        return self.policy_net
 
 
 
