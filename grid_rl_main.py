@@ -124,12 +124,12 @@ elif exp_parameters["random_policy"] == "pg":
                             hidden_activation, output_activation)
 elif exp_parameters["random_policy"] == "dqn":
     #TODO add other DQN parameters into config
-    policy = DQN(numrobot, action_space, lr, obs_dim, conv_channels, conv_filters, conv_activation, hidden_sizes, hidden_activation, output_activation)
-
-# '''Init replay buffer'''
-# buff = None
-# if buffer:
-#     buff = ReplayBuffer(buffer_maxsize)
+    batch_size = None
+    if exp_parameters["batch_size"] > 0:
+        batch_size = exp_parameters["batch_size"]
+    policy = DQN(numrobot, action_space, lr, obs_dim, conv_channels,
+                 conv_filters, conv_activation, hidden_sizes, hidden_activation,
+                 output_activation, batch_size=batch_size)
 
 '''Making the Controller for the Swarm Agent'''
 controller = GridRLController(numrobot, policy)

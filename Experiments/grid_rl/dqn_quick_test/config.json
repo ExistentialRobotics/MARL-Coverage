@@ -1,7 +1,8 @@
 {
   "experiment_name"   : "dqn_quick_test",
-  "makevid"           : 1,
+  "makevid"           : 0,
   "random_policy"     : "dqn",
+  "batch_size"        : 100,
   "numrobot"          : 6,
   "gridwidth"         : 25,
   "gridlen"           : 25,

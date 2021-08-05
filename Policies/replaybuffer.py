@@ -44,9 +44,9 @@ class ReplayBuffer(object):
         index = np.random.randint(self._size)
         return self._state[index], self._action[index], self._reward[index], self._nextstate[index]
 
-    def sampleepisode(self, steps):
-        episode = []
-        for i in range(steps):
+    def samplebatch(self, N):
+        batch = []
+        for i in range(N):
             state, action, reward, next_state = self.sampletransition()
-            episode.append((state, action, reward, next_state))
-        return episode
+            batch.append((state, action, reward, next_state))
+        return batch

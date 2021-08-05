@@ -10,7 +10,9 @@ class DQN(Base_Policy):
 
     def __init__(self, numrobot, action_space, learning_rate, obs_dim,
                  conv_channels, conv_filters, conv_activation, hidden_sizes,
-                 hidden_activation, output_activation, epsilon=0.999, min_epsilon=0.1, buffer_size = 1000, gamma=0.9, tau=0.9):
+                 hidden_activation, output_activation, epsilon=0.999,
+                 min_epsilon=0.1, buffer_size = 1000, batch_size=None,
+                 gamma=0.9, tau=0.9):
         super().__init__(numrobot, action_space)
 
         self.num_actions = action_space.num_actions
@@ -30,6 +32,7 @@ class DQN(Base_Policy):
         self._min_epsilon = min_epsilon
 
         #replay buffer creation
+        self.batch_size = batch_size
         self._buff = ReplayBuffer(buffer_size)
 
         self._gamma = gamma
@@ -68,14 +71,17 @@ class DQN(Base_Policy):
         self.optimizer.zero_grad()
 
         #sampling episode(s)? from buffer and updating q-network
-        sample_episode = self._buff.sampleepisode(len(episode))
-        for i in range(len(sample_episode)):
-            state = episode[i][0]
-            action = episode[i][1]
-            reward = episode[i][2]
-            next_state = episode[i][3]
+        N = len(episode)
+        if self.batch_size is not None:
+            N = self.batch_size
+        batch = self._buff.samplebatch(N)
 
-            self.calc_gradient(state, action, reward, next_state, len(sample_episode))
+        for i in range(len(batch)):
+            state = batch[i][0]
+            action = batch[i][1]
+            reward = batch[i][2]
+            next_state = batch[i][3]
+            self.calc_gradient(state, action, reward, next_state, len(batch))
 
         # update parameters
         self.optimizer.step()
@@ -87,7 +93,7 @@ class DQN(Base_Policy):
                 q_targ.data.mul_(self._tau)
                 q_targ.data.add_((1 - self._tau) * q.data)
 
-    def calc_gradient(self, state, action, reward, next_state, num_episodes):
+    def calc_gradient(self, state, action, reward, next_state, batch_size):
         qvals = self.q_net(torch.from_numpy(state).float())
         next_qvals = self.target_net(torch.from_numpy(next_state).float())
 
@@ -100,8 +106,7 @@ class DQN(Base_Policy):
             currq = (qvals[i * self.num_actions: (i + 1) * self.num_actions])[action[i]]
 
             #calculating mean squared error
-            loss += 1.0/num_episodes* (y-currq)**2
-
+            loss += 1.0/batch_size* (y-currq)**2
         loss.backward()
 
     def set_train(self):
@@ -116,28 +121,3 @@ class DQN(Base_Policy):
 
     def getnet(self):
         return self.q_net
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
