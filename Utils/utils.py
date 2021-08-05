@@ -16,7 +16,7 @@ def generate_episode(env, controller, iters=100, render=False):
         episode.append((state, action, reward, next_state))
         state = next_state
         steps += 1
-        total_reward += reward
+        total_reward += np.sum(reward)
         done = env.done()
 
         if render:

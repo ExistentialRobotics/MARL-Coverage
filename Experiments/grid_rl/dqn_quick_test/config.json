@@ -1,5 +1,5 @@
 {
-  "experiment_name"   : "quick_test",
+  "experiment_name"   : "dqn_quick_test",
   "makevid"           : 1,
   "random_policy"     : "dqn",
   "numrobot"          : 6,

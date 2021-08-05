@@ -96,7 +96,7 @@ class DQN(Base_Policy):
         for i in range(self.numrobot):
             with torch.no_grad():
                 next_q = torch.max(next_qvals[i * self.num_actions: (i + 1) * self.num_actions])
-                y = reward + self._gamma*next_q
+                y = reward[i] + self._gamma*next_q
             currq = (qvals[i * self.num_actions: (i + 1) * self.num_actions])[action[i]]
 
             #calculating mean squared error

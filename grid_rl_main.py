@@ -170,7 +170,7 @@ for _ in range(test_episodes):
         # step environment and save episode results
         state, reward = env.step(action)
         steps += 1
-        total_reward += reward
+        total_reward += np.sum(reward)
 
         # render if necessary
         if render:
