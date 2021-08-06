@@ -97,6 +97,8 @@ if exp_parameters["hidden_activation"] == "relu":
 
 if exp_parameters["output_activation"] == "sigmoid":
     output_activation = nn.Sigmoid
+elif exp_parameters["output_activation"] == "softmax":
+    output_activation = nn.Softmax
 
 print(DASH)
 print("Running experiment using: " + str(config_path))

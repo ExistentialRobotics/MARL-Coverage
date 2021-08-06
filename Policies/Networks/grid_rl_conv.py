@@ -18,22 +18,20 @@ class Grid_RL_Conv(nn.Module):
 
         # add conv layers to network
         for i in range(len(conv_channels)):
-            # set padding so that img dims remain the same thru each conv layer
-            padding = np.floor((conv_filters[i][0] - 1) / 2).astype(int)
             if i == 0:
                 # add stride on first conv layer to reduce img dims
                 stride = 2
-                layers += [nn.Conv2d(obs_dim[0], conv_channels[i], conv_filters[i], padding=padding,
+                layers += [nn.Conv2d(obs_dim[0], conv_channels[i], conv_filters[i],
                                           stride=stride), nn.BatchNorm2d(conv_channels[i], affine=False),
                                 conv_activation()]
             else:
                 stride = 1
-                layers += [nn.Conv2d(conv_channels[i - 1], conv_channels[i], conv_filters[i], padding=padding,
+                layers += [nn.Conv2d(conv_channels[i - 1], conv_channels[i], conv_filters[i],
                                           stride=stride), nn.BatchNorm2d(conv_channels[i], affine=False),
                                 conv_activation()]
 
             # calculate the output of the current layer based on the output of the last layer
-            conv_output_size[1:] = np.floor((conv_output_size[1:] + 2 * padding - np.array(conv_filters[i])) / stride + 1)
+            conv_output_size[1:] = np.floor((conv_output_size[1:] - np.array(conv_filters[i])) / stride + 1)
             conv_output_size[0] = conv_channels[i]
 
         # add flatten layer to made conv output 1D for the fc layers
