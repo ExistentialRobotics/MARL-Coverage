@@ -1,8 +1,8 @@
 {
-  "experiment_name"   : "dqn5k",
+  "experiment_name"   : "dqn8k",
   "makevid"           : 1,
   "random_policy"     : "dqn",
-  "batch_size"        : 500,
+  "batch_size"        : 200,
   "numrobot"          : 6,
   "gridwidth"         : 25,
   "gridlen"           : 25,
@@ -10,11 +10,11 @@
   "num_actions"       : 4,
   "render_test"       : 1,
   "render_train"      : 1,
-  "lr"                : 0.0001,
-  "train_episodes"    : 5000,
+  "lr"                : 0.001,
+  "train_episodes"    : 8000,
   "test_episodes"     : 100,
-  "train_iters"       : 100,
-  "test_iters"        : 100,
+  "train_iters"       : 50,
+  "test_iters"        : 50,
   "collision_p"       : 5,
   "conv_channels"     : [
     {

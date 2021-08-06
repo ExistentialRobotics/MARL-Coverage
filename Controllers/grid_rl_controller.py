@@ -7,7 +7,7 @@ class GridRLController(Controller):
         super().__init__(numrobot, policy)
 
     def getControls(self, observation, testing=False):
-        return self._policy.step(observation)
+        return self._policy.step(observation, testing)
 
     def update_policy(self, episode):
         self._policy.update_policy(episode)
