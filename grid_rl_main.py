@@ -139,7 +139,7 @@ controller = GridRLController(numrobot, policy)
 '''Train policy'''
 train_rewardlis = []
 if not random_policy:
-    print("----------Running {} for ".format(exp_parameters["random_policy"]) + str(train_episodes) + " episodes-----------")
+    print("----------Running {} for ".format(exp_parameters["policy_type"]) + str(train_episodes) + " episodes-----------")
     controller._policy.printNumParams()
     train_rewardlis = train_RLalg(env, controller, logger, episodes=train_episodes, iters=train_iters, render=render_train)
 else:
