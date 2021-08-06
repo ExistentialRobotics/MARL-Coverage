@@ -12,20 +12,25 @@ class DQN(Base_Policy):
                  conv_channels, conv_filters, conv_activation, hidden_sizes,
                  hidden_activation, output_activation, epsilon=0.999,
                  min_epsilon=0.1, buffer_size = 1000, batch_size=None,
-                 gamma=0.9, tau=0.9):
+                 gamma=0.9, tau=0.9, weight_decay=0.1):
         super().__init__(numrobot, action_space)
 
         self.num_actions = action_space.num_actions
 
-        # init q network and optimizer
+        # init q network and target-q-network
         action_dim = numrobot * self.num_actions
         self.q_net = Grid_RL_Conv(action_dim, obs_dim, conv_channels,
                             conv_filters, conv_activation, hidden_sizes,
                                 hidden_activation, output_activation)
         self.target_net = deepcopy(self.q_net)
 
+        #setting requires gradient in target net to false for all params
+        for p in self.target_net.parameters():
+            p.requires_grad = False
+
+        #optimizer
         self.optimizer = torch.optim.Adam(self.q_net.parameters(),
-                                          lr=learning_rate)
+                                          lr=learning_rate, weight_decay=weight_decay)
         #epsilon-greedy parameters
         self._epsilon = 1
         self._e_decay = epsilon
@@ -122,3 +127,7 @@ class DQN(Base_Policy):
 
     def getnet(self):
         return self.q_net
+
+    def printTotalParams(self):
+        pytorch_total_params = sum(p.numel() for p in self.q_net.parameters() if p.requires_grad)
+        print(str(pytorch_total_params) + " in the Q Network")

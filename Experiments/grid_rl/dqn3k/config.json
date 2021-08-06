@@ -1,7 +1,7 @@
 {
   "experiment_name"   : "dqn3k",
   "makevid"           : 1,
-  "random_policy"     : "dqn",
+  "policy_type"       : "dqn",
   "batch_size"        : 100,
   "numrobot"          : 6,
   "gridwidth"         : 25,

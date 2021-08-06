@@ -12,7 +12,7 @@ from Policies.policy_gradient import PolicyGradient
 from Policies.dqn import DQN
 from Policies.replaybuffer import ReplayBuffer
 from Logger.logger import Logger
-from Utils.utils import train_RLalg
+from Utils.utils import train_RLalg, test_RLalg
 import torch.nn as nn
 
 DASH = "-----------------------------------------------------------------------"
@@ -116,15 +116,16 @@ action_space = Discrete(num_actions)
 '''Init policy'''
 obs_dim = np.squeeze(env.get_state(), axis=0).shape
 random_policy = False
-if exp_parameters["random_policy"] == "random":
+if exp_parameters["policy_type"] == "random":
     policy = Basic_Random(numrobot, action_space)
     random_policy = True
-elif exp_parameters["random_policy"] == "pg":
+elif exp_parameters["policy_type"] == "pg":
     policy = PolicyGradient(numrobot, action_space, lr, obs_dim, conv_channels,
                             conv_filters, conv_activation, hidden_sizes,
                             hidden_activation, output_activation)
-elif exp_parameters["random_policy"] == "dqn":
+elif exp_parameters["policy_type"] == "dqn":
     #TODO add other DQN parameters into config
+    #could add weight_decay, gamma, tau as parameters if we want to change them
     batch_size = None
     if exp_parameters["batch_size"] > 0:
         batch_size = exp_parameters["batch_size"]
@@ -145,49 +146,17 @@ else:
 
 '''Test policy'''
 print("-----------------------------Testing Policy----------------------------")
+
 # set policy network to eval mode
 if not random_policy:
     controller.set_eval()
 
-test_rewardlis = []
-success = 0
-percent_covered = 0
-for _ in range(test_episodes):
-    render = False
-    if _ % 10 == 0:
-        if render_test:
-            render = True
-        print("Testing Episode: " + str(_) + " out of " + str(test_episodes))
-
-    # reset env at the start of each episode
-    state = env.reset()
-    steps = 0
-    total_reward = 0
-    done = False
-    while not done and steps != test_iters:
-        # determine action
-        action = controller.getControls(state, testing=True)
-
-        # step environment and save episode results
-        state, reward = env.step(action)
-        steps += 1
-        total_reward += np.sum(reward)
-
-        # render if necessary
-        if render:
-            env.render()
-            logger.update()
-
-        # determine if env was successfully covered
-        done = env.done()
-        if done:
-            success += 1
-    percent_covered += env.percent_covered()
-    test_rewardlis.append(total_reward)
+#testing the policy and collecting data
+test_rewardlis, average_percent_covered = test_RLalg(env, controller, logger, episodes=test_episodes, iters=test_iters, render_test=render_test, make_vid=makevid)
 
 '''Display results'''
 print(DASH)
-print("Trained policy covered " + str((percent_covered / test_episodes) * 100) + " percent of the environment on average!")
+print("Trained policy covered " + str(average_percent_covered) + " percent of the environment on average!")
 print(DASH)
 
 # plot testing rewards
