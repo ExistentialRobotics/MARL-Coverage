@@ -44,5 +44,5 @@
   "hidden_activation" : "relu",
   "output_activation" : "sigmoid",
   "buffer"            : 0,
-  "buf_divisor" : 4
+  "buf_divisor" : 5
 }
