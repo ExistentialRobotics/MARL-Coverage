@@ -55,7 +55,9 @@ def train_RLalg(env, controller, logger, episodes=1000, iters=100,  render=False
             logger.saveModelWeights(controller._policy.getnet())
 
             #testing policy
+            controller.set_eval()
             testrewards, average_percent_covered = test_RLalg(env, controller, logger, render_test=False)
+            controller.set_train()
 
             #printing debug info
             checkpoint_num += 1
