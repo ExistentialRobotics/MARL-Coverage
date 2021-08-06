@@ -59,12 +59,11 @@ test_episodes  = exp_parameters["test_episodes"]
 train_iters    = exp_parameters["train_iters"]
 test_iters     = exp_parameters["test_iters"]
 collision_p    = exp_parameters["collision_p"]
-buffer_maxsize = (train_episodes * train_iters) / exp_parameters["buf_divisor"]
+buffer_maxsize = (train_episodes * train_iters) // exp_parameters["buf_divisor"]
 
 makevid = False
 if exp_parameters["makevid"] == 1:
     makevid = True
-
 
 render_test = False
 if exp_parameters["render_test"] == 1:
@@ -100,7 +99,7 @@ if exp_parameters["output_activation"] == "sigmoid":
     output_activation = nn.Sigmoid
 
 print(DASH)
-print("Running experiement using: " + str(config_path))
+print("Running experiment using: " + str(config_path))
 print(DASH)
 
 '''Init logger'''
@@ -129,7 +128,7 @@ elif exp_parameters["random_policy"] == "dqn":
         batch_size = exp_parameters["batch_size"]
     policy = DQN(numrobot, action_space, lr, obs_dim, conv_channels,
                  conv_filters, conv_activation, hidden_sizes, hidden_activation,
-                 output_activation, batch_size=batch_size)
+                 output_activation, batch_size=batch_size, buffer_size=buffer_maxsize)
 
 '''Making the Controller for the Swarm Agent'''
 controller = GridRLController(numrobot, policy)
@@ -137,7 +136,7 @@ controller = GridRLController(numrobot, policy)
 '''Train policy'''
 train_rewardlis = []
 if not random_policy:
-    print("----------Running PG for " + str(train_episodes) + " episodes-----------")
+    print("----------Running {} for ".format(exp_parameters["random_policy"]) + str(train_episodes) + " episodes-----------")
     train_rewardlis = train_RLalg(env, controller, logger, episodes=train_episodes, iters=train_iters, render=render_train)
 else:
     print("-----------------------Running Random Policy-----------------------")
