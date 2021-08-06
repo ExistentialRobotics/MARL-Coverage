@@ -59,6 +59,7 @@ test_episodes  = exp_parameters["test_episodes"]
 train_iters    = exp_parameters["train_iters"]
 test_iters     = exp_parameters["test_iters"]
 collision_p    = exp_parameters["collision_p"]
+weight_decay   = exp_parameters["weight_decay"]
 buffer_maxsize = (train_episodes * train_iters) // exp_parameters["buf_divisor"]
 
 makevid = False
@@ -122,7 +123,8 @@ if exp_parameters["policy_type"] == "random":
 elif exp_parameters["policy_type"] == "pg":
     policy = PolicyGradient(numrobot, action_space, lr, obs_dim, conv_channels,
                             conv_filters, conv_activation, hidden_sizes,
-                            hidden_activation, output_activation)
+                            hidden_activation, output_activation,
+                            weight_decay=weight_decay)
 elif exp_parameters["policy_type"] == "dqn":
     #TODO add other DQN parameters into config
     #could add weight_decay, gamma, tau as parameters if we want to change them

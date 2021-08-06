@@ -1,5 +1,5 @@
 {
-  "experiment_name"   : "6K_Train_Epi",
+  "experiment_name"   : "vpg6k",
   "makevid"           : 1,
   "policy_type"       : "pg",
   "numrobot"          : 6,
@@ -17,10 +17,10 @@
   "collision_p"       : 5,
   "conv_channels"     : [
     {
-      "_" : 10
+      "_" : 64
     },
     {
-      "_" : 10
+      "_" : 32
     }
   ],
   "conv_filters"      : [
@@ -41,7 +41,7 @@
     }
   ],
   "hidden_activation" : "relu",
-  "output_activation" : "sigmoid",
-  "buffer"            : 0,
+  "output_activation" : "softmax",
+  "weight_decay"      : 0.01,
   "buf_divisor"       : 4
 }
