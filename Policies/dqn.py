@@ -80,14 +80,12 @@ class DQN(Base_Policy):
         N = len(episode)
         if self.batch_size is not None:
             N = self.batch_size
-        batch = self._buff.samplebatch(N)
+        state, action, reward, next_state = self._buff.samplebatch(N)
+        state = np.squeeze(state, axis=1)
+        next_state = np.squeeze(next_state, axis=1)
 
-        for i in range(len(batch)):
-            state = batch[i][0]
-            action = batch[i][1]
-            reward = batch[i][2]
-            next_state = batch[i][3]
-            self.calc_gradient(state, action, reward, next_state, len(batch))
+        # calculate network gradient
+        self.calc_gradient(state, action, reward, next_state, state.shape[0])
 
         # update parameters
         self.optimizer.step()
@@ -100,19 +98,31 @@ class DQN(Base_Policy):
                 q_targ.data.add_((1 - self._tau) * q.data)
 
     def calc_gradient(self, state, action, reward, next_state, batch_size):
-        qvals = self.q_net(torch.from_numpy(state).float())
-        next_qvals = self.target_net(torch.from_numpy(next_state).float())
+        # convert to tensors
+        state = torch.from_numpy(state).float()
+        next_state = torch.from_numpy(next_state).float()
+        reward = torch.from_numpy(reward).float()
+        action = torch.from_numpy(action).long()
+
+        # calc q vals
+        qvals = self.q_net(state)
+        next_qvals = self.target_net(next_state)
 
         # calculate gradient for q function
         loss = 0
         for i in range(self.numrobot):
             with torch.no_grad():
-                next_q = torch.max(next_qvals[i * self.num_actions: (i + 1) * self.num_actions])
-                y = reward[i] + self._gamma*next_q
-            currq = (qvals[i * self.num_actions: (i + 1) * self.num_actions])[action[i]]
+                next_q = torch.max(next_qvals[:, i * self.num_actions: (i + 1) * self.num_actions], 1).values
+                y = reward[:, i] + self._gamma*next_q
+            q_temp = qvals[:, i * self.num_actions: (i + 1) * self.num_actions]
+
+            #TODO vectorize this for loop
+            currq = torch.zeros(100)
+            for j in range(q_temp.shape[0]):
+                currq[j] = q_temp[j, action[:, i][j]]
 
             #calculating mean squared error
-            loss += 1.0/batch_size* (y-currq)**2
+            loss += ((y-currq)**2).mean()
         loss.backward()
 
     def set_train(self):
