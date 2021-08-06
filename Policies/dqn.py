@@ -65,6 +65,51 @@ class DQN(Base_Policy):
             ulis.append(u)
         return ulis
 
+    def update_policy_old(self, episode):
+        #adding new data to buffer
+        self._buff.addepisode(episode)
+
+        #decaying the epsilon
+        self._epsilon *= self._e_decay
+
+        #zero gradients
+        self.optimizer.zero_grad()
+
+        #sampling episode(s)? from buffer and updating q-network
+        N = len(episode)
+        if self.batch_size is not None:
+            N = self.batch_size
+        state, action, reward, next_state = self._buff.samplebatch(N)
+
+        for i in range(N):
+            self.calc_gradient_old(state[i], action[i], reward[i], next_state[i], N)
+
+        # update parameters
+        self.optimizer.step()
+
+        #update target network to soft follow main network
+        with torch.no_grad():
+            for q, q_targ in zip(self.q_net.parameters(),
+                                 self.target_net.parameters()):
+                q_targ.data.mul_(self._tau)
+                q_targ.data.add_((1 - self._tau) * q.data)
+
+    def calc_gradient_old(self, state, action, reward, next_state, batch_size):
+        qvals = self.q_net(torch.from_numpy(state).float())
+        next_qvals = self.target_net(torch.from_numpy(next_state).float())
+
+        # calculate gradient for q function
+        loss = 0
+        for i in range(self.numrobot):
+            with torch.no_grad():
+                next_q = torch.max(next_qvals[i * self.num_actions: (i + 1) * self.num_actions])
+                y = reward[i] + self._gamma*next_q
+            currq = (qvals[i * self.num_actions: (i + 1) * self.num_actions])[action[i]]
+
+            #calculating mean squared error
+            loss += 1.0/batch_size* (y-currq)**2
+        loss.backward()
+
     def update_policy(self, episode):
         #adding new data to buffer
         self._buff.addepisode(episode)
