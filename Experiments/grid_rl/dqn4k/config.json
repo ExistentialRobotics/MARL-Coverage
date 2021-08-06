@@ -1,5 +1,5 @@
 {
-  "experiment_name"   : "DQN_2KTrainEpi_BS100",
+  "experiment_name"   : "dqn4k",
   "makevid"           : 1,
   "random_policy"     : "dqn",
   "batch_size"        : 100,
@@ -11,7 +11,7 @@
   "render_test"       : 1,
   "render_train"      : 1,
   "lr"                : 0.0001,
-  "train_episodes"    : 2000,
+  "train_episodes"    : 4000,
   "test_episodes"     : 100,
   "train_iters"       : 100,
   "test_iters"        : 100,

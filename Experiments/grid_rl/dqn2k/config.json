@@ -1,6 +1,6 @@
 {
-  "experiment_name"   : "DQN_2KTrainEpi_BS100",
-  "makevid"           : 1,
+  "experiment_name"   : "dqn2k",
+  "makevid"           : 0,
   "random_policy"     : "dqn",
   "batch_size"        : 100,
   "numrobot"          : 6,
