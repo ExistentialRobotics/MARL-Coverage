@@ -1,6 +1,6 @@
 {
-  "experiment_name"   : "dqn2k",
-  "makevid"           : 0,
+  "experiment_name"   : "dqn3k",
+  "makevid"           : 1,
   "random_policy"     : "dqn",
   "batch_size"        : 100,
   "numrobot"          : 6,
@@ -11,7 +11,7 @@
   "render_test"       : 1,
   "render_train"      : 1,
   "lr"                : 0.0001,
-  "train_episodes"    : 2000,
+  "train_episodes"    : 3000,
   "test_episodes"     : 100,
   "train_iters"       : 100,
   "test_iters"        : 100,
