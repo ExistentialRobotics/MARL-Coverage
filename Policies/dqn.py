@@ -117,7 +117,7 @@ class DQN(Base_Policy):
             q_temp = qvals[:, i * self.num_actions: (i + 1) * self.num_actions]
 
             #TODO vectorize this for loop
-            currq = torch.zeros(100)
+            currq = torch.zeros(batch_size)
             for j in range(q_temp.shape[0]):
                 currq[j] = q_temp[j, action[:, i][j]]
 

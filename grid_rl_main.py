@@ -74,10 +74,6 @@ render_train = False
 if exp_parameters["render_train"] == 1:
     render_train = True
 
-buffer = False
-if exp_parameters["buffer"] == 1:
-    buffer = True
-
 conv_channels = []
 for channel in exp_parameters["conv_channels"]:
     conv_channels.append(channel["_"])
