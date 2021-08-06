@@ -21,7 +21,6 @@ class Logger(object):
             os.makedirs(self._output_dir)
 
         if make_video:
-            print(self._output_dir + experiment_name + ".mp4")
             self._writer = ani.FFMpegWriter(fps= int(1/dt))
             self._writer.setup(plt.gcf(), self._output_dir + experiment_name + ".mp4", dpi=100)
 
