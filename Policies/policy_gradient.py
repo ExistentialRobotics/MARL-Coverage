@@ -20,7 +20,7 @@ class PolicyGradient(Base_Policy):
         #reward discounting
         self._gamma = gamma
 
-    def step(self, state):
+    def step(self, state, testing):
         probs = self.policy_net(torch.from_numpy(state).float())
 
         # sample from each set of probabilities to get the actions
@@ -51,19 +51,19 @@ class PolicyGradient(Base_Policy):
             action = episode[i][1]
 
             # increment gradient
-            self.calc_gradient(state, action, d_rewards[i])
+            self.calc_gradient(state, action, d_rewards[i], len(episode))
 
         # update parameters
         self.optimizer.step()
 
-    def calc_gradient(self, state, action, r_return):
+    def calc_gradient(self, state, action, r_return, episode_len):
         probs = self.policy_net(torch.from_numpy(state).float())
 
         # calculate gradient
         loss = 0
         for i in range(self.numrobot):
             m = Categorical(probs[i * self.num_actions: (i + 1) * self.num_actions])
-            loss -= m.log_prob(action[i]) * r_return
+            loss -= 1.0/episode_len * m.log_prob(action[i]) * r_return
         loss.backward()
 
     def set_train(self):

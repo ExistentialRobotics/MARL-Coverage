@@ -39,7 +39,7 @@ class DQN(Base_Policy):
         self._tau = tau
 
 
-    def step(self, state):
+    def step(self, state, testing):
         qvals = self.q_net(torch.from_numpy(state).float())
 
         #choosing the action with highest q-value or choose random with p(epsilon)
@@ -49,7 +49,7 @@ class DQN(Base_Policy):
             s = np.random.uniform()
 
             #epsilon greedy policy
-            if(s > self._epsilon):
+            if(s > self._epsilon or testing):
                 #greedy
                 u = torch.argmax(qvals[i * self.num_actions: (i + 1) * self.num_actions])
             else:
@@ -65,7 +65,8 @@ class DQN(Base_Policy):
         self._buff.addepisode(episode)
 
         #decaying the epsilon
-        self._epsilon *= self._e_decay
+        if self._epsilon > self._min_epsilon:
+            self._epsilon *= self._e_decay
 
         #zero gradients
         self.optimizer.zero_grad()
