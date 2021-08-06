@@ -79,7 +79,7 @@ class PolicyGradient(Base_Policy):
     def getnet(self):
         return self.policy_net
 
-    def printTotalParams(self):
+    def printNumParams(self):
         pytorch_total_params = sum(p.numel() for p in self.policy_net.parameters() if p.requires_grad)
         print(str(pytorch_total_params) + " in the Policy Network")
 

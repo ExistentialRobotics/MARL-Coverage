@@ -128,6 +128,6 @@ class DQN(Base_Policy):
     def getnet(self):
         return self.q_net
 
-    def printTotalParams(self):
+    def printNumParams(self):
         pytorch_total_params = sum(p.numel() for p in self.q_net.parameters() if p.requires_grad)
         print(str(pytorch_total_params) + " in the Q Network")
