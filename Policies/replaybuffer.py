@@ -45,8 +45,14 @@ class ReplayBuffer(object):
         return self._state[index], self._action[index], self._reward[index], self._nextstate[index]
 
     def samplebatch(self, N):
-        batch = []
+        states = []
+        actions = []
+        rewards = []
+        next_states = []
         for i in range(N):
             state, action, reward, next_state = self.sampletransition()
-            batch.append((state, action, reward, next_state))
-        return batch
+            states.append(state)
+            actions.append(action)
+            rewards.append(reward)
+            next_states.append(next_state)
+        return np.array(states), np.array(actions), np.array(rewards), np.array(next_states) 
