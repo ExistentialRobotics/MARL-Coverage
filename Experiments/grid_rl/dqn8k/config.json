@@ -2,7 +2,7 @@
   "experiment_name"   : "dqn8k",
   "makevid"           : 1,
   "policy_type"       : "dqn",
-  "batch_size"        : 200,
+  "batch_size"        : 500,
   "numrobot"          : 6,
   "gridwidth"         : 25,
   "gridlen"           : 25,
@@ -10,11 +10,11 @@
   "num_actions"       : 4,
   "render_test"       : 1,
   "render_train"      : 1,
-  "lr"                : 0.001,
+  "lr"                : 0.0001,
   "train_episodes"    : 8000,
   "test_episodes"     : 100,
-  "train_iters"       : 50,
-  "test_iters"        : 50,
+  "train_iters"       : 100,
+  "test_iters"        : 100,
   "collision_p"       : 5,
   "conv_channels"     : [
     {
@@ -44,5 +44,6 @@
   "hidden_activation" : "relu",
   "output_activation" : "sigmoid",
   "buffer"            : 0,
+  "weight_decay"      : 0.1,
   "buf_divisor" : 5
 }
