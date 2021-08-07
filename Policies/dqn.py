@@ -1,7 +1,8 @@
 import numpy as np
 import torch
 from . base_policy import Base_Policy
-from . Networks.grid_rl_conv import Grid_RL_Conv
+# from . Networks.grid_rl_conv import Grid_RL_Conv
+from . Networks.Qnet import Critic
 from torch.distributions.categorical import Categorical
 from copy import deepcopy
 from . replaybuffer import ReplayBuffer
@@ -19,9 +20,12 @@ class DQN(Base_Policy):
 
         # init q network and target-q-network
         action_dim = numrobot * self.num_actions
-        self.q_net = Grid_RL_Conv(action_dim, obs_dim, conv_channels,
-                            conv_filters, conv_activation, hidden_sizes,
-                                hidden_activation, output_activation)
+        # self.q_net = Grid_RL_Conv(action_dim, obs_dim, conv_channels,
+        #                     conv_filters, conv_activation, hidden_sizes,
+        #                         hidden_activation, output_activation)
+        self.q_net = Critic(obs_dim, action_dim,
+                            conv_channels, conv_filters, conv_activation,
+                            hidden_sizes, hidden_activation)
         self.target_net = deepcopy(self.q_net)
 
         #setting requires gradient in target net to false for all params
