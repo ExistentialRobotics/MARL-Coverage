@@ -126,8 +126,14 @@ class DQN(Base_Policy):
         if self.batch_size is not None:
             N = self.batch_size
         state, action, reward, next_state = self._buff.samplebatch(N)
-        state = np.squeeze(state, axis=1)
-        next_state = np.squeeze(next_state, axis=1)
+
+        # convert to tensors
+        state = torch.tensor(state).float()
+        next_state = torch.tensor(next_state).float()
+        reward = torch.tensor(reward).float()
+        action = torch.tensor(action).long()
+        state = torch.squeeze(state, axis=1)
+        next_state = torch.squeeze(next_state, axis=1)
 
         # calculate network gradient
         self.calc_gradient(state, action, reward, next_state, state.shape[0])
@@ -143,12 +149,6 @@ class DQN(Base_Policy):
                 q_targ.data.add_((1 - self._tau) * q.data)
 
     def calc_gradient(self, state, action, reward, next_state, batch_size):
-        # convert to tensors
-        state = torch.from_numpy(state).float()
-        next_state = torch.from_numpy(next_state).float()
-        reward = torch.from_numpy(reward).float()
-        action = torch.from_numpy(action).long()
-
         # calc q vals
         qvals = self.q_net(state)
         next_qvals = self.target_net(next_state)

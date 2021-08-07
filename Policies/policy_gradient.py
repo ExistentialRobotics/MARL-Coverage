@@ -15,7 +15,10 @@ class PolicyGradient(Base_Policy):
 
         # init policy network and optimizer
         self.policy_net = Grid_RL_Conv(action_dim, obs_dim, conv_channels, conv_filters, conv_activation, hidden_sizes, hidden_activation, output_activation)
-        self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=learning_rate, weight_decay=weight_decay)
+        if weight_decay is not None:
+            self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=learning_rate, weight_decay=weight_decay)
+        else:
+            self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=learning_rate)
 
         #reward discounting
         self._gamma = gamma
@@ -45,7 +48,7 @@ class PolicyGradient(Base_Policy):
             d_rewards.insert(0, self._gamma*d_rewards[0]
                              + raw_rewards[len(episode) - 2 - i])
 
-        #calculating gradients for each step of episode 
+        #calculating gradients for each step of episode
         for i in range(len(episode)):
             state = episode[i][0]
             action = episode[i][1]
@@ -82,4 +85,3 @@ class PolicyGradient(Base_Policy):
     def printNumParams(self):
         pytorch_total_params = sum(p.numel() for p in self.policy_net.parameters() if p.requires_grad)
         print(str(pytorch_total_params) + " in the Policy Network")
-

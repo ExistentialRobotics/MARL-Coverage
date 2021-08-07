@@ -1,8 +1,7 @@
 {
-  "experiment_name"   : "dqn3k",
+  "experiment_name"   : "vpg6k",
   "makevid"           : 1,
-  "policy_type"       : "dqn",
-  "batch_size"        : 100,
+  "policy_type"       : "pg",
   "numrobot"          : 6,
   "gridwidth"         : 25,
   "gridlen"           : 25,
@@ -11,17 +10,17 @@
   "render_test"       : 1,
   "render_train"      : 1,
   "lr"                : 0.0001,
-  "train_episodes"    : 3000,
+  "train_episodes"    : 6000,
   "test_episodes"     : 100,
   "train_iters"       : 100,
   "test_iters"        : 100,
   "collision_p"       : 5,
   "conv_channels"     : [
     {
-      "_" : 10
+      "_" : 64
     },
     {
-      "_" : 10
+      "_" : 32
     }
   ],
   "conv_filters"      : [
@@ -42,8 +41,7 @@
     }
   ],
   "hidden_activation" : "relu",
-  "output_activation" : "sigmoid",
-  "weight_decay"      : 0.01,
-  "buffer"            : 0,
+  "output_activation" : "softmax",
+  "weight_decay"      : 0,
   "buf_divisor"       : 4
 }

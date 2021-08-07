@@ -10,7 +10,7 @@ class GridRLController(Controller):
         return self._policy.step(observation, testing)
 
     def update_policy(self, episode):
-        self._policy.update_policy_old(episode)
+        self._policy.update_policy(episode)
 
     def set_train(self):
         self._policy.set_train()
