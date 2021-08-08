@@ -128,6 +128,7 @@ class SuperGridRL(object):
                 self._xinds[robots[0]] = newx[robots[0]]
                 self._yinds[robots[0]] = newy[robots[0]]
             else:
+                # print(robots)
                 #penalizing all robots that tried to end up in the same place
                 for r in robots:
                     reward[r2c[r]] -= self._collision_penalty
@@ -237,7 +238,7 @@ class SuperGridRL(object):
 
         return self.get_state()
 
-    def done(self, thres=0.85):
+    def done(self, thres=0.98):
         return thres < self.percent_covered()
 
     def percent_covered(self):

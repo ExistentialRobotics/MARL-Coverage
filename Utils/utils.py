@@ -55,9 +55,9 @@ def train_RLalg(env, controller, logger, episodes=1000, iters=100,  render=False
             logger.saveModelWeights(controller._policy.getnet())
 
             #testing policy
-            controller.set_eval()
+            # controller.set_eval()
             testrewards, average_percent_covered = test_RLalg(env, controller, logger, render_test=False)
-            controller.set_train()
+            # controller.set_train()
 
             #printing debug info
             checkpoint_num += 1
@@ -89,7 +89,7 @@ def test_RLalg(env, controller, logger, episodes=10, iters=100, render_test=Fals
         done = False
         while not done and steps != iters:
             # determine action
-            action = controller.getControls(state, testing=True)
+            action = controller.getControls(state)
 
             # step environment and save episode results
             state, reward = env.step(action)

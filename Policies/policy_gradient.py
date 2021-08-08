@@ -15,10 +15,8 @@ class PolicyGradient(Base_Policy):
 
         # init policy network and optimizer
         self.policy_net = Grid_RL_Conv(action_dim, obs_dim, conv_channels, conv_filters, conv_activation, hidden_sizes, hidden_activation, output_activation)
-        if weight_decay is not None:
-            self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=learning_rate, weight_decay=weight_decay)
-        else:
-            self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=learning_rate)
+
+        self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
         #reward discounting
         self._gamma = gamma

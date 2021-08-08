@@ -148,6 +148,9 @@ class DQN(Base_Policy):
                 q_targ.data.mul_(self._tau)
                 q_targ.data.add_((1 - self._tau) * q.data)
 
+        #paranoid about memory leak
+        del state, next_state, reward, action
+
     def calc_gradient(self, state, action, reward, next_state, batch_size):
         # calc q vals
         qvals = self.q_net(state)
@@ -159,16 +162,19 @@ class DQN(Base_Policy):
             with torch.no_grad():
                 next_q = torch.max(next_qvals[:, i * self.num_actions: (i + 1) * self.num_actions], 1).values
                 y = reward[:, i] + self._gamma*next_q
+                currq = torch.zeros(batch_size)
             q_temp = qvals[:, i * self.num_actions: (i + 1) * self.num_actions]
 
             #TODO vectorize this for loop
-            currq = torch.zeros(batch_size)
             for j in range(q_temp.shape[0]):
                 currq[j] = q_temp[j, action[:, i][j]]
 
             #calculating mean squared error
             loss += ((y-currq)**2).mean()
         loss.backward()
+
+        #paranoid about memory leak
+        del loss, next_qvals, qvals, currq, q_temp, y, next_q
 
     def set_train(self):
         self.q_net.train()
