@@ -57,5 +57,5 @@ class Critic(nn.Module):
         self.q_fc.apply(init_weights)
 
     def forward(self, obs, act):
-        q = self.q_fc(torch.cat((self.q_conv(obs), act), dim=-1))
+        q = self.q_fc(torch.cat((self.q_conv(obs).float(), act.float()), dim=-1))
         return torch.squeeze(q, -1)

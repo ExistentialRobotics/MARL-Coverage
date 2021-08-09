@@ -1,7 +1,8 @@
 import numpy as np
 import torch
+import itertools
 from . base_policy import Base_Policy
-# from . Networks.grid_rl_conv import Grid_RL_Conv
+from . Networks.grid_rl_conv import Grid_RL_Conv
 from . Networks.Qnet import Critic
 from torch.distributions.categorical import Categorical
 from copy import deepcopy
@@ -13,20 +14,40 @@ class DQN(Base_Policy):
                  conv_channels, conv_filters, conv_activation, hidden_sizes,
                  hidden_activation, output_activation, epsilon=0.999,
                  min_epsilon=0.1, buffer_size = 1000, batch_size=None,
-                 gamma=0.9, tau=0.9, weight_decay=0.1):
+                 gamma=0.9, tau=0.9, weight_decay=0.1, ani=False):
         super().__init__(numrobot, action_space)
 
+        self.ani = ani
         self.num_actions = action_space.num_actions
 
         # init q network and target-q-network
-        action_dim = numrobot * self.num_actions
-        self.q_net = Grid_RL_Conv(action_dim, obs_dim, conv_channels,
-                            conv_filters, conv_activation, hidden_sizes,
-                                hidden_activation, output_activation)
-        #TODO add this in and make it work
-        # self.q_net = Critic(obs_dim, action_dim,
-        #                     conv_channels, conv_filters, conv_activation,
-        #                     hidden_sizes, hidden_activation)
+        if self.ani:
+            # Generate action list using cartesian product. This is def not the
+            # fastest way to do this, but I thought it would be the most simple
+            # and easiest to understand given that we aren't gonna stick to DQN
+            # in the long run. Plus it shouldn't affect runtime drastically
+            # since it's just ran once in __init__.
+            self.actions = [_ for _ in range(self.num_actions)]
+            self.action_sets = np.array([p for p in itertools.product(self.actions, repeat=numrobot)])
+
+            # create batched action sets
+            self.batched_action_sets = np.stack([self.action_sets for _ in range(batch_size)], axis=0)
+
+            # init q net
+            self.q_net = Critic(obs_dim, numrobot, conv_channels, conv_filters,
+                                conv_activation, hidden_sizes, hidden_activation)
+
+            # init q val array
+            self.q_vals = np.zeros((self.action_sets.shape[0], 1))
+            self.batch_q_vals = np.zeros((batch_size, self.action_sets.shape[0]))
+            self.batch_next_q = torch.zeros((batch_size, self.action_sets.shape[0]))
+        else:
+            # init q net
+            action_dim = numrobot * self.num_actions
+            self.q_net = Grid_RL_Conv(action_dim, obs_dim, conv_channels,
+                                conv_filters, conv_activation, hidden_sizes,
+                                    hidden_activation, output_activation)
+        # init q net
         self.target_net = deepcopy(self.q_net)
 
         #setting requires gradient in target net to false for all params
@@ -48,26 +69,36 @@ class DQN(Base_Policy):
         self._gamma = gamma
         self._tau = tau
 
-
     def step(self, state, testing):
-        qvals = self.q_net(torch.from_numpy(state).float())
+        if self.ani:
+            qvals = self.q_net(torch.from_numpy(state).float())
 
         #choosing the action with highest q-value or choose random with p(epsilon)
         ulis = []
-        for i in range(self.numrobot):
-            #epsilon greedy check
-            s = np.random.uniform()
 
-            #epsilon greedy policy
-            if(s > self._epsilon or testing):
-                #greedy
-                u = torch.argmax(qvals[i * self.num_actions: (i + 1) * self.num_actions])
-            else:
-                #random
-                u = np.random.randint(self.num_actions)
+        if self.ani:
+            for j in range(self.action_sets.shape[0]):
+                self.q_vals[i] = self.q_net(torch.from_numpy(state).float(), torch.from_numpy(self.action_sets[i]))
 
-            #adding controls
-            ulis.append(u)
+            # greedy
+            u = torch.argmax(self.q_vals)
+
+        else:
+            for i in range(self.numrobot):
+                #epsilon greedy check
+                s = np.random.uniform()
+
+                #epsilon greedy policy
+                if(s > self._epsilon or testing):
+                    #greedy
+                    u = torch.argmax(qvals[i * self.num_actions: (i + 1) * self.num_actions])
+                else:
+                    #random
+                    u = np.random.randint(self.num_actions)
+
+                #adding controls
+                ulis.append(u)
+
         return ulis
 
     def update_policy_old(self, episode):
@@ -158,15 +189,19 @@ class DQN(Base_Policy):
 
     def calc_gradient(self, state, action, reward, next_state, batch_size):
         # calc q vals
-        qvals = self.q_net(state)
-        next_qvals = self.target_net(next_state)
+        qvals = self.q_net(state, action)
 
-        # calculate gradient for q function
-        loss = 0
-        for i in range(self.numrobot):
+        if not self.ani:
+            next_qvals = self.target_net(next_state)
+
+
+        if self.ani:
             with torch.no_grad():
-                next_q = torch.max(next_qvals[:, i * self.num_actions: (i + 1) * self.num_actions], 1).values
-                y = reward[:, i] + self._gamma*next_q
+                for i in range(self.action_sets.shape[0]):
+                    self.batch_next_q[:, i] = self.target_net(next_state.float(), torch.from_numpy(self.batched_action_sets[:, i]))
+
+                next_q = torch.max(self.batch_next_q, 1).values
+                y = reward + self._gamma*next_q
                 currq = torch.zeros(batch_size)
             q_temp = qvals[:, i * self.num_actions: (i + 1) * self.num_actions]
 
@@ -174,8 +209,24 @@ class DQN(Base_Policy):
             for j in range(q_temp.shape[0]):
                 currq[j] = q_temp[j, action[:, i][j]]
 
-            #calculating mean squared error
-            loss += ((y-currq)**2).mean()
+                #calculating mean squared error
+                loss += ((y-currq)**2).mean()
+        else:
+            # calculate gradient for q function
+            loss = 0
+            for i in range(self.numrobot):
+                with torch.no_grad():
+                    next_q = torch.max(next_qvals[:, i * self.num_actions: (i + 1) * self.num_actions], 1).values
+                    y = reward[:, i] + self._gamma*next_q
+                    currq = torch.zeros(batch_size)
+                q_temp = qvals[:, i * self.num_actions: (i + 1) * self.num_actions]
+
+                #TODO vectorize this for loop
+                for j in range(q_temp.shape[0]):
+                    currq[j] = q_temp[j, action[:, i][j]]
+
+                #calculating mean squared error
+                loss += ((y-currq)**2).mean()
         loss.backward()
 
         #paranoid about memory leak

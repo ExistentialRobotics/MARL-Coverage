@@ -1,10 +1,10 @@
 {
-  "experiment_name"   : "dqn3k",
+  "experiment_name"   : "dqn3kNewQNet",
   "makevid"           : 1,
   "policy_type"       : "dqn",
-  "action_net_input"  : 0,
+  "action_net_input"  : 1,
   "batch_size"        : 100,
-  "numrobot"          : 6,
+  "numrobot"          : 3,
   "gridwidth"         : 25,
   "gridlen"           : 25,
   "seed"              : 420,

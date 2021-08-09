@@ -61,6 +61,10 @@ test_iters     = exp_parameters["test_iters"]
 collision_p    = exp_parameters["collision_p"]
 buffer_maxsize = (train_episodes * train_iters) // exp_parameters["buf_divisor"]
 
+action_net_input = False
+if exp_parameters["action_net_input"] > 0:
+    action_net_input = True
+
 weight_decay = 0
 if exp_parameters["weight_decay"] > 0:
     weight_decay = exp_parameters["weight_decay"]
@@ -132,7 +136,7 @@ elif exp_parameters["policy_type"] == "dqn":
         batch_size = exp_parameters["batch_size"]
     policy = DQN(numrobot, action_space, lr, obs_dim, conv_channels,
                  conv_filters, conv_activation, hidden_sizes, hidden_activation,
-                 output_activation, batch_size=batch_size, buffer_size=buffer_maxsize)
+                 output_activation, batch_size=batch_size, buffer_size=buffer_maxsize, ani=action_net_input)
 
 '''Making the Controller for the Swarm Agent'''
 controller = GridRLController(numrobot, policy)
