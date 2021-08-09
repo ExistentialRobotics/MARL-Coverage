@@ -36,6 +36,7 @@ class DQN(Base_Policy):
         #optimizer
         self.optimizer = torch.optim.Adam(self.q_net.parameters(),
                                           lr=learning_rate, weight_decay=weight_decay)
+
         #epsilon-greedy parameters
         self._epsilon = 1
         self._e_decay = epsilon
@@ -47,6 +48,9 @@ class DQN(Base_Policy):
 
         self._gamma = gamma
         self._tau = tau
+
+        #tracking loss over time
+        self._lastloss = 0
 
 
     def step(self, state, testing):
@@ -86,6 +90,9 @@ class DQN(Base_Policy):
             N = self.batch_size
         state, action, reward, next_state = self._buff.samplebatch(N)
 
+        #setting loss to zero so we can increment
+        self._lastloss = 0
+
         for i in range(N):
             self.calc_gradient_old(state[i], action[i], reward[i], next_state[i], N)
 
@@ -114,6 +121,9 @@ class DQN(Base_Policy):
             #calculating mean squared error
             loss += 1.0/batch_size* (y-currq)**2
         loss.backward()
+
+        #incrementing the loss
+        self._lastloss += loss.item()
 
     def update_policy(self, episode):
         #adding new data to buffer
@@ -177,6 +187,9 @@ class DQN(Base_Policy):
             #calculating mean squared error
             loss += ((y-currq)**2).mean()
         loss.backward()
+
+        #tracking loss
+        self._lastloss = loss.item()
 
         #paranoid about memory leak
         del loss, next_qvals, qvals, currq, q_temp, y, next_q

@@ -33,6 +33,7 @@ def train_RLalg(env, controller, logger, episodes=1000, iters=100,  render=False
     controller.set_train()
 
     reward_per_episode = []
+    losslist = []
     best_reward = -sys.maxsize - 1
     checkpoint_num = 0
     for _ in range(episodes):
@@ -43,6 +44,7 @@ def train_RLalg(env, controller, logger, episodes=1000, iters=100,  render=False
 
         # track reward per episode
         reward_per_episode.append(total_reward)
+
 
         # letting us know when we beat previous best
         if total_reward > best_reward:
@@ -55,9 +57,7 @@ def train_RLalg(env, controller, logger, episodes=1000, iters=100,  render=False
             logger.saveModelWeights(controller._policy.getnet())
 
             #testing policy
-            # controller.set_eval()
             testrewards, average_percent_covered = test_RLalg(env, controller, logger, render_test=False)
-            # controller.set_train()
 
             #printing debug info
             checkpoint_num += 1
@@ -66,10 +66,13 @@ def train_RLalg(env, controller, logger, episodes=1000, iters=100,  render=False
         # update policy using the episode
         controller.update_policy(episode)
 
+        #tracking training loss for the episode
+        losslist.append(controller._policy._lastloss)
+
     #saving final policy
     logger.saveModelWeights(controller._policy.getnet())
 
-    return reward_per_episode
+    return reward_per_episode, losslist
 
 def test_RLalg(env, controller, logger, episodes=10, iters=100, render_test=False,make_vid=False):
     test_rewardlis = []
