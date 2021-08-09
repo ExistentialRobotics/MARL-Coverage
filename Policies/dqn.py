@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from . base_policy import Base_Policy
-# from . Networks.grid_rl_conv import Grid_RL_Conv
+from . Networks.grid_rl_conv import Grid_RL_Conv
 from . Networks.Qnet import Critic
 from torch.distributions.categorical import Categorical
 from copy import deepcopy
