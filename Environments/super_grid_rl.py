@@ -133,6 +133,7 @@ class SuperGridRL(object):
                 for r in robots:
                     reward[r2c[r]] -= self._collision_penalty
 
+
         #sense from all the current robot positions
         for i in range(self._numrobot):
             x = self._xinds[i]
@@ -157,7 +158,7 @@ class SuperGridRL(object):
 
                     elif(self.isInBounds(j,k) and self._grid[j][k]>=0 and
                        self._free[j][k] == 0):
-                       reward[r2c[i]] -= self._free_penalty
+                        reward[r2c[i]] -= self._free_penalty
 
                     elif(self.isInBounds(j,k) and self._grid[j][k]<0 and
                          self._observed_obstacles[j][k] == 0):

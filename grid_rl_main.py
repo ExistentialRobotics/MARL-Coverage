@@ -61,6 +61,10 @@ test_iters     = exp_parameters["test_iters"]
 collision_p    = exp_parameters["collision_p"]
 buffer_maxsize = (train_episodes * train_iters) // exp_parameters["buf_divisor"]
 
+action_net_input = False
+if exp_parameters["action_net_input"] > 0:
+    action_net_input = True
+
 weight_decay = 0
 if exp_parameters["weight_decay"] > 0:
     weight_decay = exp_parameters["weight_decay"]
@@ -95,12 +99,12 @@ if exp_parameters["conv_activation"] == "relu":
 if exp_parameters["hidden_activation"] == "relu":
     hidden_activation = nn.ReLU
 
-if exp_parameters["output_activation"] == "sigmoid":
-    output_activation = nn.Sigmoid
-elif exp_parameters["output_activation"] == "softmax":
-    output_activation = nn.Softmax
-elif exp_parameters["output_activation"] == "none":
-    output_activation = None
+# if exp_parameters["output_activation"] == "sigmoid":
+#     output_activation = nn.Sigmoid
+# elif exp_parameters["output_activation"] == "softmax":
+#     output_activation = nn.Softmax
+# elif exp_parameters["output_activation"] == "none":
+#     output_activation = None
 print(DASH)
 print("Running experiment using: " + str(config_path))
 print(DASH)
@@ -121,6 +125,7 @@ if exp_parameters["policy_type"] == "random":
     policy = Basic_Random(numrobot, action_space)
     random_policy = True
 elif exp_parameters["policy_type"] == "pg":
+    output_activation = nn.Softmax
     policy = PolicyGradient(numrobot, action_space, lr, obs_dim, conv_channels,
                             conv_filters, conv_activation, hidden_sizes,
                             hidden_activation, output_activation,
@@ -133,7 +138,7 @@ elif exp_parameters["policy_type"] == "dqn":
         batch_size = exp_parameters["batch_size"]
     policy = DQN(numrobot, action_space, lr, obs_dim, conv_channels,
                  conv_filters, conv_activation, hidden_sizes, hidden_activation,
-                 output_activation, batch_size=batch_size, buffer_size=buffer_maxsize)
+                 batch_size=batch_size, buffer_size=buffer_maxsize, ani=action_net_input)
 
 '''Making the Controller for the Swarm Agent'''
 controller = GridRLController(numrobot, policy)
@@ -156,7 +161,8 @@ if not random_policy:
     controller.set_eval()
 
 #testing the policy and collecting data
-test_rewardlis, average_percent_covered = test_RLalg(env, controller, logger, episodes=test_episodes, iters=test_iters, render_test=render_test, make_vid=makevid)
+test_rewardlis, average_percent_covered = test_RLalg(env, controller, logger, episodes=test_episodes, iters=test_iters, render_test=render_test,
+                                                     make_vid=makevid)
 
 '''Display results'''
 print(DASH)

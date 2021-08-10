@@ -46,10 +46,10 @@ class Critic(nn.Module):
         for i in range(len(hidden_sizes)):
             if i == 0:
                 fc_layers += [nn.Linear(np.prod(conv_output_size) + act_dim, hidden_sizes[i]),
-                              nn.BatchNorm1d(hidden_sizes[i], affine=False), hidden_activation()]
+                              hidden_activation()]
             else:
                 fc_layers += [nn.Linear(hidden_sizes[i - 1], hidden_sizes[i]),
-                              nn.BatchNorm1d(hidden_sizes[i], affine=False), hidden_activation()]
+                              hidden_activation()]
 
         fc_layers += [nn.Linear(hidden_sizes[-1], 1)]
 
@@ -57,5 +57,6 @@ class Critic(nn.Module):
         self.q_fc.apply(init_weights)
 
     def forward(self, obs, act):
-        q = self.q_fc(torch.cat((self.q_conv(obs), act), dim=-1))
+        temp = torch.squeeze(torch.cat((self.q_conv(obs), act.float()), dim=-1), 0)
+        q = self.q_fc(temp)
         return torch.squeeze(q, -1)

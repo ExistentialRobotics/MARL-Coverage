@@ -45,7 +45,6 @@ def train_RLalg(env, controller, logger, episodes=1000, iters=100,  render=False
         # track reward per episode
         reward_per_episode.append(total_reward)
 
-
         # letting us know when we beat previous best
         if total_reward > best_reward:
             print("New best reward on episode " + str(_) + ": " + str(total_reward))
@@ -57,7 +56,7 @@ def train_RLalg(env, controller, logger, episodes=1000, iters=100,  render=False
             logger.saveModelWeights(controller._policy.getnet())
 
             #testing policy
-            testrewards, average_percent_covered = test_RLalg(env, controller, logger, render_test=False)
+            testrewards, average_percent_covered = test_RLalg(env, controller, logger, render_test=True)
 
             #printing debug info
             checkpoint_num += 1

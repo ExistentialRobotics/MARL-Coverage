@@ -1,10 +1,10 @@
 {
-  "experiment_name"   : "quick_test",
+  "experiment_name"   : "dqn3kNewQNet",
   "makevid"           : 1,
   "policy_type"       : "dqn",
+  "action_net_input"  : 1,
   "batch_size"        : 100,
-  "action_net_input"  : 0,
-  "numrobot"          : 6,
+  "numrobot"          : 3,
   "gridwidth"         : 25,
   "gridlen"           : 25,
   "seed"              : 420,
@@ -12,7 +12,7 @@
   "render_test"       : 1,
   "render_train"      : 1,
   "lr"                : 0.0001,
-  "train_episodes"    : 200,
+  "train_episodes"    : 3000,
   "test_episodes"     : 100,
   "train_iters"       : 100,
   "test_iters"        : 100,
@@ -44,7 +44,7 @@
   ],
   "hidden_activation" : "relu",
   "output_activation" : "none",
-  "buffer"            : 0,
   "weight_decay"      : 0,
-  "buf_divisor" : 4
+  "buffer"            : 0,
+  "buf_divisor"       : 4
 }
