@@ -112,7 +112,7 @@ print(DASH)
 logger = Logger(exp_name, makevid, 0.02)
 
 '''Making the environment'''
-env = SuperGridRL(numrobot, gridlen, gridwidth, collision_penalty=collision_p)
+env = SuperGridRL(numrobot, gridlen, gridwidth, collision_penalty=collision_p, ani=action_net_input)
 
 '''Init action space'''
 action_space = Discrete(num_actions)
@@ -143,10 +143,11 @@ controller = GridRLController(numrobot, policy)
 
 '''Train policy'''
 train_rewardlis = []
+losslist = []
 if not random_policy:
     print("----------Running {} for ".format(exp_parameters["policy_type"]) + str(train_episodes) + " episodes-----------")
     controller._policy.printNumParams()
-    train_rewardlis = train_RLalg(env, controller, logger, episodes=train_episodes, iters=train_iters, render=render_train)
+    train_rewardlis, losslist = train_RLalg(env, controller, logger, episodes=train_episodes, iters=train_iters, render=render_train, ani=action_net_input)
 else:
     print("-----------------------Running Random Policy-----------------------")
 
@@ -158,14 +159,15 @@ if not random_policy:
     controller.set_eval()
 
 #testing the policy and collecting data
-test_rewardlis, average_percent_covered = test_RLalg(env, controller, logger, episodes=test_episodes, iters=test_iters, render_test=render_test, make_vid=makevid)
+test_rewardlis, average_percent_covered = test_RLalg(env, controller, logger, episodes=test_episodes, iters=test_iters, render_test=render_test,
+                                                     make_vid=makevid, ani=action_net_input)
 
 '''Display results'''
 print(DASH)
 print("Trained policy covered " + str(average_percent_covered) + " percent of the environment on average!")
 print(DASH)
 
-# plot testing rewards
+# plot training rewards
 plt.figure(2)
 plt.title("Training Reward per Episode")
 plt.xlabel('Episodes')
@@ -175,7 +177,7 @@ plt.legend(handles=[line_r])
 logger.savefig(plt.gcf(), 'TrainingReward')
 plt.show()
 
-# plot training rewards
+# plot testing rewards
 plt.figure(3)
 plt.title("Testing Reward per Episode")
 plt.xlabel('Episodes')
@@ -183,6 +185,16 @@ plt.ylabel('Reward')
 line_r, = plt.plot(test_rewardlis, label="Testing Reward")
 plt.legend(handles=[line_r])
 logger.savefig(plt.gcf(), 'TestingReward')
+plt.show()
+
+# plot training loss
+plt.figure(4)
+plt.title("Training Loss per Episode")
+plt.xlabel('Episodes')
+plt.ylabel('Loss')
+line_r, = plt.plot(losslist, label="Training Loss")
+plt.legend(handles=[line_r])
+logger.savefig(plt.gcf(), 'TrainingLoss')
 plt.show()
 
 #closing logger

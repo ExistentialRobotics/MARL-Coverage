@@ -1,7 +1,7 @@
 import numpy as np
 import sys
 
-def generate_episode(env, controller, iters=100, render=False):
+def generate_episode(env, controller, iters=100, render=False, ani=False):
     episode = []
     state = env.reset()
     steps = 0
@@ -16,7 +16,10 @@ def generate_episode(env, controller, iters=100, render=False):
         episode.append((state, action, reward, next_state))
         state = next_state
         steps += 1
-        total_reward += np.sum(reward)
+        if ani:
+            total_reward = reward
+        else:
+            total_reward += np.sum(reward)
         done = env.done()
 
         if render:
@@ -25,7 +28,7 @@ def generate_episode(env, controller, iters=100, render=False):
     return episode, total_reward, steps
 
 def train_RLalg(env, controller, logger, episodes=1000, iters=100,  render=False,
-                checkpoint_interval=500):
+                checkpoint_interval=500, ani=False):
     # reset environment
     state = env.reset()
 
@@ -33,13 +36,14 @@ def train_RLalg(env, controller, logger, episodes=1000, iters=100,  render=False
     controller.set_train()
 
     reward_per_episode = []
+    losslist = []
     best_reward = -sys.maxsize - 1
     checkpoint_num = 0
     for _ in range(episodes):
         if _ % 10 == 0:
             print("Training Episode: " + str(_) + " out of " + str(episodes))
 
-        episode, total_reward, steps = generate_episode(env, controller, iters=iters, render=False)
+        episode, total_reward, steps = generate_episode(env, controller, iters=iters, render=False, ani=ani)
 
         # track reward per episode
         reward_per_episode.append(total_reward)
@@ -55,9 +59,7 @@ def train_RLalg(env, controller, logger, episodes=1000, iters=100,  render=False
             logger.saveModelWeights(controller._policy.getnet())
 
             #testing policy
-            # controller.set_eval()
-            testrewards, average_percent_covered = test_RLalg(env, controller, logger, render_test=False)
-            # controller.set_train()
+            testrewards, average_percent_covered = test_RLalg(env, controller, logger, render_test=False, ani=ani)
 
             #printing debug info
             checkpoint_num += 1
@@ -66,12 +68,15 @@ def train_RLalg(env, controller, logger, episodes=1000, iters=100,  render=False
         # update policy using the episode
         controller.update_policy(episode)
 
+        #tracking training loss for the episode
+        losslist.append(controller._policy._lastloss)
+
     #saving final policy
     logger.saveModelWeights(controller._policy.getnet())
 
-    return reward_per_episode
+    return reward_per_episode, losslist
 
-def test_RLalg(env, controller, logger, episodes=10, iters=100, render_test=False,make_vid=False):
+def test_RLalg(env, controller, logger, episodes=10, iters=1, render_test=False,make_vid=False, ani=False):
     test_rewardlis = []
     success = 0
     percent_covered = 0
@@ -88,13 +93,17 @@ def test_RLalg(env, controller, logger, episodes=10, iters=100, render_test=Fals
         total_reward = 0
         done = False
         while not done and steps != iters:
+            print(steps)
             # determine action
             action = controller.getControls(state)
 
             # step environment and save episode results
             state, reward = env.step(action)
             steps += 1
-            total_reward += np.sum(reward)
+            if ani:
+                total_reward = reward
+            else:
+                total_reward += np.sum(reward)
 
             # render if necessary
             if render:

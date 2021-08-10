@@ -7,9 +7,10 @@ class SuperGridRL(object):
     """
     A Multi-Agent Grid Environment with a discrete action space for RL testing.
     """
-    def __init__(self, numrobot, gridlen, gridwidth, discrete_grid_values=2, collision_penalty=5, sensesize=1, grid=None, seed=None, free_penalty=0):
+    def __init__(self, numrobot, gridlen, gridwidth, discrete_grid_values=2, collision_penalty=5, sensesize=1, grid=None, seed=None, free_penalty=0, ani=False):
         super().__init__()
 
+        self.ani = ani
         self._numrobot = numrobot
         self._gridlen = gridlen
         self._gridwidth = gridwidth
@@ -54,7 +55,10 @@ class SuperGridRL(object):
 
     def step(self, ulis):
         #initialize reward for this step
-        reward = np.zeros((self._numrobot,))
+        if self.ani:
+            reward = 0
+        else:
+            reward = np.zeros((self._numrobot,))
 
         #update robot positions using controls
         newx = self._xinds
@@ -84,7 +88,10 @@ class SuperGridRL(object):
                 if(self.isInBounds(x,y) and self._grid[x][y]>=0):
                     newx[z] = x
                 else:
-                    reward[i] -= self._collision_penalty
+                    if self.ani:
+                        reward -= self._collision_penalty
+                    else:
+                        reward[i] -= self._collision_penalty
             #right
             elif(u == 1):
                 x = self._xinds[z] + 1
@@ -93,7 +100,10 @@ class SuperGridRL(object):
                 if(self.isInBounds(x,y) and self._grid[x][y]>=0):
                     newx[z] = x
                 else:
-                    reward[i] -= self._collision_penalty
+                    if self.ani:
+                        reward -= self._collision_penalty
+                    else:
+                        reward[i] -= self._collision_penalty
             #up
             elif(u == 2):
                 x = self._xinds[z]
@@ -102,7 +112,10 @@ class SuperGridRL(object):
                 if(self.isInBounds(x,y) and self._grid[x][y]>=0):
                     newy[z] = y
                 else:
-                    reward[i] -= self._collision_penalty
+                    if self.ani:
+                        reward -= self._collision_penalty
+                    else:
+                        reward[i] -= self._collision_penalty
             #down
             elif(u == 3):
                 x = self._xinds[z]
@@ -111,7 +124,10 @@ class SuperGridRL(object):
                 if(self.isInBounds(x,y) and self._grid[x][y]>=0):
                     newy[z]= y
                 else:
-                    reward[i] -= self._collision_penalty
+                    if self.ani:
+                        reward -= self._collision_penalty
+                    else:
+                        reward[i] -= self._collision_penalty
 
         #checking if any robots are at same position
         coord_dict = {}
@@ -131,7 +147,11 @@ class SuperGridRL(object):
                 # print(robots)
                 #penalizing all robots that tried to end up in the same place
                 for r in robots:
-                    reward[r2c[r]] -= self._collision_penalty
+                    if self.ani:
+                        reward -= self._collision_penalty
+                    else:
+                        reward[r2c[r]] -= self._collision_penalty
+
 
         #sense from all the current robot positions
         for i in range(self._numrobot):
@@ -145,7 +165,10 @@ class SuperGridRL(object):
                     if(self.isInBounds(j,k) and self._grid[j][k]>=0 and
                        self._free[j][k] == 1):
                         # add reward
-                        reward[r2c[i]] += self._grid[j][k]
+                        if self.ani:
+                            reward += self._grid[j][k]
+                        else:
+                            reward[r2c[i]] += self._grid[j][k]
 
                         # record observation value
                         sensing_level = self._grid[j][k]
@@ -157,7 +180,10 @@ class SuperGridRL(object):
 
                     elif(self.isInBounds(j,k) and self._grid[j][k]>=0 and
                        self._free[j][k] == 0):
-                       reward[r2c[i]] -= self._free_penalty
+                       if self.ani:
+                           reward -= self._free_penalty
+                       else:
+                           reward[r2c[i]] -= self._free_penalty
 
                     elif(self.isInBounds(j,k) and self._grid[j][k]<0 and
                          self._observed_obstacles[j][k] == 0):

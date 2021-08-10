@@ -29,16 +29,17 @@ class DQN(Base_Policy):
             # since it's just ran once in __init__.
             self.actions = [_ for _ in range(self.num_actions)]
             self.action_sets = np.array([p for p in itertools.product(self.actions, repeat=numrobot)])
+            self.act_dim = self.num_actions * self.numrobot
 
             # create batched action sets
             self.batched_action_sets = np.stack([self.action_sets for _ in range(batch_size)], axis=0)
 
             # init q net
-            self.q_net = Critic(obs_dim, numrobot, conv_channels, conv_filters,
+            self.q_net = Critic(obs_dim, self.act_dim, conv_channels, conv_filters,
                                 conv_activation, hidden_sizes, hidden_activation)
 
             # init q val array
-            self.q_vals = np.zeros((self.action_sets.shape[0], 1))
+            self.q_vals = torch.zeros((self.action_sets.shape[0], 1))
             self.batch_q_vals = np.zeros((batch_size, self.action_sets.shape[0]))
             self.batch_next_q = torch.zeros((batch_size, self.action_sets.shape[0]))
         else:
@@ -57,6 +58,7 @@ class DQN(Base_Policy):
         #optimizer
         self.optimizer = torch.optim.Adam(self.q_net.parameters(),
                                           lr=learning_rate, weight_decay=weight_decay)
+
         #epsilon-greedy parameters
         self._epsilon = 1
         self._e_decay = epsilon
@@ -69,21 +71,43 @@ class DQN(Base_Policy):
         self._gamma = gamma
         self._tau = tau
 
+    def one_hot(self, action_set, batch=False):
+        if batch:
+            oh = torch.zeros((self.batch_size, self.act_dim))
+        else:
+            oh = torch.zeros((self.act_dim,))
+
+        for i in range(action_set.shape[0]):
+            if batch:
+                oh[:, i * self.num_actions: (i + 1) * self.num_actions][action_set[i]] = 1
+            else:
+                oh[i * self.num_actions: (i + 1) * self.num_actions][action_set[i]] = 1
+        return oh
+
+
     def step(self, state, testing):
-        if self.ani:
+        if not self.ani:
             qvals = self.q_net(torch.from_numpy(state).float())
 
         #choosing the action with highest q-value or choose random with p(epsilon)
-        ulis = []
-
         if self.ani:
-            for j in range(self.action_sets.shape[0]):
-                self.q_vals[i] = self.q_net(torch.from_numpy(state).float(), torch.from_numpy(self.action_sets[i]))
+            # iterate over every possible set of actions
+            for i in range(self.action_sets.shape[0]):
+                a = torch.unsqueeze(self.one_hot(self.action_sets[i]), 0)
+                self.q_vals[i] = self.q_net(torch.from_numpy(state).float(), a)
 
             # greedy
-            u = torch.argmax(self.q_vals)
+            ulis = self.action_sets[torch.argmax(self.q_vals)]
 
+            #epsilon greedy check
+            for i in range(ulis.shape[0]):
+                s = np.random.uniform()
+
+                #epsilon greedy policy
+                if(s <= self._epsilon or testing):
+                    ulis[i] = np.random.randint(self.num_actions)
         else:
+            ulis = []
             for i in range(self.numrobot):
                 #epsilon greedy check
                 s = np.random.uniform()
@@ -117,6 +141,9 @@ class DQN(Base_Policy):
             N = self.batch_size
         state, action, reward, next_state = self._buff.samplebatch(N)
 
+        #setting loss to zero so we can increment
+        self._lastloss = 0
+
         for i in range(N):
             self.calc_gradient_old(state[i], action[i], reward[i], next_state[i], N)
 
@@ -145,6 +172,9 @@ class DQN(Base_Policy):
             #calculating mean squared error
             loss += 1.0/batch_size* (y-currq)**2
         loss.backward()
+
+        #incrementing the loss
+        self._lastloss += loss.item()
 
     def update_policy(self, episode):
         #adding new data to buffer
@@ -189,48 +219,48 @@ class DQN(Base_Policy):
 
     def calc_gradient(self, state, action, reward, next_state, batch_size):
         # calc q vals
-        qvals = self.q_net(state, action)
+        if self.ani:
+            a = self.one_hot(action, batch=True)
+            qvals = self.q_net(state, a)
+        else:
+            qvals = self.q_net(state)
 
         if not self.ani:
             next_qvals = self.target_net(next_state)
 
-
         if self.ani:
             with torch.no_grad():
                 for i in range(self.action_sets.shape[0]):
-                    self.batch_next_q[:, i] = self.target_net(next_state.float(), torch.from_numpy(self.batched_action_sets[:, i]))
-
+                    a = self.one_hot(self.batched_action_sets[:, i], batch=True)
+                    self.batch_next_q[:, i] = self.target_net(next_state.float(), a)
                 next_q = torch.max(self.batch_next_q, 1).values
                 y = reward + self._gamma*next_q
-                currq = torch.zeros(batch_size)
-            q_temp = qvals[:, i * self.num_actions: (i + 1) * self.num_actions]
 
-            #TODO vectorize this for loop
-            for j in range(q_temp.shape[0]):
-                currq[j] = q_temp[j, action[:, i][j]]
-
-                #calculating mean squared error
-                loss += ((y-currq)**2).mean()
+            #calculating mean squared error
+            loss = ((y-qvals)**2).mean()
         else:
             # calculate gradient for q function
             loss = 0
+            currq = torch.zeros(batch_size)
             for i in range(self.numrobot):
                 with torch.no_grad():
                     next_q = torch.max(next_qvals[:, i * self.num_actions: (i + 1) * self.num_actions], 1).values
                     y = reward[:, i] + self._gamma*next_q
-                    currq = torch.zeros(batch_size)
                 q_temp = qvals[:, i * self.num_actions: (i + 1) * self.num_actions]
 
                 #TODO vectorize this for loop
                 for j in range(q_temp.shape[0]):
-                    currq[j] = q_temp[j, action[:, i][j]]
+                    currq[j] = q_temp[j, action[j, i]]
 
                 #calculating mean squared error
                 loss += ((y-currq)**2).mean()
         loss.backward()
 
+        #tracking loss
+        self._lastloss = loss.item()
+
         #paranoid about memory leak
-        del loss, next_qvals, qvals, currq, q_temp, y, next_q
+        # del loss, next_qvals, qvals, currq, q_temp, y, next_q
 
     def set_train(self):
         self.q_net.train()
