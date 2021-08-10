@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import sys
+import getopt, sys
 import json
 
 from Environments.super_grid_rl import SuperGridRL
@@ -21,14 +21,67 @@ DASH = "-----------------------------------------------------------------------"
 np.set_printoptions(suppress=True)
 
 '''Read config file'''
-if len(sys.argv) != 2:
-    print(DASH)
-    print("No config file specified.")
-    print(DASH)
-    sys.exit(1)
+# Options
+options = "m:"
+
+# Long options
+long_options = ["model ="]
+
+# Remove 1st argument from the
+# list of command line arguments
+argumentList = sys.argv[1:]
+
+saved_model = False
+try:
+    # Parsing argument
+    arguments, values = getopt.getopt(argumentList, options, long_options)
+
+    # checking each argument
+    for currentArgument, currentValue in arguments:
+
+        if currentArgument in ("-m", "--model"):
+            print (("Running saved model directly from % s") % (currentValue))
+            model_path = currentValue
+            saved_model = True
+        else:
+            print("Not a valid arg.")
+
+except getopt.error as err:
+    # output error, and return with an error code
+    print (str(err))
+
+if saved_model:
+    # run testing with a saved model
+    random_policy = False
+
+    # check if model path is valid
+    try:
+        model_file = open(model_path)
+    except OSError:
+        print(DASH)
+        print(str(model_path) + " does not exit.")
+        print(DASH)
+        sys.exit(1)
+
+    # determine index of second \ character
+    sc = 0
+    for i in range(len(model_path) - 1, -1, -1):
+        if model_path[i] == "/":
+             sc += 1
+        if sc == 2:
+            break
+
+    # create config file path string
+    config_path = model_path[:i + 1] + "config.json"
+else:
+    if len(sys.argv) != 2:
+        print(DASH)
+        print("No config file specified.")
+        print(DASH)
+        sys.exit(1)
+    config_path = sys.argv[1]
 
 # check if config path is valid
-config_path = sys.argv[1]
 try:
     config_file = open(config_path)
 except OSError:
@@ -141,15 +194,27 @@ elif exp_parameters["policy_type"] == "dqn":
 '''Making the Controller for the Swarm Agent'''
 controller = GridRLController(numrobot, policy)
 
-'''Train policy'''
-train_rewardlis = []
-losslist = []
-if not random_policy:
-    print("----------Running {} for ".format(exp_parameters["policy_type"]) + str(train_episodes) + " episodes-----------")
-    controller._policy.printNumParams()
-    train_rewardlis, losslist = train_RLalg(env, controller, logger, episodes=train_episodes, iters=train_iters, render=render_train, ani=action_net_input)
-else:
-    print("-----------------------Running Random Policy-----------------------")
+# train a policy if not testing a saved model
+if not saved_model:
+    '''Train policy'''
+    train_rewardlis = []
+    losslist = []
+    if not random_policy:
+        print("----------Running {} for ".format(exp_parameters["policy_type"]) + str(train_episodes) + " episodes-----------")
+        controller._policy.printNumParams()
+        train_rewardlis, losslist = train_RLalg(env, controller, logger, episodes=train_episodes, iters=train_iters, render=render_train, ani=action_net_input)
+
+        # plot training rewards
+        plt.figure(2)
+        plt.title("Training Reward per Episode")
+        plt.xlabel('Episodes')
+        plt.ylabel('Reward')
+        line_r, = plt.plot(train_rewardlis, label="Training Reward")
+        plt.legend(handles=[line_r])
+        logger.savefig(plt.gcf(), 'TrainingReward')
+        plt.show()
+    else:
+        print("-----------------------Running Random Policy-----------------------")
 
 '''Test policy'''
 print("-----------------------------Testing Policy----------------------------")
@@ -166,16 +231,6 @@ test_rewardlis, average_percent_covered = test_RLalg(env, controller, logger, ep
 print(DASH)
 print("Trained policy covered " + str(average_percent_covered) + " percent of the environment on average!")
 print(DASH)
-
-# plot training rewards
-plt.figure(2)
-plt.title("Training Reward per Episode")
-plt.xlabel('Episodes')
-plt.ylabel('Reward')
-line_r, = plt.plot(train_rewardlis, label="Training Reward")
-plt.legend(handles=[line_r])
-logger.savefig(plt.gcf(), 'TrainingReward')
-plt.show()
 
 # plot testing rewards
 plt.figure(3)

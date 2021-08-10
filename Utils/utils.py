@@ -93,7 +93,6 @@ def test_RLalg(env, controller, logger, episodes=10, iters=1, render_test=False,
         total_reward = 0
         done = False
         while not done and steps != iters:
-            print(steps)
             # determine action
             action = controller.getControls(state)
 
