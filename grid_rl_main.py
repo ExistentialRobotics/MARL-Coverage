@@ -99,7 +99,8 @@ if exp_parameters["output_activation"] == "sigmoid":
     output_activation = nn.Sigmoid
 elif exp_parameters["output_activation"] == "softmax":
     output_activation = nn.Softmax
-
+elif exp_parameters["output_activation"] == "none":
+    output_activation = None
 print(DASH)
 print("Running experiment using: " + str(config_path))
 print(DASH)

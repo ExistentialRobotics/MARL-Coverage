@@ -63,7 +63,10 @@ class Grid_RL_Conv(nn.Module):
                            hidden_activation()]
 
         # last fc layer output features is the number of actions
-        layers += [nn.Linear(hidden_sizes[-1], action_dim), output_activation()]
+        if output_activation == None:
+            layers += [nn.Linear(hidden_sizes[-1], action_dim)]
+        else:
+            layers += [nn.Linear(hidden_sizes[-1], action_dim), output_activation()]
         self.layers = nn.Sequential(*layers)
 
     def forward(self, x):

@@ -42,7 +42,7 @@
     }
   ],
   "hidden_activation" : "relu",
-  "output_activation" : "sigmoid",
+  "output_activation" : "none",
   "weight_decay"      : 0,
   "buffer"            : 0,
   "buf_divisor"       : 4

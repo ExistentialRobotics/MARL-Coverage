@@ -182,7 +182,7 @@ class DQN(Base_Policy):
 
             #TODO vectorize this for loop
             for j in range(q_temp.shape[0]):
-                currq[j] = q_temp[j, action[:, i][j]]
+                currq[j] = q_temp[j, action[j, i]]
 
             #calculating mean squared error
             loss += ((y-currq)**2).mean()
@@ -190,6 +190,7 @@ class DQN(Base_Policy):
 
         #tracking loss
         self._lastloss = loss.item()
+        print("Loss: " + str(self._lastloss))
 
         #paranoid about memory leak
         del loss, next_qvals, qvals, currq, q_temp, y, next_q

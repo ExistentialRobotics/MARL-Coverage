@@ -1,8 +1,7 @@
 {
-  "experiment_name"   : "dqn5vectorized",
+  "experiment_name"   : "quick_test",
   "makevid"           : 1,
-  "policy_type"       : "dqn",
-  "batch_size"        : 100,
+  "policy_type"       : "pg",
   "numrobot"          : 6,
   "gridwidth"         : 25,
   "gridlen"           : 25,
@@ -11,8 +10,8 @@
   "render_test"       : 1,
   "render_train"      : 1,
   "lr"                : 0.0001,
-  "train_episodes"    : 5000,
-  "test_episodes"     : 100,
+  "train_episodes"    : 50,
+  "test_episodes"     : 30,
   "train_iters"       : 100,
   "test_iters"        : 100,
   "collision_p"       : 5,
@@ -42,8 +41,8 @@
     }
   ],
   "hidden_activation" : "relu",
-  "output_activation" : "none",
+  "output_activation" : "sigmoid",
   "buffer"            : 0,
   "weight_decay"      : 0,
-  "buf_divisor" : 5
+  "buf_divisor" : 4
 }
