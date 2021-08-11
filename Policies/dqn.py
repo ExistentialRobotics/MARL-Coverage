@@ -40,8 +40,10 @@ class DQN(Base_Policy):
 
             # init q val array
             self.q_vals = torch.zeros((self.action_sets.shape[0], 1))
-            self.batch_q_vals = np.zeros((batch_size, self.action_sets.shape[0]))
-            self.batch_next_q = torch.zeros((batch_size, self.action_sets.shape[0]))
+            self.next_q = torch.zeros((self.action_sets.shape[0], 1))
+
+            # self.batch_q_vals = np.zeros((batch_size, self.action_sets.shape[0]))
+            # self.batch_next_q = torch.zeros((batch_size, self.action_sets.shape[0]))
         else:
             # use grid rl conv instead of qnet
             action_dim = numrobot * self.num_actions
@@ -147,8 +149,8 @@ class DQN(Base_Policy):
 
         #converting all the rewards in the episode to be total rewards instead of per robot reward if ani
         if self.ani:
-            for i in range(len(reward)):
-                reward[i] = np.sum(reward[i])
+            for i in range(len(rewards)):
+                rewards[i] = np.sum(rewards[i])
 
         # convert to tensors
         states = torch.tensor(states).float()
@@ -159,7 +161,16 @@ class DQN(Base_Policy):
         next_states = torch.squeeze(next_states, axis=1)
 
         # calculate network gradient
-        self.calc_gradient(states, actions, rewards, next_states, states.shape[0])
+        loss = 0
+        if self.ani:
+            for i in range(N):
+                loss += self.calc_gradient(states[i], actions[i], rewards[i], next_states[i], N)
+        else:
+            loss = self.calc_gradient(states, actions, rewards, next_states, N)
+
+        #tracking loss
+        self._lastloss = loss.item()
+        print("Loss: " + str(self._lastloss))
 
         # update parameters
         self.optimizer.step()
@@ -177,8 +188,8 @@ class DQN(Base_Policy):
     def calc_gradient(self, states, actions, rewards, next_states, batch_size):
         # calc q vals
         if self.ani:
-            a = self.one_hot(actions, batch=True)
-            qvals = self.q_net(states, a)
+            a = torch.unsqueeze(self.one_hot(actions), 0)
+            qval = self.q_net(torch.unsqueeze(states, 0), a)
         else:
             qvals = self.q_net(states)
 
@@ -188,13 +199,13 @@ class DQN(Base_Policy):
         if self.ani:
             with torch.no_grad():
                 for i in range(self.action_sets.shape[0]):
-                    a = self.one_hot(self.batched_action_sets[:, i], batch=True)
-                    self.batch_next_q[:, i] = self.target_net(next_states.float(), a)
-                next_q = torch.max(self.batch_next_q, 1).values
+                    a = torch.unsqueeze(self.one_hot(self.action_sets[i]), 0)
+                    self.next_q[i] = self.target_net(torch.unsqueeze(next_states, 0), a)
+                next_q = torch.max(self.next_q)
                 y = rewards + self._gamma*next_q
 
             #calculating mean squared error
-            loss = ((y-qvals)**2).mean()
+            loss = 1.0/batch_size * (y-qval)**2
         else:
             # calculate gradient for q function
             loss = 0
@@ -212,10 +223,7 @@ class DQN(Base_Policy):
                 #calculating mean squared error
                 loss += ((y-currq)**2).mean()
         loss.backward()
-
-        #tracking loss
-        self._lastloss = loss.item()
-        print("Loss: " + str(self._lastloss))
+        return loss
 
     def set_train(self):
         self.q_net.train()

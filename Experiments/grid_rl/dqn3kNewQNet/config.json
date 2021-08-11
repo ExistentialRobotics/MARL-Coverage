@@ -10,7 +10,7 @@
   "seed"              : 420,
   "num_actions"       : 4,
   "render_test"       : 1,
-  "render_train"      : 1,
+  "render_train"      : 0,
   "lr"                : 0.0001,
   "train_episodes"    : 3000,
   "test_episodes"     : 100,
@@ -45,6 +45,5 @@
   "hidden_activation" : "relu",
   "output_activation" : "none",
   "weight_decay"      : 0,
-  "buffer"            : 0,
-  "buf_divisor"       : 4
+  "buffer_size"       : 2000
 }

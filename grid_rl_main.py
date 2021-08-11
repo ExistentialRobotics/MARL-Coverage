@@ -113,8 +113,7 @@ test_episodes  = exp_parameters["test_episodes"]
 train_iters    = exp_parameters["train_iters"]
 test_iters     = exp_parameters["test_iters"]
 collision_p    = exp_parameters["collision_p"]
-buffer_maxsize = (train_episodes * train_iters) // exp_parameters["buf_divisor"]
-
+buffer_maxsize = ["buffer_size"]
 
 weight_decay = 0
 if exp_parameters["weight_decay"] > 0:
