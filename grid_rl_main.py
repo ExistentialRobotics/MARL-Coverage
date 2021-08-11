@@ -176,7 +176,7 @@ if exp_parameters["policy_type"] == "random":
     policy = Basic_Random(numrobot, action_space)
     random_policy = True
 elif exp_parameters["policy_type"] == "pg":
-    output_activation = nn.Softmax
+    output_activation = None
     policy = PolicyGradient(numrobot, action_space, lr, obs_dim, conv_channels,
                             conv_filters, conv_activation, hidden_sizes,
                             hidden_activation, output_activation,

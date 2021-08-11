@@ -30,7 +30,7 @@ class PolicyGradient(Base_Policy):
         # sample from each set of probabilities to get the actions
         ulis = []
         for i in range(self.numrobot):
-            m = Categorical(probs[i * self.num_actions: (i + 1) * self.num_actions])
+            m = Categorical(logits=probs[i * self.num_actions: (i + 1) * self.num_actions])
             ulis.append(m.sample())
         return ulis
 
@@ -69,7 +69,7 @@ class PolicyGradient(Base_Policy):
         # calculate gradient
         loss = 0
         for i in range(self.numrobot):
-            m = Categorical(probs[i * self.num_actions: (i + 1) * self.num_actions])
+            m = Categorical(logits=probs[i * self.num_actions: (i + 1) * self.num_actions])
             loss -= 1.0/episode_len * m.log_prob(action[i]) * r_return
         loss.backward()
 
@@ -79,16 +79,16 @@ class PolicyGradient(Base_Policy):
         self.optimizer.zero_grad()
 
         #converting all the rewards in the episode to be total rewards instead of per robot reward
-        raw_rewards = []
-        for i in range(len(episode)):
-            raw_rewards.append(np.sum(episode[i][2]))
+        # raw_rewards = []
+        # for i in range(len(episode)):
+        #     raw_rewards.append(np.sum(episode[i][2]))
 
-        #calculate all r_returns efficiently (with discounting)
-        d_rewards = []
-        d_rewards.append(raw_rewards[len(episode) - 1])
-        for i in range(len(episode) - 1):
-            d_rewards.insert(0, self._gamma*d_rewards[0]
-                             + raw_rewards[len(episode) - 2 - i])
+        # #calculate all r_returns efficiently (with discounting)
+        # d_rewards = []
+        # d_rewards.append(raw_rewards[len(episode) - 1])
+        # for i in range(len(episode) - 1):
+        #     d_rewards.insert(0, self._gamma*d_rewards[0]
+        #                      + raw_rewards[len(episode) - 2 - i])
 
         #setting loss var to zero so we can increment it for each step of episode
         self._lastloss = 0
@@ -96,29 +96,32 @@ class PolicyGradient(Base_Policy):
         #convert to tensors
         states = [e[0] for e in episode]
         actions = [e[1] for e in episode]
+        rewards = [e[2] for e in episode]
         states = torch.tensor(states).float()
         actions = torch.tensor(actions).float()
         states = torch.squeeze(states, axis=1)
-        d_rewards = torch.tensor(d_rewards).float()
-        print(d_rewards.shape)
+        rewards = torch.tensor(rewards).float()
+
+        #calculate all discounted rewards (per robot) efficiently
+        for i in range(len(episode) - 1):
+            rewards[len(episode) - 2 - i] += self._gamma*rewards[len(episode) - 1 - i]
 
         # calculate network gradient
-        self.calc_gradient(states, actions, d_rewards, states.shape[0])
+        self.calc_gradient(states, actions, rewards)
 
         # update parameters
         self.optimizer.step()
 
-    def calc_gradient(self, states, actions, rewards, batch_size):
+    def calc_gradient(self, states, actions, rewards):
         probs = self.policy_net(states)
 
         # calculate gradient
-        # loss = 0
-        # for i in range(self.numrobot):
-        #     m = Categorical(probs[i * self.num_actions: (i + 1) * self.num_actions])
-        #     loss -= 1.0/100 * m.log_prob(action[i]) * r_return
-        # loss.backward()
-
-        # self._lastloss += loss.item()
+        loss = 0
+        for i in range(self.numrobot):
+            m = Categorical(logits=probs[:,i * self.num_actions: (i + 1) * self.num_actions])
+            loss -= (m.log_prob(actions[:,i]) * rewards[:,i]).mean()
+        loss.backward()
+        self._lastloss += loss.item()
 
     def set_train(self):
         self.policy_net.train()

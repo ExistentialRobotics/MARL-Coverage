@@ -1,10 +1,8 @@
 {
-  "experiment_name"   : "dqn3kNewQNet",
+  "experiment_name"   : "vpg6kIndividualReward",
   "makevid"           : 1,
-  "policy_type"       : "dqn",
-  "action_net_input"  : 1,
-  "batch_size"        : 50,
-  "numrobot"          : 3,
+  "policy_type"       : "pg",
+  "numrobot"          : 6,
   "gridwidth"         : 25,
   "gridlen"           : 25,
   "seed"              : 420,
@@ -12,7 +10,7 @@
   "render_test"       : 1,
   "render_train"      : 1,
   "lr"                : 0.0001,
-  "train_episodes"    : 3000,
+  "train_episodes"    : 6000,
   "test_episodes"     : 100,
   "train_iters"       : 100,
   "test_iters"        : 100,
@@ -43,8 +41,7 @@
     }
   ],
   "hidden_activation" : "relu",
-  "output_activation" : "none",
+  "output_activation" : "softmax",
   "weight_decay"      : 0,
-  "buffer"            : 0,
   "buf_divisor"       : 4
 }
