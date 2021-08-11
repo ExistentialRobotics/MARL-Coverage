@@ -1,0 +1,48 @@
+{
+  "experiment_name"   : "dqn8Q(s)6432channels",
+  "makevid"           : 0,
+  "policy_type"       : "dqn",
+  "batch_size"        : 50,
+  "action_net_input"  : 0,
+  "numrobot"          : 6,
+  "gridwidth"         : 25,
+  "gridlen"           : 25,
+  "seed"              : 420,
+  "num_actions"       : 4,
+  "render_test"       : 1,
+  "render_train"      : 1,
+  "lr"                : 0.0001,
+  "train_episodes"    : 8000,
+  "test_episodes"     : 100,
+  "train_iters"       : 100,
+  "test_iters"        : 100,
+  "collision_p"       : 5,
+  "conv_channels"     : [
+    {
+      "_" : 64
+    },
+    {
+      "_" : 32
+    }
+  ],
+  "conv_filters"      : [
+    {
+      "_" : 5
+    },
+    {
+      "_" : 5
+    }
+  ],
+  "conv_activation"   : "relu",
+  "hidden_sizes"      : [
+    {
+      "_" : 500
+    },
+    {
+      "_" : 100
+    }
+  ],
+  "hidden_activation" : "relu",
+  "weight_decay"      : 0,
+  "buffer_size" : 2000
+}
