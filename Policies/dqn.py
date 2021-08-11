@@ -14,7 +14,7 @@ class DQN(Base_Policy):
                  conv_channels, conv_filters, conv_activation, hidden_sizes,
                  hidden_activation, epsilon=0.999,
                  min_epsilon=0.1, buffer_size = 1000, batch_size=None,
-                 gamma=0.9, tau=0.9, weight_decay=0.1, ani=False):
+                 gamma=0.9, tau=0.9, weight_decay=0.1, ani=False, model_path=None):
         super().__init__(numrobot, action_space)
 
         self.ani = ani
@@ -47,9 +47,16 @@ class DQN(Base_Policy):
         else:
             # use grid rl conv instead of qnet
             action_dim = numrobot * self.num_actions
+
+            # init q net
             self.q_net = Grid_RL_Conv(action_dim, obs_dim, conv_channels,
                                 conv_filters, conv_activation, hidden_sizes,
                                       hidden_activation, None)
+
+        # init with saved weights if testing saved model
+        if model_path is not None:
+            self.q_net.load_state_dict(torch.load(model_path))
+
         # init q net
         self.target_net = deepcopy(self.q_net)
 

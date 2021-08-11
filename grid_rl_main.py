@@ -50,7 +50,6 @@ except getopt.error as err:
     # output error, and return with an error code
     print (str(err))
 
-#TODO I suspect there is a bug in saved_model code, policy seems to be significantly worse
 if saved_model:
     # run testing with a saved model
     random_policy = False
@@ -176,10 +175,17 @@ if exp_parameters["policy_type"] == "random":
     random_policy = True
 elif exp_parameters["policy_type"] == "pg":
     output_activation = None
-    policy = PolicyGradient(numrobot, action_space, lr, obs_dim, conv_channels,
-                            conv_filters, conv_activation, hidden_sizes,
-                            hidden_activation, output_activation,
-                            weight_decay=weight_decay)
+
+    if saved_model:
+        policy = PolicyGradient(numrobot, action_space, lr, obs_dim, conv_channels,
+                                conv_filters, conv_activation, hidden_sizes,
+                                hidden_activation, output_activation,
+                                weight_decay=weight_decay, model_path=model_path)
+    else:
+        policy = PolicyGradient(numrobot, action_space, lr, obs_dim, conv_channels,
+                                conv_filters, conv_activation, hidden_sizes,
+                                hidden_activation, output_activation,
+                                weight_decay=weight_decay, model_path=None)
 elif exp_parameters["policy_type"] == "dqn":
     #determines whether we use q(s,a) or just q(s)
     action_net_input = False
@@ -191,9 +197,16 @@ elif exp_parameters["policy_type"] == "dqn":
     if exp_parameters["batch_size"] > 0:
         batch_size = exp_parameters["batch_size"]
 
-    policy = DQN(numrobot, action_space, lr, obs_dim, conv_channels,
-                 conv_filters, conv_activation, hidden_sizes, hidden_activation,
-                 batch_size=batch_size, buffer_size=buffer_maxsize, ani=action_net_input)
+    if saved_model:
+        policy = DQN(numrobot, action_space, lr, obs_dim, conv_channels,
+                     conv_filters, conv_activation, hidden_sizes, hidden_activation,
+                     batch_size=batch_size, buffer_size=buffer_maxsize, ani=action_net_input,
+                     model_path=model_path)
+    else:
+        policy = DQN(numrobot, action_space, lr, obs_dim, conv_channels,
+                     conv_filters, conv_activation, hidden_sizes, hidden_activation,
+                     batch_size=batch_size, buffer_size=buffer_maxsize, ani=action_net_input,
+                     model_path=None)
     #could add weight_decay, gamma, tau as parameters if we want to change them
 
 '''Making the Controller for the Swarm Agent'''
