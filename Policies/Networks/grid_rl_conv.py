@@ -2,6 +2,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+'''
+Switched Padding back to what it was earlier to test if that is
+breaking the performance, ideally it shouldn't be but who knows.
+'''
+
 class Grid_RL_Conv(nn.Module):
 
     def __init__(self, action_dim, obs_dim, conv_channels, conv_filters,
@@ -18,20 +23,30 @@ class Grid_RL_Conv(nn.Module):
 
         # add conv layers to network
         for i in range(len(conv_channels)):
+            # set padding so that img dims remain the same thru each conv layer
+            padding = np.floor((conv_filters[i][0] - 1) / 2).astype(int)
+
             if i == 0:
                 # add stride on first conv layer to reduce img dims
                 stride = 2
-                layers += [nn.Conv2d(obs_dim[0], conv_channels[i], conv_filters[i],
-                                          stride=stride), nn.BatchNorm2d(conv_channels[i], affine=False),
-                                conv_activation()]
+                # layers += [nn.Conv2d(obs_dim[0], conv_channels[i], conv_filters[i],
+                #                           stride=stride), nn.BatchNorm2d(conv_channels[i], affine=False),
+                #                 conv_activation()]
+                layers += [nn.Conv2d(obs_dim[0], conv_channels[i], conv_filters[i], padding=padding,
+                                stride=stride), nn.BatchNorm2d(conv_channels[i], affine=False),
+                                                conv_activation()]
             else:
                 stride = 1
-                layers += [nn.Conv2d(conv_channels[i - 1], conv_channels[i], conv_filters[i],
-                                          stride=stride), nn.BatchNorm2d(conv_channels[i], affine=False),
-                                conv_activation()]
-
+                # layers += [nn.Conv2d(conv_channels[i - 1], conv_channels[i], conv_filters[i],
+                #                           stride=stride), nn.BatchNorm2d(conv_channels[i], affine=False),
+                #                 conv_activation()]
+                layers += [nn.Conv2d(conv_channels[i - 1], conv_channels[i], conv_filters[i], padding=padding,
+                                                        stride=stride), nn.BatchNorm2d(conv_channels[i], affine=False),
+                                                conv_activation()]
             # calculate the output of the current layer based on the output of the last layer
-            conv_output_size[1:] = np.floor((conv_output_size[1:] - np.array(conv_filters[i])) / stride + 1)
+
+            # conv_output_size[1:] = np.floor((conv_output_size[1:] - np.array(conv_filters[i])) / stride + 1)
+            conv_output_size[1:] = np.floor((conv_output_size[1:] + 2 * padding - np.array(conv_filters[i])) / stride + 1)
             conv_output_size[0] = conv_channels[i]
 
         # add flatten layer to made conv output 1D for the fc layers
@@ -48,7 +63,10 @@ class Grid_RL_Conv(nn.Module):
                            hidden_activation()]
 
         # last fc layer output features is the number of actions
-        layers += [nn.Linear(hidden_sizes[-1], action_dim), output_activation()]
+        if output_activation == None:
+            layers += [nn.Linear(hidden_sizes[-1], action_dim)]
+        else:
+            layers += [nn.Linear(hidden_sizes[-1], action_dim), output_activation()]
         self.layers = nn.Sequential(*layers)
 
     def forward(self, x):

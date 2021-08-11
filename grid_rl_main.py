@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import sys
+import getopt, sys
 import json
 
 from Environments.super_grid_rl import SuperGridRL
@@ -21,14 +21,68 @@ DASH = "-----------------------------------------------------------------------"
 np.set_printoptions(suppress=True)
 
 '''Read config file'''
-if len(sys.argv) != 2:
-    print(DASH)
-    print("No config file specified.")
-    print(DASH)
-    sys.exit(1)
+# Options
+options = "m:"
+
+# Long options
+long_options = ["model ="]
+
+# Remove 1st argument from the
+# list of command line arguments
+argumentList = sys.argv[1:]
+
+saved_model = False
+try:
+    # Parsing argument
+    arguments, values = getopt.getopt(argumentList, options, long_options)
+
+    # checking each argument
+    for currentArgument, currentValue in arguments:
+
+        if currentArgument in ("-m", "--model"):
+            print (("Running saved model directly from % s") % (currentValue))
+            model_path = currentValue
+            saved_model = True
+        else:
+            print("Not a valid arg.")
+
+except getopt.error as err:
+    # output error, and return with an error code
+    print (str(err))
+
+#TODO I suspect there is a bug in saved_model code, policy seems to be significantly worse
+if saved_model:
+    # run testing with a saved model
+    random_policy = False
+
+    # check if model path is valid
+    try:
+        model_file = open(model_path)
+    except OSError:
+        print(DASH)
+        print(str(model_path) + " does not exit.")
+        print(DASH)
+        sys.exit(1)
+
+    # determine index of second \ character
+    sc = 0
+    for i in range(len(model_path) - 1, -1, -1):
+        if model_path[i] == "/":
+             sc += 1
+        if sc == 2:
+            break
+
+    # create config file path string
+    config_path = model_path[:i + 1] + "config.json"
+else:
+    if len(sys.argv) != 2:
+        print(DASH)
+        print("No config file specified.")
+        print(DASH)
+        sys.exit(1)
+    config_path = sys.argv[1]
 
 # check if config path is valid
-config_path = sys.argv[1]
 try:
     config_file = open(config_path)
 except OSError:
@@ -61,7 +115,8 @@ test_iters     = exp_parameters["test_iters"]
 collision_p    = exp_parameters["collision_p"]
 buffer_maxsize = (train_episodes * train_iters) // exp_parameters["buf_divisor"]
 
-weight_decay = None
+
+weight_decay = 0
 if exp_parameters["weight_decay"] > 0:
     weight_decay = exp_parameters["weight_decay"]
 
@@ -95,11 +150,12 @@ if exp_parameters["conv_activation"] == "relu":
 if exp_parameters["hidden_activation"] == "relu":
     hidden_activation = nn.ReLU
 
-if exp_parameters["output_activation"] == "sigmoid":
-    output_activation = nn.Sigmoid
-elif exp_parameters["output_activation"] == "softmax":
-    output_activation = nn.Softmax
-
+# if exp_parameters["output_activation"] == "sigmoid":
+#     output_activation = nn.Sigmoid
+# elif exp_parameters["output_activation"] == "softmax":
+#     output_activation = nn.Softmax
+# elif exp_parameters["output_activation"] == "none":
+#     output_activation = None
 print(DASH)
 print("Running experiment using: " + str(config_path))
 print(DASH)
@@ -120,31 +176,42 @@ if exp_parameters["policy_type"] == "random":
     policy = Basic_Random(numrobot, action_space)
     random_policy = True
 elif exp_parameters["policy_type"] == "pg":
+    output_activation = None
     policy = PolicyGradient(numrobot, action_space, lr, obs_dim, conv_channels,
                             conv_filters, conv_activation, hidden_sizes,
                             hidden_activation, output_activation,
                             weight_decay=weight_decay)
 elif exp_parameters["policy_type"] == "dqn":
-    #TODO add other DQN parameters into config
-    #could add weight_decay, gamma, tau as parameters if we want to change them
+    #determines whether we use q(s,a) or just q(s)
+    action_net_input = False
+    if exp_parameters["action_net_input"] > 0:
+        action_net_input = True
+
+    #determines batch size for q-network
     batch_size = None
     if exp_parameters["batch_size"] > 0:
         batch_size = exp_parameters["batch_size"]
+
     policy = DQN(numrobot, action_space, lr, obs_dim, conv_channels,
                  conv_filters, conv_activation, hidden_sizes, hidden_activation,
-                 output_activation, batch_size=batch_size, buffer_size=buffer_maxsize)
+                 batch_size=batch_size, buffer_size=buffer_maxsize, ani=action_net_input)
+    #could add weight_decay, gamma, tau as parameters if we want to change them
 
 '''Making the Controller for the Swarm Agent'''
 controller = GridRLController(numrobot, policy)
 
-'''Train policy'''
-train_rewardlis = []
-if not random_policy:
-    print("----------Running {} for ".format(exp_parameters["policy_type"]) + str(train_episodes) + " episodes-----------")
-    controller._policy.printNumParams()
-    train_rewardlis = train_RLalg(env, controller, logger, episodes=train_episodes, iters=train_iters, render=render_train)
-else:
-    print("-----------------------Running Random Policy-----------------------")
+# train a policy if not testing a saved model
+if not saved_model:
+    '''Train policy'''
+    train_rewardlis = []
+    losslist = []
+    if not random_policy:
+        print("----------Running {} for ".format(exp_parameters["policy_type"]) + str(train_episodes) + " episodes-----------")
+        controller._policy.printNumParams()
+        train_rewardlis, losslist = train_RLalg(env, controller, logger, episodes=train_episodes, iters=train_iters, render=render_train)
+
+    else:
+        print("-----------------------Running Random Policy-----------------------")
 
 '''Test policy'''
 print("-----------------------------Testing Policy----------------------------")
@@ -154,24 +221,36 @@ if not random_policy:
     controller.set_eval()
 
 #testing the policy and collecting data
-test_rewardlis, average_percent_covered = test_RLalg(env, controller, logger, episodes=test_episodes, iters=test_iters, render_test=render_test, make_vid=makevid)
+test_rewardlis, average_percent_covered = test_RLalg(env, controller, logger, episodes=test_episodes, iters=test_iters, render_test=render_test,
+                                                     make_vid=makevid)
 
 '''Display results'''
 print(DASH)
 print("Trained policy covered " + str(average_percent_covered) + " percent of the environment on average!")
 print(DASH)
 
-# plot testing rewards
-plt.figure(2)
-plt.title("Training Reward per Episode")
-plt.xlabel('Episodes')
-plt.ylabel('Reward')
-line_r, = plt.plot(train_rewardlis, label="Training Reward")
-plt.legend(handles=[line_r])
-logger.savefig(plt.gcf(), 'TrainingReward')
-plt.show()
+if not saved_model:
+    # plot training rewards
+    plt.figure(2)
+    plt.title("Training Reward per Episode")
+    plt.xlabel('Episodes')
+    plt.ylabel('Reward')
+    line_r, = plt.plot(train_rewardlis, label="Training Reward")
+    plt.legend(handles=[line_r])
+    logger.savefig(plt.gcf(), 'TrainingReward')
+    plt.show()
 
-# plot training rewards
+    # plot training loss
+    plt.figure(4)
+    plt.title("Training Loss per Episode")
+    plt.xlabel('Episodes')
+    plt.ylabel('Loss')
+    line_r, = plt.plot(losslist, label="Training Loss")
+    plt.legend(handles=[line_r])
+    logger.savefig(plt.gcf(), 'TrainingLoss')
+    plt.show()
+
+# plot testing rewards
 plt.figure(3)
 plt.title("Testing Reward per Episode")
 plt.xlabel('Episodes')

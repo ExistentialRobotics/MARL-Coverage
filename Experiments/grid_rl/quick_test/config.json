@@ -1,7 +1,9 @@
 {
   "experiment_name"   : "quick_test",
   "makevid"           : 1,
-  "policy_type"       : "pg",
+  "policy_type"       : "dqn",
+  "batch_size"        : 100,
+  "action_net_input"  : 0,
   "numrobot"          : 6,
   "gridwidth"         : 25,
   "gridlen"           : 25,
@@ -41,7 +43,8 @@
     }
   ],
   "hidden_activation" : "relu",
-  "output_activation" : "sigmoid",
+  "output_activation" : "none",
   "buffer"            : 0,
+  "weight_decay"      : 0,
   "buf_divisor" : 4
 }
