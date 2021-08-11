@@ -34,7 +34,7 @@ class PolicyGradient(Base_Policy):
             ulis.append(m.sample())
         return ulis
 
-    def update_policy(self, episode):
+    def update_policy_old(self, episode):
         self.optimizer.zero_grad()
 
         #converting all the rewards in the episode to be total rewards instead of per robot reward
@@ -63,7 +63,7 @@ class PolicyGradient(Base_Policy):
         # update parameters
         self.optimizer.step()
 
-    def calc_gradient(self, state, action, r_return, episode_len):
+    def calc_gradient_old(self, state, action, r_return, episode_len):
         probs = self.policy_net(torch.from_numpy(state).float())
 
         # calculate gradient
@@ -74,6 +74,51 @@ class PolicyGradient(Base_Policy):
         loss.backward()
 
         self._lastloss += loss.item()
+
+    def update_policy(self, episode):
+        self.optimizer.zero_grad()
+
+        #converting all the rewards in the episode to be total rewards instead of per robot reward
+        raw_rewards = []
+        for i in range(len(episode)):
+            raw_rewards.append(np.sum(episode[i][2]))
+
+        #calculate all r_returns efficiently (with discounting)
+        d_rewards = []
+        d_rewards.append(raw_rewards[len(episode) - 1])
+        for i in range(len(episode) - 1):
+            d_rewards.insert(0, self._gamma*d_rewards[0]
+                             + raw_rewards[len(episode) - 2 - i])
+
+        #setting loss var to zero so we can increment it for each step of episode
+        self._lastloss = 0
+
+        #convert to tensors
+        states = [e[0] for e in episode]
+        actions = [e[1] for e in episode]
+        states = torch.tensor(states).float()
+        actions = torch.tensor(actions).float()
+        states = torch.squeeze(states, axis=1)
+        d_rewards = torch.tensor(d_rewards).float()
+        print(d_rewards.shape)
+
+        # calculate network gradient
+        self.calc_gradient(states, actions, d_rewards, states.shape[0])
+
+        # update parameters
+        self.optimizer.step()
+
+    def calc_gradient(self, states, actions, rewards, batch_size):
+        probs = self.policy_net(states)
+
+        # calculate gradient
+        # loss = 0
+        # for i in range(self.numrobot):
+        #     m = Categorical(probs[i * self.num_actions: (i + 1) * self.num_actions])
+        #     loss -= 1.0/100 * m.log_prob(action[i]) * r_return
+        # loss.backward()
+
+        # self._lastloss += loss.item()
 
     def set_train(self):
         self.policy_net.train()

@@ -50,6 +50,7 @@ except getopt.error as err:
     # output error, and return with an error code
     print (str(err))
 
+#TODO I suspect there is a bug in saved_model code, policy seems to be significantly worse
 if saved_model:
     # run testing with a saved model
     random_policy = False
@@ -114,9 +115,6 @@ test_iters     = exp_parameters["test_iters"]
 collision_p    = exp_parameters["collision_p"]
 buffer_maxsize = (train_episodes * train_iters) // exp_parameters["buf_divisor"]
 
-action_net_input = False
-if exp_parameters["action_net_input"] > 0:
-    action_net_input = True
 
 weight_decay = 0
 if exp_parameters["weight_decay"] > 0:
@@ -184,14 +182,20 @@ elif exp_parameters["policy_type"] == "pg":
                             hidden_activation, output_activation,
                             weight_decay=weight_decay)
 elif exp_parameters["policy_type"] == "dqn":
-    #TODO add other DQN parameters into config
-    #could add weight_decay, gamma, tau as parameters if we want to change them
+    #determines whether we use q(s,a) or just q(s)
+    action_net_input = False
+    if exp_parameters["action_net_input"] > 0:
+        action_net_input = True
+
+    #determines batch size for q-network
     batch_size = None
     if exp_parameters["batch_size"] > 0:
         batch_size = exp_parameters["batch_size"]
+
     policy = DQN(numrobot, action_space, lr, obs_dim, conv_channels,
                  conv_filters, conv_activation, hidden_sizes, hidden_activation,
                  batch_size=batch_size, buffer_size=buffer_maxsize, ani=action_net_input)
+    #could add weight_decay, gamma, tau as parameters if we want to change them
 
 '''Making the Controller for the Swarm Agent'''
 controller = GridRLController(numrobot, policy)
@@ -206,15 +210,6 @@ if not saved_model:
         controller._policy.printNumParams()
         train_rewardlis, losslist = train_RLalg(env, controller, logger, episodes=train_episodes, iters=train_iters, render=render_train)
 
-        # plot training rewards
-        plt.figure(2)
-        plt.title("Training Reward per Episode")
-        plt.xlabel('Episodes')
-        plt.ylabel('Reward')
-        line_r, = plt.plot(train_rewardlis, label="Training Reward")
-        plt.legend(handles=[line_r])
-        logger.savefig(plt.gcf(), 'TrainingReward')
-        plt.show()
     else:
         print("-----------------------Running Random Policy-----------------------")
 
@@ -234,6 +229,27 @@ print(DASH)
 print("Trained policy covered " + str(average_percent_covered) + " percent of the environment on average!")
 print(DASH)
 
+if not saved_model:
+    # plot training rewards
+    plt.figure(2)
+    plt.title("Training Reward per Episode")
+    plt.xlabel('Episodes')
+    plt.ylabel('Reward')
+    line_r, = plt.plot(train_rewardlis, label="Training Reward")
+    plt.legend(handles=[line_r])
+    logger.savefig(plt.gcf(), 'TrainingReward')
+    plt.show()
+
+    # plot training loss
+    plt.figure(4)
+    plt.title("Training Loss per Episode")
+    plt.xlabel('Episodes')
+    plt.ylabel('Loss')
+    line_r, = plt.plot(losslist, label="Training Loss")
+    plt.legend(handles=[line_r])
+    logger.savefig(plt.gcf(), 'TrainingLoss')
+    plt.show()
+
 # plot testing rewards
 plt.figure(3)
 plt.title("Testing Reward per Episode")
@@ -242,16 +258,6 @@ plt.ylabel('Reward')
 line_r, = plt.plot(test_rewardlis, label="Testing Reward")
 plt.legend(handles=[line_r])
 logger.savefig(plt.gcf(), 'TestingReward')
-plt.show()
-
-# plot training loss
-plt.figure(4)
-plt.title("Training Loss per Episode")
-plt.xlabel('Episodes')
-plt.ylabel('Loss')
-line_r, = plt.plot(losslist, label="Training Loss")
-plt.legend(handles=[line_r])
-logger.savefig(plt.gcf(), 'TrainingLoss')
 plt.show()
 
 #closing logger

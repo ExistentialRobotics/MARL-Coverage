@@ -91,7 +91,7 @@ def test_RLalg(env, controller, logger, episodes=10, iters=100, render_test=Fals
         done = False
         while not done and steps != iters:
             # determine action
-            action = controller.getControls(state)
+            action = controller.getControls(state, testing=True)
 
             # step environment and save episode results
             state, reward = env.step(action)
