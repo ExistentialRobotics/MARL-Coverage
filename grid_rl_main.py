@@ -201,11 +201,6 @@ if not saved_model:
 
 '''Test policy'''
 print("-----------------------------Testing Policy----------------------------")
-
-# set policy network to eval mode
-if not random_policy:
-    policy.set_eval()
-
 #testing the policy and collecting data
 test_rewardlis, average_percent_covered = test_RLalg(env, policy, logger, episodes=test_episodes, iters=test_iters, render_test=render_test,
                                                      make_vid=makevid)
