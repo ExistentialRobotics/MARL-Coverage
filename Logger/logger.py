@@ -67,6 +67,16 @@ class Logger(object):
                    + str(self._current_checkpoint) + '.pt')
         self._current_checkpoint += 1
 
+    def plot(self, list, fignum, title, xlabel, ylabel, linelabel, figname):
+        plt.figure(fignum)
+        plt.title(title)
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        line, = plt.plot(list, label=linelabel)
+        plt.legend(handles=[line])
+        self.savefig(plt.gcf(), figname)
+        plt.show()
+
     def close(self):
         '''
         Handling all file closing and writing

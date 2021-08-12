@@ -208,11 +208,6 @@ if not saved_model:
 
 '''Test policy'''
 print("-----------------------------Testing Policy----------------------------")
-
-# set policy network to eval mode
-if not random_policy:
-    policy.set_eval()
-
 #testing the policy and collecting data
 test_rewardlis, average_percent_covered = test_RLalg(env, policy, logger, episodes=test_episodes, iters=test_iters, render_test=render_test,
                                                      make_vid=makevid)
@@ -224,34 +219,13 @@ print(DASH)
 
 if not saved_model:
     # plot training rewards
-    plt.figure(2)
-    plt.title("Training Reward per Episode")
-    plt.xlabel('Episodes')
-    plt.ylabel('Reward')
-    line_r, = plt.plot(train_rewardlis, label="Training Reward")
-    plt.legend(handles=[line_r])
-    logger.savefig(plt.gcf(), 'TrainingReward')
-    plt.show()
+    logger.plot(train_rewardlis, 2, "Training Reward per Episode", 'Episodes', 'Reward', "Training Reward", "Training Reward")
 
     # plot training loss
-    plt.figure(4)
-    plt.title("Training Loss per Episode")
-    plt.xlabel('Episodes')
-    plt.ylabel('Loss')
-    line_r, = plt.plot(losslist, label="Training Loss")
-    plt.legend(handles=[line_r])
-    logger.savefig(plt.gcf(), 'TrainingLoss')
-    plt.show()
+    logger.plot(losslist, 4, "Training Loss per Episode", 'Episodes', 'Loss', "Training Loss", "Training Loss")
 
 # plot testing rewards
-plt.figure(3)
-plt.title("Testing Reward per Episode")
-plt.xlabel('Episodes')
-plt.ylabel('Reward')
-line_r, = plt.plot(test_rewardlis, label="Testing Reward")
-plt.legend(handles=[line_r])
-logger.savefig(plt.gcf(), 'TestingReward')
-plt.show()
+logger.plot(test_rewardlis, 3, "Testing Reward per Episode", 'Episodes', 'Reward', "Testing Reward", "Testing Reward")
 
 #closing logger
 logger.close()
