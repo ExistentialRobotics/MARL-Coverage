@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as ani
-import os
+import os, sys
 import torch
 
 class Logger(object):
@@ -28,6 +28,7 @@ class Logger(object):
 
         #checkpoint for model saving
         self._current_checkpoint = 1
+        self._terminaloutput = None
 
     def update(self):
         if(self._make_vid):
@@ -64,12 +65,30 @@ class Logger(object):
                    + str(self._current_checkpoint) + '.pt')
         self._current_checkpoint += 1
 
+    def saveTerminalOutput(self):
+        sys.stdout = TerminalWriter("TerminalOutput.txt")
+
     def close(self):
         '''
+        Handling all file closing and writing
         '''
         if self._make_vid:
             #saving video
             self._writer.finish()
-
         #check if there is any timeseries data and save to text file
         #TODO
+
+
+#adopted from some stackoverflow answer
+#https://stackoverflow.com/questions/14906764/how-to-redirect-stdout-to-both-file-and-console-with-scripting
+class TerminalWriter(object):
+    def __init__(self, filename):
+        self.terminal = sys.stdout
+        self.log = open(filename, 'a')
+
+    def write(self, message):
+        self.terminal.write(message)
+        self.log.write(message)
+
+    def flush(self):
+        pass

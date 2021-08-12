@@ -159,7 +159,8 @@ print("Running experiment using: " + str(config_path))
 print(DASH)
 
 '''Init logger'''
-logger = Logger(exp_name, makevid, 0.02)
+logger = Logger(exp_name, makevid, 0.1)
+logger.saveTerminalOutput()
 
 '''Making the environment'''
 env = SuperGridRL(numrobot, gridlen, gridwidth, collision_penalty=collision_p)
