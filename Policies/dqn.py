@@ -17,7 +17,7 @@ class DQN(Base_Policy):
                  gamma=0.9, tau=0.9, weight_decay=0.1, model_path=None):
         super().__init__(numrobot, action_space)
 
-        # save num actions as instance var 
+        # save num actions as instance var
         self.num_actions = action_space.num_actions
 
         # use grid rl conv instead of qnet
@@ -56,6 +56,10 @@ class DQN(Base_Policy):
         self._tau = tau
 
     def step(self, state, testing):
+        # calc qvals
+        qvals = self.q_net(torch.from_numpy(state).float())
+
+        # set eps 
         temp = self._epsilon
         if testing:
             self._epsilon = self._min_epsilon
