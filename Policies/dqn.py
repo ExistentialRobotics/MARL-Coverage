@@ -124,7 +124,7 @@ class DQN(Base_Policy):
 
         # calculate gradient for q function
         with torch.no_grad():
-            next_q = torch.max(next_qvals)
+            next_q = torch.max(next_qvals, 1).values
             y = rewards + self._gamma*next_q
 
         #TODO vectorize this for loop
