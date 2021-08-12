@@ -4,13 +4,10 @@ import getopt, sys
 import json
 
 from Environments.super_grid_rl import SuperGridRL
-from Controllers.grid_rl_random_controller import GridRLRandomController
-from Controllers.grid_rl_controller import GridRLController
 from Action_Spaces.discrete import Discrete
 from Policies.basic_random import Basic_Random
 from Policies.policy_gradient import PolicyGradient
 from Policies.dqn import DQN
-from Policies.replaybuffer import ReplayBuffer
 from Logger.logger import Logger
 from Utils.utils import train_RLalg, test_RLalg
 import torch.nn as nn
@@ -189,9 +186,6 @@ elif exp_parameters["policy_type"] == "dqn":
                  batch_size=batch_size, buffer_size=buffer_maxsize, model_path=model_path)
     #could add weight_decay, gamma, tau as parameters if we want to change them
 
-'''Making the Controller for the Swarm Agent'''
-controller = GridRLController(numrobot, policy)
-
 # train a policy if not testing a saved model
 if not saved_model:
     '''Train policy'''
@@ -199,8 +193,8 @@ if not saved_model:
     losslist = []
     if not random_policy:
         print("----------Running {} for ".format(exp_parameters["policy_type"]) + str(train_episodes) + " episodes-----------")
-        controller._policy.printNumParams()
-        train_rewardlis, losslist = train_RLalg(env, controller, logger, episodes=train_episodes, iters=train_iters, render=render_train)
+        policy.printNumParams()
+        train_rewardlis, losslist = train_RLalg(env, policy, logger, episodes=train_episodes, iters=train_iters, render=render_train)
 
     else:
         print("-----------------------Running Random Policy-----------------------")
@@ -210,10 +204,10 @@ print("-----------------------------Testing Policy----------------------------")
 
 # set policy network to eval mode
 if not random_policy:
-    controller.set_eval()
+    policy.set_eval()
 
 #testing the policy and collecting data
-test_rewardlis, average_percent_covered = test_RLalg(env, controller, logger, episodes=test_episodes, iters=test_iters, render_test=render_test,
+test_rewardlis, average_percent_covered = test_RLalg(env, policy, logger, episodes=test_episodes, iters=test_iters, render_test=render_test,
                                                      make_vid=makevid)
 
 '''Display results'''
