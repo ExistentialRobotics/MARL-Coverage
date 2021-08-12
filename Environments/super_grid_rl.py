@@ -52,7 +52,22 @@ class SuperGridRL(object):
         if seed is not None:
             np.random.seed(seed)
 
-    def step(self, ulis):
+        #observation and action dimensions
+        self._obs_dim = np.squeeze(self.get_state(), axis=0).shape
+        self._num_actions = 4**self._numrobot
+
+
+    def step(self, action):
+        #handling case where action is an integer that identifies the action
+        if type(action) != list:
+            ulis = []
+            #conveting integer to base 4 and putting it in ulis
+            while action > 0:
+                ulis.insert(0, action % 4)
+                action = action // 4
+        else:
+            ulis = action
+
         #initialize reward for this step
         reward = np.zeros((self._numrobot,))
 

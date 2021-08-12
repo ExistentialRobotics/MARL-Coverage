@@ -10,6 +10,7 @@ from Policies.policy_gradient import PolicyGradient
 from Policies.dqn import DQN
 from Logger.logger import Logger
 from Utils.utils import train_RLalg, test_RLalg
+from Policies.Networks.grid_rl_conv import Grid_RL_Conv
 import torch.nn as nn
 
 DASH = "-----------------------------------------------------------------------"
@@ -103,7 +104,6 @@ numrobot       = exp_parameters["numrobot"]
 gridwidth      = exp_parameters["gridwidth"]
 gridlen        = exp_parameters["gridlen"]
 seed           = exp_parameters["seed"]
-num_actions    = exp_parameters["num_actions"]
 lr             = exp_parameters["lr"]
 train_episodes = exp_parameters["train_episodes"]
 test_episodes  = exp_parameters["test_episodes"]
@@ -151,28 +151,31 @@ print("Running experiment using: " + str(config_path))
 print(DASH)
 
 '''Init logger'''
-logger = Logger(exp_name, makevid, 0.1)
-logger.saveTerminalOutput()
+logger = Logger(exp_name, makevid, 0.05)
 
 '''Making the environment'''
 env = SuperGridRL(numrobot, gridlen, gridwidth, collision_penalty=collision_p)
+num_actions = env._num_actions
+obs_dim = env._obs_dim
 
 '''Init action space'''
 action_space = Discrete(num_actions)
 
 '''Init policy'''
-obs_dim = np.squeeze(env.get_state(), axis=0).shape
 random_policy = False
 if exp_parameters["policy_type"] == "random":
-    policy = Basic_Random(numrobot, action_space)
+    policy = Basic_Random(action_space)
     random_policy = True
 elif exp_parameters["policy_type"] == "pg":
-    output_activation = None
+    #creating actor network
+    #TODO change this hardcode
+    actor = Grid_RL_Conv(4*numrobot, obs_dim, conv_channels,
+                conv_filters, conv_activation, hidden_sizes,
+                    hidden_activation)
 
     # init policy
-    policy = PolicyGradient(numrobot, action_space, lr, obs_dim, conv_channels,
-                            conv_filters, conv_activation, hidden_sizes,
-                            hidden_activation, output_activation,
+    #TODO fix hardcode
+    policy = PolicyGradient(actor, numrobot, Discrete(4), lr,
                             weight_decay=weight_decay, model_path=model_path)
 
 elif exp_parameters["policy_type"] == "dqn":
@@ -181,11 +184,14 @@ elif exp_parameters["policy_type"] == "dqn":
     if exp_parameters["batch_size"] > 0:
         batch_size = exp_parameters["batch_size"]
 
+    #creating q network
+    q_net = Grid_RL_Conv(num_actions, obs_dim, conv_channels,
+                conv_filters, conv_activation, hidden_sizes,
+                    hidden_activation)
     # init policy
-    policy = DQN(numrobot, action_space, lr, obs_dim, conv_channels,
-                 conv_filters, conv_activation, hidden_sizes, hidden_activation,
-                 batch_size=batch_size, buffer_size=buffer_maxsize, model_path=model_path)
-    #could add weight_decay, gamma, tau as parameters if we want to change them
+    policy = DQN(q_net, num_actions, lr, batch_size=batch_size,
+                 buffer_size=buffer_maxsize, model_path=model_path)
+    #TODO could add weight_decay, gamma, tau as parameters if we want to change them
 
 # train a policy if not testing a saved model
 if not saved_model:

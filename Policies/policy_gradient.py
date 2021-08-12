@@ -6,16 +6,14 @@ from torch.distributions.categorical import Categorical
 
 class PolicyGradient(Base_Policy):
 
-    def __init__(self, numrobot, action_space, learning_rate, obs_dim,
-                 conv_channels, conv_filters, conv_activation, hidden_sizes,
-                 hidden_activation, output_activation, gamma=0.9, weight_decay=0.1,
-                 model_path=None):
-        super().__init__(numrobot, action_space)
+    def __init__(self, actor, numrobot, action_space, learning_rate,
+                 gamma=0.9, weight_decay=0.1, model_path=None):
+        super().__init__()
+        self.numrobot = numrobot
         self.num_actions = action_space.num_actions
-        action_dim = numrobot * self.num_actions
 
         # init policy network and optimizer
-        self.policy_net = Grid_RL_Conv(action_dim, obs_dim, conv_channels, conv_filters, conv_activation, hidden_sizes, hidden_activation, output_activation)
+        self.policy_net = actor
 
         # init with saved weights if testing saved model
         if model_path is not None:
@@ -35,7 +33,7 @@ class PolicyGradient(Base_Policy):
         #window for the exponentially moving average
         self.baselinecount = 100*self.numrobot
 
-    def step(self, state, testing):
+    def pi(self, state):
         probs = self.policy_net(torch.from_numpy(state).float())
 
         # sample from each set of probabilities to get the actions

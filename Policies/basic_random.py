@@ -3,11 +3,11 @@ from . base_policy import Base_Policy
 
 class Basic_Random(Base_Policy):
 
-    def __init__(self, num_output, action_space):
-        super().__init__(num_output, action_space)
+    def __init__(self, actions_space):
+        super().__init__()
 
-    def step(self, state):
-        return self.action_space.sample(s=self.numrobot)
+    def pi(self, state):
+        return self.action_space.sample()
 
     def update(self):
         pass

@@ -11,7 +11,7 @@ class Grid_RL_Conv(nn.Module):
 
     def __init__(self, action_dim, obs_dim, conv_channels, conv_filters,
                  conv_activation, hidden_sizes, hidden_activation,
-                 output_activation):
+                 output_activation=None):
         super(Grid_RL_Conv, self).__init__()
 
         # ensure that the number of channels and filters match
@@ -29,23 +29,16 @@ class Grid_RL_Conv(nn.Module):
             if i == 0:
                 # add stride on first conv layer to reduce img dims
                 stride = 2
-                # layers += [nn.Conv2d(obs_dim[0], conv_channels[i], conv_filters[i],
-                #                           stride=stride), nn.BatchNorm2d(conv_channels[i], affine=False),
-                #                 conv_activation()]
                 layers += [nn.Conv2d(obs_dim[0], conv_channels[i], conv_filters[i], padding=padding,
                                 stride=stride), nn.BatchNorm2d(conv_channels[i], affine=False),
                                                 conv_activation()]
             else:
                 stride = 1
-                # layers += [nn.Conv2d(conv_channels[i - 1], conv_channels[i], conv_filters[i],
-                #                           stride=stride), nn.BatchNorm2d(conv_channels[i], affine=False),
-                #                 conv_activation()]
                 layers += [nn.Conv2d(conv_channels[i - 1], conv_channels[i], conv_filters[i], padding=padding,
                                                         stride=stride), nn.BatchNorm2d(conv_channels[i], affine=False),
                                                 conv_activation()]
             # calculate the output of the current layer based on the output of the last layer
 
-            # conv_output_size[1:] = np.floor((conv_output_size[1:] - np.array(conv_filters[i])) / stride + 1)
             conv_output_size[1:] = np.floor((conv_output_size[1:] + 2 * padding - np.array(conv_filters[i])) / stride + 1)
             conv_output_size[0] = conv_channels[i]
 

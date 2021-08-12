@@ -9,7 +9,7 @@ def generate_episode(env, policy, iters=100, render=False):
     done = False
     while not done and steps != iters:
         # determine action
-        action = policy.step(state, False)
+        action = policy.pi(state)
 
         # step environment and save episode results
         next_state, reward = env.step(action)
@@ -74,6 +74,9 @@ def train_RLalg(env, policy, logger, episodes=1000, iters=100,  render=False,
     return reward_per_episode, losslist
 
 def test_RLalg(env, policy, logger, episodes=10, iters=100, render_test=False,make_vid=False):
+    #setting the policy to testing mode
+    policy.set_eval()
+
     test_rewardlis = []
     success = 0
     percent_covered = 0
@@ -91,7 +94,7 @@ def test_RLalg(env, policy, logger, episodes=10, iters=100, render_test=False,ma
         done = False
         while not done and steps != iters:
             # determine action
-            action = policy.step(state, True)
+            action = policy.pi(state)
 
             # step environment and save episode results
             state, reward = env.step(action)
@@ -110,6 +113,9 @@ def test_RLalg(env, policy, logger, episodes=10, iters=100, render_test=False,ma
                 success += 1
         percent_covered += env.percent_covered()
         test_rewardlis.append(total_reward)
+
+    #returning policy to train mode
+    policy.set_train()
 
     #returning the statistics
     average_percent_covered = percent_covered/episodes*100

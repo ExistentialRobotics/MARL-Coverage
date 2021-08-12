@@ -28,7 +28,9 @@ class Logger(object):
 
         #checkpoint for model saving
         self._current_checkpoint = 1
-        self._terminaloutput = None
+
+        #creating terminal write for saving console output
+        sys.stdout = TerminalWriter(self._output_dir + "TerminalOutput.txt")
 
     def update(self):
         if(self._make_vid):
@@ -65,9 +67,6 @@ class Logger(object):
                    + str(self._current_checkpoint) + '.pt')
         self._current_checkpoint += 1
 
-    def saveTerminalOutput(self):
-        sys.stdout = TerminalWriter("TerminalOutput.txt")
-
     def close(self):
         '''
         Handling all file closing and writing
@@ -75,6 +74,8 @@ class Logger(object):
         if self._make_vid:
             #saving video
             self._writer.finish()
+
+        sys.stdout.log.close()
         #check if there is any timeseries data and save to text file
         #TODO
 
@@ -84,7 +85,7 @@ class Logger(object):
 class TerminalWriter(object):
     def __init__(self, filename):
         self.terminal = sys.stdout
-        self.log = open(filename, 'a')
+        self.log = open(filename, 'w')
 
     def write(self, message):
         self.terminal.write(message)
@@ -92,3 +93,4 @@ class TerminalWriter(object):
 
     def flush(self):
         pass
+
