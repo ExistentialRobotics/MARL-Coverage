@@ -56,17 +56,20 @@ class SuperGridRL(object):
         self._obs_dim = np.squeeze(self.get_state(), axis=0).shape
         self._num_actions = 4**self._numrobot
 
-
     def step(self, action):
         #handling case where action is an integer that identifies the action
+        # print("in step: " + str(action))
         if type(action) != list:
             ulis = []
             #conveting integer to base 4 and putting it in ulis
             while action > 0:
+                # print("mod: " + str(action % 4))
                 ulis.insert(0, action % 4)
                 action = action // 4
+                # print("div: " + str(action))
         else:
             ulis = action
+        # print(ulis)
 
         #initialize reward for this step
         reward = np.zeros((self._numrobot,))

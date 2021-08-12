@@ -6,7 +6,7 @@ import json
 from Environments.super_grid_rl import SuperGridRL
 from Action_Spaces.discrete import Discrete
 from Policies.basic_random import Basic_Random
-from Policies.policy_gradient import PolicyGradient
+from Policies.vpg import VPG
 from Policies.dqn import DQN
 from Logger.logger import Logger
 from Utils.utils import train_RLalg, test_RLalg
@@ -165,32 +165,26 @@ random_policy = False
 if exp_parameters["policy_type"] == "random":
     policy = Basic_Random(action_space)
     random_policy = True
-elif exp_parameters["policy_type"] == "pg":
-    #creating actor network
-    #TODO change this hardcode
-    actor = Grid_RL_Conv(4*numrobot, obs_dim, conv_channels,
-                conv_filters, conv_activation, hidden_sizes,
-                    hidden_activation)
+else:
+    #creating neural net, same constructor params for both vpg and dqn
+    net = Grid_RL_Conv(num_actions, obs_dim, conv_channels, conv_filters,
+                         conv_activation, hidden_sizes, hidden_activation)
 
-    # init policy
-    #TODO fix hardcode
-    policy = PolicyGradient(actor, numrobot, Discrete(4), lr,
-                            weight_decay=weight_decay, model_path=model_path)
+    if exp_parameters["policy_type"] == "vpg":
+        policy = VPG(net, numrobot, action_space, lr,
+                                weight_decay=weight_decay,
+                                model_path=model_path)
+    elif exp_parameters["policy_type"] == "dqn":
+        #determines batch size for q-network
+        batch_size = None
+        if exp_parameters["batch_size"] > 0:
+            batch_size = exp_parameters["batch_size"]
 
-elif exp_parameters["policy_type"] == "dqn":
-    #determines batch size for q-network
-    batch_size = None
-    if exp_parameters["batch_size"] > 0:
-        batch_size = exp_parameters["batch_size"]
-
-    #creating q network
-    q_net = Grid_RL_Conv(num_actions, obs_dim, conv_channels,
-                conv_filters, conv_activation, hidden_sizes,
-                    hidden_activation)
-    # init policy
-    policy = DQN(q_net, num_actions, lr, batch_size=batch_size,
-                 buffer_size=buffer_maxsize, model_path=model_path)
-    #TODO could add weight_decay, gamma, tau as parameters if we want to change them
+        # init policy
+        policy = DQN(net, num_actions, lr, batch_size=batch_size,
+                     buffer_size=buffer_maxsize, model_path=model_path)
+        #TODO could add weight_decay, gamma, tau as parameters
+        #if we want to change them
 
 # train a policy if not testing a saved model
 if not saved_model:
@@ -209,7 +203,7 @@ if not saved_model:
 print("-----------------------------Testing Policy----------------------------")
 #testing the policy and collecting data
 test_rewardlis, average_percent_covered = test_RLalg(env, policy, logger, episodes=test_episodes, iters=test_iters, render_test=render_test,
-                                                     make_vid=makevid)
+                                                     makevid=makevid)
 
 '''Display results'''
 print(DASH)
