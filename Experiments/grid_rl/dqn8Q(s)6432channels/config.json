@@ -1,6 +1,6 @@
 {
   "experiment_name"   : "dqn8Q(s)6432channels",
-  "makevid"           : 0,
+  "makevid"           : 1,
   "policy_type"       : "dqn",
   "batch_size"        : 50,
   "action_net_input"  : 0,

@@ -32,6 +32,7 @@ long_options = ["model ="]
 argumentList = sys.argv[1:]
 
 saved_model = False
+model_path = None
 try:
     # Parsing argument
     arguments, values = getopt.getopt(argumentList, options, long_options)
@@ -112,7 +113,7 @@ test_episodes  = exp_parameters["test_episodes"]
 train_iters    = exp_parameters["train_iters"]
 test_iters     = exp_parameters["test_iters"]
 collision_p    = exp_parameters["collision_p"]
-buffer_maxsize = ["buffer_size"]
+buffer_maxsize = exp_parameters["buffer_size"]
 
 weight_decay = 0
 if exp_parameters["weight_decay"] > 0:
@@ -148,12 +149,6 @@ if exp_parameters["conv_activation"] == "relu":
 if exp_parameters["hidden_activation"] == "relu":
     hidden_activation = nn.ReLU
 
-# if exp_parameters["output_activation"] == "sigmoid":
-#     output_activation = nn.Sigmoid
-# elif exp_parameters["output_activation"] == "softmax":
-#     output_activation = nn.Softmax
-# elif exp_parameters["output_activation"] == "none":
-#     output_activation = None
 print(DASH)
 print("Running experiment using: " + str(config_path))
 print(DASH)
@@ -176,37 +171,22 @@ if exp_parameters["policy_type"] == "random":
 elif exp_parameters["policy_type"] == "pg":
     output_activation = None
 
-    if saved_model:
-        policy = PolicyGradient(numrobot, action_space, lr, obs_dim, conv_channels,
-                                conv_filters, conv_activation, hidden_sizes,
-                                hidden_activation, output_activation,
-                                weight_decay=weight_decay, model_path=model_path)
-    else:
-        policy = PolicyGradient(numrobot, action_space, lr, obs_dim, conv_channels,
-                                conv_filters, conv_activation, hidden_sizes,
-                                hidden_activation, output_activation,
-                                weight_decay=weight_decay, model_path=None)
-elif exp_parameters["policy_type"] == "dqn":
-    #determines whether we use q(s,a) or just q(s)
-    action_net_input = False
-    if exp_parameters["action_net_input"] > 0:
-        action_net_input = True
+    # init policy
+    policy = PolicyGradient(numrobot, action_space, lr, obs_dim, conv_channels,
+                            conv_filters, conv_activation, hidden_sizes,
+                            hidden_activation, output_activation,
+                            weight_decay=weight_decay, model_path=model_path)
 
+elif exp_parameters["policy_type"] == "dqn":
     #determines batch size for q-network
     batch_size = None
     if exp_parameters["batch_size"] > 0:
         batch_size = exp_parameters["batch_size"]
 
-    if saved_model:
-        policy = DQN(numrobot, action_space, lr, obs_dim, conv_channels,
-                     conv_filters, conv_activation, hidden_sizes, hidden_activation,
-                     batch_size=batch_size, buffer_size=buffer_maxsize, ani=action_net_input,
-                     model_path=model_path)
-    else:
-        policy = DQN(numrobot, action_space, lr, obs_dim, conv_channels,
-                     conv_filters, conv_activation, hidden_sizes, hidden_activation,
-                     batch_size=batch_size, buffer_size=buffer_maxsize, ani=action_net_input,
-                     model_path=None)
+    # init policy
+    policy = DQN(numrobot, action_space, lr, obs_dim, conv_channels,
+                 conv_filters, conv_activation, hidden_sizes, hidden_activation,
+                 batch_size=batch_size, buffer_size=buffer_maxsize, model_path=model_path)
     #could add weight_decay, gamma, tau as parameters if we want to change them
 
 '''Making the Controller for the Swarm Agent'''
