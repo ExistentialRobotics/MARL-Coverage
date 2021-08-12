@@ -48,18 +48,6 @@ class PolicyGradient(Base_Policy):
     def update_policy(self, episode):
         self.optimizer.zero_grad()
 
-        #converting all the rewards in the episode to be total rewards instead of per robot reward
-        # raw_rewards = []
-        # for i in range(len(episode)):
-        #     raw_rewards.append(np.sum(episode[i][2]))
-
-        # #calculate all r_returns efficiently (with discounting)
-        # d_rewards = []
-        # d_rewards.append(raw_rewards[len(episode) - 1])
-        # for i in range(len(episode) - 1):
-        #     d_rewards.insert(0, self._gamma*d_rewards[0]
-        #                      + raw_rewards[len(episode) - 2 - i])
-
         #setting loss var to zero so we can increment it for each step of episode
         self._lastloss = 0
 
