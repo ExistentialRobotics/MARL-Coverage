@@ -25,8 +25,7 @@ options = "m:"
 # Long options
 long_options = ["model ="]
 
-# Remove 1st argument from the
-# list of command line arguments
+# Remove 1st argument from the list of command line arguments
 argumentList = sys.argv[1:]
 
 saved_model = False
