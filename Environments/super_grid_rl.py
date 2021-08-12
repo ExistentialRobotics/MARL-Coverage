@@ -142,7 +142,6 @@ class SuperGridRL(object):
                 self._xinds[robots[0]] = newx[robots[0]]
                 self._yinds[robots[0]] = newy[robots[0]]
             else:
-                # print(robots)
                 #penalizing all robots that tried to end up in the same place
                 for r in robots:
                     reward[r2c[r]] -= self._collision_penalty
