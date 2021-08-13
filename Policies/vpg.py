@@ -22,7 +22,7 @@ class VPG(Base_Policy):
 
         # init optimizer
         self.a_optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=learning_rate, weight_decay=weight_decay)
-        self.c_optimizer = torch.optim.Adam(self.critic.parameters(), lr=learning_rate, weight_decay=weight_decay)
+        self.c_optimizer = torch.optim.Adam(self.critic.parameters(), lr=(learning_rate * 100), weight_decay=weight_decay)
 
         #reward discounting
         self._gamma = gamma
@@ -85,7 +85,7 @@ class VPG(Base_Policy):
 
         # calc loss
         m = Categorical(logits=probs)
-        a_loss = (m.log_prob(actions) * adv.detach()).mean()
+        a_loss = -(m.log_prob(actions) * adv.detach()).mean()
         c_loss = adv.pow(2).mean()
 
         # backprop
