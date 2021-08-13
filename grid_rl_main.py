@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import getopt, sys
 import json
+from copy import deepcopy
 
 from Environments.super_grid_rl import SuperGridRL
 from Action_Spaces.discrete import Discrete
@@ -171,9 +172,13 @@ else:
                          conv_activation, hidden_sizes, hidden_activation)
 
     if exp_parameters["policy_type"] == "vpg":
-        policy = VPG(net, numrobot, action_space, lr,
-                                weight_decay=weight_decay,
-                                model_path=model_path)
+        # init critic using same structure as actor
+        critic = Grid_RL_Conv(1, obs_dim, conv_channels, conv_filters,
+                             conv_activation, hidden_sizes, hidden_activation)
+
+        # init vpg policy
+        policy = VPG(net, critic, numrobot, action_space, lr,
+                     weight_decay=weight_decay, model_path=model_path)
     elif exp_parameters["policy_type"] == "dqn":
         #determines batch size for q-network
         batch_size = None

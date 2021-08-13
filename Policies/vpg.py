@@ -6,7 +6,7 @@ from torch.distributions.categorical import Categorical
 
 class VPG(Base_Policy):
 
-    def __init__(self, actor, numrobot, action_space, learning_rate,
+    def __init__(self, actor, critic, numrobot, action_space, learning_rate,
                  gamma=0.9, weight_decay=0.1, model_path=None):
         super().__init__()
         self.numrobot = numrobot
@@ -14,13 +14,15 @@ class VPG(Base_Policy):
 
         # init policy network and optimizer
         self.policy_net = actor
+        self.critic = critic
 
         # init with saved weights if testing saved model
         if model_path is not None:
             self.policy_net.load_state_dict(torch.load(model_path))
 
         # init optimizer
-        self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=learning_rate, weight_decay=weight_decay)
+        self.a_optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=learning_rate, weight_decay=weight_decay)
+        self.c_optimizer = torch.optim.Adam(self.critic.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
         #reward discounting
         self._gamma = gamma
@@ -41,7 +43,9 @@ class VPG(Base_Policy):
         return m.sample()
 
     def update_policy(self, episode):
-        self.optimizer.zero_grad()
+        # reset opt gradients
+        self.a_optimizer.zero_grad()
+        self.c_optimizer.zero_grad()
 
         #setting loss var to zero so we can increment it for each step of episode
         self._lastloss = 0
@@ -70,19 +74,24 @@ class VPG(Base_Policy):
         self.calc_gradient(states, actions, rewards)
 
         # update parameters
-        self.optimizer.step()
+        self.a_optimizer.step()
+        self.c_optimizer.step()
 
     def calc_gradient(self, states, actions, rewards):
         probs = self.policy_net(states)
 
-        # calculate gradient
-        loss = 0
+        # calc advantage between actor and critic
+        adv = rewards.detach() - self.critic(states)
+
+        # calc loss
         m = Categorical(logits=probs)
-        loss -= (m.log_prob(actions) * (rewards - self.baseline)).mean()
+        a_loss = (m.log_prob(actions) * adv.detach()).mean()
+        c_loss = adv.pow(2).mean()
 
         # backprop
-        loss.backward()
-        self._lastloss += loss.item()
+        a_loss.backward()
+        c_loss.backward()
+        self._lastloss += a_loss.item()
 
     def set_train(self):
         self.policy_net.train()
