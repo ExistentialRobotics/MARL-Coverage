@@ -81,7 +81,7 @@ class VPG(Base_Policy):
         probs = self.policy_net(states)
 
         # calc advantage between actor and critic
-        adv = rewards.detach() - self.critic(states)
+        adv = rewards.detach() - torch.squeeze(self.critic(states), 1)
 
         # calc loss
         m = Categorical(logits=probs)
