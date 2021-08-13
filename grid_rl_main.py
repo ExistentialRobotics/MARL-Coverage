@@ -146,6 +146,10 @@ if exp_parameters["conv_activation"] == "relu":
 if exp_parameters["hidden_activation"] == "relu":
     hidden_activation = nn.ReLU
 
+gae = False
+if exp_parameters["GAE"] > 0:
+    gae = True
+
 print(DASH)
 print("Running experiment using: " + str(config_path))
 print(DASH)
@@ -178,7 +182,7 @@ else:
 
         # init vpg policy
         policy = VPG(net, critic, numrobot, action_space, lr,
-                     weight_decay=weight_decay, model_path=model_path)
+                     weight_decay=weight_decay, model_path=model_path, gae=gae)
     elif exp_parameters["policy_type"] == "dqn":
         #determines batch size for q-network
         batch_size = None

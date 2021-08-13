@@ -7,7 +7,7 @@ from torch.distributions.categorical import Categorical
 class VPG(Base_Policy):
 
     def __init__(self, actor, critic, numrobot, action_space, learning_rate,
-                 gamma=0.97, lam = 0.95, weight_decay=0.1, model_path=None):
+                 gamma=0.97, lam = 0.95, weight_decay=0.1, model_path=None, gae=False):
         super().__init__()
         self.numrobot = numrobot
         self.num_actions = action_space.num_actions
@@ -15,6 +15,7 @@ class VPG(Base_Policy):
         # init policy network and optimizer
         self.policy_net = actor
         self.critic = critic
+        self.gae = gae
 
         # init with saved weights if testing saved model
         if model_path is not None:
@@ -64,13 +65,14 @@ class VPG(Base_Policy):
     def calc_gradient(self, states, actions, rewards, advantages, values):
         probs = self.policy_net(states)
 
-        # calc advantage between actor and critic
-        # adv = rewards.detach() - torch.squeeze(self.critic(states), 1)
-
         # calc loss
         m = Categorical(logits=probs)
-        a_loss = -(m.log_prob(actions) * advantages).mean()
-        c_loss = (rewards - values).pow(2).mean()
+        if self.gae:
+            a_loss = -(m.log_prob(actions) * advantages).mean()
+            c_loss = (rewards - values).pow(2).mean()
+        else:
+            a_loss = -(m.log_prob(actions) * advantages.detach()).mean()
+            c_loss = advantages.pow(2).mean()
 
         # backprop
         a_loss.backward()
@@ -101,26 +103,29 @@ class VPG(Base_Policy):
         #evaluate critic on states
         values = torch.squeeze(self.critic(states), 1)
 
-        with torch.no_grad():
-            #calculating the td-error at each timestep
-            deltas = self._gamma*values[1:] + rewards - values[:-1]
+        if self.gae:
+            with torch.no_grad():
+                #calculating the td-error at each timestep
+                deltas = self._gamma*values[1:] + rewards - values[:-1]
 
-            #calculating the discounted sum of td errors from each timestep onward
-            for i in range(episode_len):
-                deltas[episode_len - 2 - i] += self._gamma*self._lam*deltas[episode_len - 1 - i]
+                #calculating the discounted sum of td errors from each timestep onward
+                for i in range(episode_len):
+                    deltas[episode_len - 2 - i] += self._gamma*self._lam*deltas[episode_len - 1 - i]
 
-            #normalizing the advantages
-            mu = torch.mean(deltas, 0)
-            std = torch.std(deltas)
-            advantages = (deltas - mu)/std
-
-        #confirming that advantages have mean 0 variance 1
-        # print(torch.mean(advantages, 0))
-        # print(torch.std(advantages))
+                #normalizing the advantages
+                mu = torch.mean(deltas, 0)
+                std = torch.std(deltas)
+                advantages = (deltas - mu)/std
+            #confirming that advantages have mean 0 variance 1
+            # print(torch.mean(advantages, 0))
+            # print(torch.std(advantages))
 
         #calculate all discounted rewards efficiently
         for i in range(episode_len - 1):
             rewards[episode_len - 2 - i] += self._gamma*rewards[episode_len - 1 - i]
+
+        if not self.gae:
+            advantages = rewards.detach() - values[:rewards.shape[0]]
 
         #returning everything
         return states[:-1], actions, rewards, advantages, values[:-1]
