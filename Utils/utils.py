@@ -80,7 +80,7 @@ def train_RLalg(env, policy, logger, episodes=1000, iters=100,  render=False,
 
     return reward_per_episode, losslist
 
-def test_RLalg(env, policy, logger, episodes=10, iters=100, render_test=False, makevid=False):
+def test_RLalg(env, policy, logger, episodes=100, iters=100, render_test=False, makevid=False):
     # set model to eval mode
     policy.set_eval()
 
