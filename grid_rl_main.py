@@ -109,6 +109,8 @@ train_iters    = exp_parameters["train_iters"]
 test_iters     = exp_parameters["test_iters"]
 collision_p    = exp_parameters["collision_p"]
 buffer_maxsize = exp_parameters["buffer_size"]
+gamma = exp_parameters["gamma"]
+tau = exp_parameters["tau"]
 
 weight_decay = 0
 if exp_parameters["weight_decay"] > 0:
@@ -189,7 +191,8 @@ else:
 
         # init policy
         policy = DQN(net, num_actions, lr, batch_size=batch_size,
-                     buffer_size=buffer_maxsize, model_path=model_path)
+                     buffer_size=buffer_maxsize, model_path=model_path,
+                     weight_decay=weight_decay, gamma=gamma, tau=tau)
         #TODO could add weight_decay, gamma, tau as parameters
         #if we want to change them
 
@@ -217,15 +220,33 @@ print(DASH)
 print("Trained policy covered " + str(average_percent_covered) + " percent of the environment on average!")
 print(DASH)
 
+show_fig = exp_parameters["render_plots"]
 if not saved_model:
     # plot training rewards
-    logger.plot(train_rewardlis, 2, "Training Reward per Episode", 'Episodes', 'Reward', "Training Reward", "Training Reward")
+    logger.plot(train_rewardlis, 2, "Training Reward per Episode", 'Episodes', 'Reward', "Training Reward",
+                "Training Reward", show_fig=show_fig)
 
     # plot training loss
-    logger.plot(losslist, 4, "Training Loss per Episode", 'Episodes', 'Loss', "Training Loss", "Training Loss")
+    logger.plot(losslist, 4, "Training Loss per Episode", 'Episodes', 'Loss', "Training Loss",
+                "Training Loss", show_fig=show_fig)
 
-# plot testing rewards
-logger.plot(test_rewardlis, 3, "Testing Reward per Episode", 'Episodes', 'Reward', "Testing Reward", "Testing Reward")
+    # plot testing rewards
+    logger.plot(test_rewardlis, 3, "Testing Reward per Episode", 'Episodes', 'Reward', "Testing Reward"
+                , "Testing Reward", show_fig=show_fig)
 
 #closing logger
 logger.close()
+
+# from Policies.Networks.grid_rl_conv import Grid_RL_Conv
+# import torch
+# import torch.nn as nn
+# print(num_actions)
+# print(obs_dim)
+# print(conv_channels)
+# print(conv_filters)
+# print(conv_activation)
+# print(hidden_sizes)
+# print(hidden_activation)
+# net = Grid_RL_Conv(64, (4, 25, 25), [64, 32], [(9, 9), (7, 7)], nn.ReLU, [500, 100], nn.ReLU)
+# net.load_state_dict(torch.load('Experiments/grid_rl_dqn_arash_3/checkpoint3.pt'))
+# a = net.layers._modules['11'].weight.data.numpy()

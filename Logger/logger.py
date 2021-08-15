@@ -67,7 +67,7 @@ class Logger(object):
                    + str(self._current_checkpoint) + '.pt')
         self._current_checkpoint += 1
 
-    def plot(self, list, fignum, title, xlabel, ylabel, linelabel, figname):
+    def plot(self, list, fignum, title, xlabel, ylabel, linelabel, figname, show_fig):
         plt.figure(fignum)
         plt.title(title)
         plt.xlabel(xlabel)
@@ -75,7 +75,8 @@ class Logger(object):
         line, = plt.plot(list, label=linelabel)
         plt.legend(handles=[line])
         self.savefig(plt.gcf(), figname)
-        plt.show()
+        if show_fig:
+            plt.show()
 
     def close(self):
         '''
