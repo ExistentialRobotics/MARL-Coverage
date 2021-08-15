@@ -1,8 +1,6 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import getopt, sys
 import json
-from copy import deepcopy
 
 from Environments.super_grid_rl import SuperGridRL
 from Action_Spaces.discrete import Discrete
@@ -58,7 +56,7 @@ if saved_model:
         model_file = open(model_path)
     except OSError:
         print(DASH)
-        print(str(model_path) + " does not exit.")
+        print(str(model_path) + " does not exist.")
         print(DASH)
         sys.exit(1)
 
@@ -85,7 +83,7 @@ try:
     config_file = open(config_path)
 except OSError:
     print(DASH)
-    print(str(config_path) + " does not exit.")
+    print(str(config_path) + " does not exist.")
     print(DASH)
     sys.exit(1)
 

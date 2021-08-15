@@ -2,10 +2,13 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+from Policies.Networks.Qnet import init_weights
+
 '''
 Switched Padding back to what it was earlier to test if that is
 breaking the performance, ideally it shouldn't be but who knows.
 '''
+
 
 class Grid_RL_Conv(nn.Module):
 
@@ -61,6 +64,7 @@ class Grid_RL_Conv(nn.Module):
         else:
             layers += [nn.Linear(hidden_sizes[-1], action_dim), output_activation()]
         self.layers = nn.Sequential(*layers)
+        self.layers.apply(init_weights)
 
     def forward(self, x):
         return torch.squeeze(self.layers(x), axis=0)
