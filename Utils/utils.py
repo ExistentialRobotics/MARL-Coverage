@@ -16,13 +16,15 @@ def generate_episode(env, policy, logger, iters=100, render=False, makevid=False
 
         # step environment and save episode results
         next_state, reward = env.step(action)
-        episode.append((state, action, reward, next_state))
-        state = next_state
-        total_reward += np.sum(reward)
 
         # determine if episode is completed
         steps += 1
         done = env.done()
+
+        #adding variables to episode
+        episode.append((state, action, reward, next_state, done))
+        state = next_state
+        total_reward += np.sum(reward)
 
         # render if necessary
         if render:
