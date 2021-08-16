@@ -7,7 +7,7 @@ class SuperGridRL(object):
     """
     A Multi-Agent Grid Environment with a discrete action space for RL testing.
     """
-    def __init__(self, numrobot, gridlen, gridwidth, discrete_grid_values=2, collision_penalty=5, sensesize=1, grid=None, seed=None, free_penalty=0):
+    def __init__(self, numrobot, gridlen, gridwidth, maxsteps, discrete_grid_values=2, collision_penalty=5, sensesize=1, grid=None, seed=None, free_penalty=0):
         super().__init__()
 
         self._numrobot = numrobot
@@ -55,6 +55,8 @@ class SuperGridRL(object):
         #observation and action dimensions
         self._obs_dim = np.squeeze(self.get_state(), axis=0).shape
         self._num_actions = 4**self._numrobot
+
+        self._maxsteps = maxsteps
 
     def step(self, action):
         #handling case where action is an integer that identifies the action
@@ -190,6 +192,9 @@ class SuperGridRL(object):
         #calculate current state
         state = self.get_state()
 
+        #incrementing step count
+        self._currstep += 1
+
         return state, np.sum(reward)
 
     def isInBounds(self, x, y):
@@ -228,6 +233,9 @@ class SuperGridRL(object):
         return ret
 
     def reset(self):
+        #resetting step count
+        self._currstep = 0
+
         #generating random robot positions
         self._xinds = np.zeros(self._numrobot, dtype=int)
         self._yinds = np.zeros(self._numrobot, dtype=int)
@@ -264,6 +272,8 @@ class SuperGridRL(object):
     def done(self, thres=1):
         if thres <= self.percent_covered():
             print("Full Environment Covered")
+            return True
+        if self._currstep == self._maxsteps:
             return True
         return False
 

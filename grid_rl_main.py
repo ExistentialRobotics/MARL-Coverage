@@ -106,8 +106,10 @@ seed           = exp_parameters["seed"]
 lr             = exp_parameters["lr"]
 train_episodes = exp_parameters["train_episodes"]
 test_episodes  = exp_parameters["test_episodes"]
-train_iters    = exp_parameters["train_iters"]
-test_iters     = exp_parameters["test_iters"]
+# train_iters    = exp_parameters["train_iters"]
+# test_iters     = exp_parameters["test_iters"]
+maxsteps       = exp_parameters['maxsteps']
+ignore_done    = exp_parameters['ignore_done']
 collision_p    = exp_parameters["collision_p"]
 gamma          = exp_parameters["gamma"]
 
@@ -156,7 +158,7 @@ print(DASH)
 logger = Logger(exp_name, makevid, 0.05)
 
 '''Making the environment'''
-env = SuperGridRL(numrobot, gridlen, gridwidth, collision_penalty=collision_p)
+env = SuperGridRL(numrobot, gridlen, gridwidth, maxsteps ,collision_penalty=collision_p)
 num_actions = env._num_actions
 obs_dim = env._obs_dim
 
@@ -213,14 +215,14 @@ if not saved_model:
         print("----------Running {} for ".format(exp_parameters["policy_type"]) + str(train_episodes) + " episodes-----------")
         policy.printNumParams()
         train_rewardlis, losslist, test_percent_covered = train_RLalg(env, policy, logger, episodes=train_episodes,
-                                                                      iters=train_iters, render=render_train)
+                                                                      render=render_train, ignore_done=ignore_done)
     else:
         print("-----------------------Running Random Policy-----------------------")
 
 '''Test policy'''
 print("-----------------------------Testing Policy----------------------------")
 #testing the policy and collecting data
-test_rewardlis, average_percent_covered = test_RLalg(env, policy, logger, episodes=test_episodes, iters=test_iters, render_test=render_test,
+test_rewardlis, average_percent_covered = test_RLalg(env, policy, logger, episodes=test_episodes, render_test=render_test,
                                                      makevid=makevid)
 test_percent_covered.append(average_percent_covered)
 
