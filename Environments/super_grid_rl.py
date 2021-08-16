@@ -83,6 +83,10 @@ class SuperGridRL(object):
         #robot 2 control, storing what robot got what control
         r2c = np.zeros((self._numrobot,), dtype=int)
 
+        # array tracking if a robot had a collision
+        collisions = np.zeros((self._numrobot,), dtype=bool)
+
+        # apply controls to each robot
         for i in range(len(ulis)):
             u = ulis[i]
 
@@ -99,6 +103,7 @@ class SuperGridRL(object):
                     newx[z] = x
                 else:
                     reward[i] -= self._collision_penalty
+                    collisions[z] = True
             #right
             elif(u == 1):
                 x = self._xinds[z] + 1
@@ -108,6 +113,7 @@ class SuperGridRL(object):
                     newx[z] = x
                 else:
                     reward[i] -= self._collision_penalty
+                    collisions[z] = True
             #up
             elif(u == 2):
                 x = self._xinds[z]
@@ -117,6 +123,7 @@ class SuperGridRL(object):
                     newy[z] = y
                 else:
                     reward[i] -= self._collision_penalty
+                    collisions[z] = True
             #down
             elif(u == 3):
                 x = self._xinds[z]
@@ -126,6 +133,7 @@ class SuperGridRL(object):
                     newy[z]= y
                 else:
                     reward[i] -= self._collision_penalty
+                    collisions[z] = True
 
         #checking if any robots are at same position
         coord_dict = {}
@@ -145,7 +153,7 @@ class SuperGridRL(object):
                 #penalizing all robots that tried to end up in the same place
                 for r in robots:
                     reward[r2c[r]] -= self._collision_penalty
-
+                    collisions[r] = True
 
         #sense from all the current robot positions
         for i in range(self._numrobot):
@@ -153,30 +161,31 @@ class SuperGridRL(object):
             y = self._yinds[i]
 
             #looping over all grid cells to sense
-            for j in range(x - self._sensesize, x + self._sensesize + 1):
-                for k in range(y - self._sensesize, y + self._sensesize + 1):
-                    #checking if cell is not visited, in bounds, not an obstacle
-                    if(self.isInBounds(j,k) and self._grid[j][k]>=0 and
-                       self._free[j][k] == 1):
-                        # add reward
-                        reward[r2c[i]] += self._grid[j][k]
+            if not collisions[i]:
+                for j in range(x - self._sensesize, x + self._sensesize + 1):
+                    for k in range(y - self._sensesize, y + self._sensesize + 1):
+                        #checking if cell is not visited, in bounds, not an obstacle
+                        if(self.isInBounds(j,k) and self._grid[j][k]>=0 and
+                           self._free[j][k] == 1):
+                            # add reward
+                            reward[r2c[i]] += self._grid[j][k]
 
-                        # record observation value
-                        sensing_level = self._grid[j][k]
-                        if(sensing_level > 0):
-                            self._observed_cells[sensing_level - 1][j][k] = 1
+                            # record observation value
+                            sensing_level = self._grid[j][k]
+                            if(sensing_level > 0):
+                                self._observed_cells[sensing_level - 1][j][k] = 1
 
-                        # mark as not free
-                        self._free[j][k] = 0
+                            # mark as not free
+                            self._free[j][k] = 0
 
-                    elif(self.isInBounds(j,k) and self._grid[j][k]>=0 and
-                       self._free[j][k] == 0):
-                        reward[r2c[i]] -= self._free_penalty
+                        elif(self.isInBounds(j,k) and self._grid[j][k]>=0 and
+                           self._free[j][k] == 0):
+                            reward[r2c[i]] -= self._free_penalty
 
-                    elif(self.isInBounds(j,k) and self._grid[j][k]<0 and
-                         self._observed_obstacles[j][k] == 0):
-                         # track observed obstacles
-                         self._observed_obstacles[j][k] = 1
+                        elif(self.isInBounds(j,k) and self._grid[j][k]<0 and
+                             self._observed_obstacles[j][k] == 0):
+                             # track observed obstacles
+                             self._observed_obstacles[j][k] = 1
 
         #calculate current state
         state = self.get_state()
