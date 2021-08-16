@@ -7,8 +7,8 @@ from copy import deepcopy
 
 class DQN(Base_Policy):
 
-    def __init__(self, q_net, num_actions, learning_rate, epsilon=0.999, min_epsilon=0.1,
-                 buffer_size=1000, batch_size=100,
+    def __init__(self, q_net, buff, num_actions, learning_rate, epsilon=0.999, min_epsilon=0.1,
+                 batch_size=100,
                  gamma=0.99, tau=0.9, weight_decay=0.1, model_path=None):
         super().__init__()
 
@@ -41,7 +41,7 @@ class DQN(Base_Policy):
 
         #replay buffer creation
         self.batch_size = batch_size
-        self._buff = ReplayBuffer(buffer_size)
+        self._buff = buff
 
         #discount rate and q-net weighted average
         self._gamma = gamma
@@ -81,21 +81,22 @@ class DQN(Base_Policy):
         self.optimizer.zero_grad()
 
         #sampling batch from buffer
-        states, actions, rewards, next_states = self._buff.samplebatch(self.batch_size)
+        states, actions, rewards, next_states, done = self._buff.samplebatch(self.batch_size)
 
         # convert to tensors
-        states = torch.tensor(states).float()
-        next_states = torch.tensor(next_states).float()
-        rewards = torch.tensor(rewards).float()
-        actions = torch.tensor(actions).long()
-        states = torch.squeeze(states, axis=1)
-        next_states = torch.squeeze(next_states, axis=1)
+        states = torch.from_numpy(states).float()
+        actions = torch.from_numpy(actions).long()
+        rewards = torch.from_numpy(rewards).float()
+        next_states = torch.from_numpy(next_states).float()
+        done = torch.from_numpy(done).long()
+        # states = torch.squeeze(states, axis=1)
+        # next_states = torch.squeeze(next_states, axis=1)
 
         #combining all individual rewards
-        rewards = torch.sum(rewards, 1)
+        # rewards = torch.sum(rewards, 1)
 
         # gradient calculation
-        loss = self.calc_gradient(states, actions, rewards, next_states, self.batch_size)
+        loss = self.calc_gradient(states, actions, rewards, next_states, done, self.batch_size)
 
         #tracking loss
         self._lastloss = loss.item()
@@ -113,7 +114,7 @@ class DQN(Base_Policy):
         #paranoid about memory leak
         del states, next_states, rewards, actions
 
-    def calc_gradient(self, states, actions, rewards, next_states, batch_size):
+    def calc_gradient(self, states, actions, rewards, next_states, done, batch_size):
         # calc q and next q
         qvals = self.q_net(states)
         next_qvals = self.target_net(next_states)
@@ -121,7 +122,7 @@ class DQN(Base_Policy):
         # calculate gradient for q function
         with torch.no_grad():
             next_q = torch.max(next_qvals, 1).values
-            y = rewards + self._gamma*next_q
+            y = rewards + self._gamma*(1-done)*next_q
 
         #TODO vectorize this for loop
         currq = torch.zeros(batch_size)

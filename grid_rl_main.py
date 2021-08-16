@@ -7,6 +7,7 @@ from Action_Spaces.discrete import Discrete
 from Policies.basic_random import Basic_Random
 from Policies.vpg import VPG
 from Policies.dqn import DQN
+from Policies.replaybuffer import ReplayBuffer
 from Logger.logger import Logger
 from Utils.utils import train_RLalg, test_RLalg
 from Policies.Networks.grid_rl_conv import Grid_RL_Conv
@@ -105,12 +106,12 @@ seed           = exp_parameters["seed"]
 lr             = exp_parameters["lr"]
 train_episodes = exp_parameters["train_episodes"]
 test_episodes  = exp_parameters["test_episodes"]
-train_iters    = exp_parameters["train_iters"]
-test_iters     = exp_parameters["test_iters"]
+# train_iters    = exp_parameters["train_iters"]
+# test_iters     = exp_parameters["test_iters"]
+maxsteps       = exp_parameters['maxsteps']
+ignore_done    = exp_parameters['ignore_done']
 collision_p    = exp_parameters["collision_p"]
-buffer_maxsize = exp_parameters["buffer_size"]
 gamma          = exp_parameters["gamma"]
-tau            = exp_parameters["tau"]
 
 weight_decay = 0
 if exp_parameters["weight_decay"] > 0:
@@ -148,9 +149,6 @@ if exp_parameters["conv_activation"] == "relu":
 if exp_parameters["hidden_activation"] == "relu":
     hidden_activation = nn.ReLU
 
-gae = False
-if exp_parameters["GAE"] > 0:
-    gae = True
 
 print(DASH)
 print("Running experiment using: " + str(config_path))
@@ -160,7 +158,7 @@ print(DASH)
 logger = Logger(exp_name, makevid, 0.05)
 
 '''Making the environment'''
-env = SuperGridRL(numrobot, gridlen, gridwidth, collision_penalty=collision_p)
+env = SuperGridRL(numrobot, gridlen, gridwidth, maxsteps ,collision_penalty=collision_p)
 num_actions = env._num_actions
 obs_dim = env._obs_dim
 
@@ -178,6 +176,11 @@ else:
                          conv_activation, hidden_sizes, hidden_activation)
 
     if exp_parameters["policy_type"] == "vpg":
+        #vpg specific params
+        gae = False
+        if exp_parameters["GAE"] > 0:
+            gae = True
+
         # init critic using same structure as actor
         critic = Grid_RL_Conv(1, obs_dim, conv_channels, conv_filters,
                              conv_activation, hidden_sizes, hidden_activation)
@@ -191,12 +194,17 @@ else:
         if exp_parameters["batch_size"] > 0:
             batch_size = exp_parameters["batch_size"]
 
+        #dqn specific parameters
+        tau            = exp_parameters["tau"]
+        buffer_maxsize = exp_parameters["buffer_size"]
+
+        #creating buffer
+        buff = ReplayBuffer(obs_dim, None, buffer_maxsize)
+
         # init policy
-        policy = DQN(net, num_actions, lr, batch_size=batch_size,
-                     buffer_size=buffer_maxsize, model_path=model_path,
+        policy = DQN(net, buff, num_actions, lr, batch_size=batch_size,
+                     model_path=model_path,
                      weight_decay=weight_decay, gamma=gamma, tau=tau)
-        #TODO could add weight_decay, gamma, tau as parameters
-        #if we want to change them
 
 # train a policy if not testing a saved model
 if not saved_model:
@@ -207,14 +215,14 @@ if not saved_model:
         print("----------Running {} for ".format(exp_parameters["policy_type"]) + str(train_episodes) + " episodes-----------")
         policy.printNumParams()
         train_rewardlis, losslist, test_percent_covered = train_RLalg(env, policy, logger, episodes=train_episodes,
-                                                                      iters=train_iters, render=render_train)
+                                                                      render=render_train, ignore_done=ignore_done)
     else:
         print("-----------------------Running Random Policy-----------------------")
 
 '''Test policy'''
 print("-----------------------------Testing Policy----------------------------")
 #testing the policy and collecting data
-test_rewardlis, average_percent_covered = test_RLalg(env, policy, logger, episodes=test_episodes, iters=test_iters, render_test=render_test,
+test_rewardlis, average_percent_covered = test_RLalg(env, policy, logger, episodes=test_episodes, render_test=render_test,
                                                      makevid=makevid)
 test_percent_covered.append(average_percent_covered)
 
