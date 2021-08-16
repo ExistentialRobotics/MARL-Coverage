@@ -128,6 +128,8 @@ render_train = False
 if exp_parameters["render_train"] == 1:
     render_train = True
 
+show_fig = exp_parameters["render_plots"]
+
 conv_channels = []
 for channel in exp_parameters["conv_channels"]:
     conv_channels.append(channel["_"])
@@ -204,8 +206,8 @@ if not saved_model:
     if not random_policy:
         print("----------Running {} for ".format(exp_parameters["policy_type"]) + str(train_episodes) + " episodes-----------")
         policy.printNumParams()
-        train_rewardlis, losslist = train_RLalg(env, policy, logger, episodes=train_episodes, iters=train_iters, render=render_train)
-
+        train_rewardlis, losslist, test_percent_covered = train_RLalg(env, policy, logger, episodes=train_episodes,
+                                                                      iters=train_iters, render=render_train)
     else:
         print("-----------------------Running Random Policy-----------------------")
 
@@ -214,25 +216,29 @@ print("-----------------------------Testing Policy----------------------------")
 #testing the policy and collecting data
 test_rewardlis, average_percent_covered = test_RLalg(env, policy, logger, episodes=test_episodes, iters=test_iters, render_test=render_test,
                                                      makevid=makevid)
+test_percent_covered.append(average_percent_covered)
 
 '''Display results'''
 print(DASH)
 print("Trained policy covered " + str(average_percent_covered) + " percent of the environment on average!")
 print(DASH)
 
-show_fig = exp_parameters["render_plots"]
 if not saved_model:
     # plot training rewards
     logger.plot(train_rewardlis, 2, "Training Reward per Episode", 'Episodes', 'Reward', "Training Reward",
                 "Training Reward", show_fig=show_fig)
 
     # plot training loss
-    logger.plot(losslist, 4, "Training Loss per Episode", 'Episodes', 'Loss', "Training Loss",
+    logger.plot(losslist, 3, "Training Loss per Episode", 'Episodes', 'Loss', "Training Loss",
                 "Training Loss", show_fig=show_fig)
 
     # plot testing rewards
-    logger.plot(test_rewardlis, 3, "Testing Reward per Episode", 'Episodes', 'Reward', "Testing Reward"
+    logger.plot(test_rewardlis, 4, "Testing Reward per Episode", 'Episodes', 'Reward', "Testing Reward"
                 , "Testing Reward", show_fig=show_fig)
+
+    # plot average percent covered when testing
+    logger.plot(test_percent_covered, 5, "Average Percent Covered", 'Episode (x10)', 'Percent Covered', "Percent Covered"
+                , "Percent Covered", show_fig=show_fig)
 
 #closing logger
 logger.close()

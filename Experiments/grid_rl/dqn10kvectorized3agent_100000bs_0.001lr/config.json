@@ -46,5 +46,7 @@
   "weight_decay"      : 0,
   "buffer"            : 0,
   "buffer_size"       : 100000,
-  "GAE"               : 0
+  "GAE"               : 0,
+  "gamma"             : 0.9,
+  "tau"               : 0.9
 }

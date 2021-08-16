@@ -37,8 +37,11 @@ def train_RLalg(env, policy, logger, episodes=1000, iters=100,  render=False,
     # set policy network to train mode
     policy.set_train()
 
+    # list for statistics
     reward_per_episode = []
     losslist = []
+    test_percent_covered = []
+
     best_reward = -sys.maxsize - 1
     checkpoint_num = 0
     for _ in range(episodes):
@@ -63,6 +66,7 @@ def train_RLalg(env, policy, logger, episodes=1000, iters=100,  render=False,
 
             #testing policy
             testrewards, average_percent_covered = test_RLalg(env, policy, logger, episodes=10, render_test=render)
+            test_percent_covered.append(average_percent_covered)
             policy.set_train()
 
             #printing debug info
@@ -78,7 +82,7 @@ def train_RLalg(env, policy, logger, episodes=1000, iters=100,  render=False,
     #saving final policy
     logger.saveModelWeights(policy.getnet())
 
-    return reward_per_episode, losslist
+    return reward_per_episode, losslist, test_percent_covered
 
 def test_RLalg(env, policy, logger, episodes=100, iters=100, render_test=False, makevid=False):
     # set model to eval mode
