@@ -1,0 +1,53 @@
+{
+  "experiment_name"   : "",
+  "makevid"           : 0,
+  "policy_type"       : "dqn",
+  "batch_size"        : 50,
+  "numrobot"          : 3,
+  "gridwidth"         : 25,
+  "gridlen"           : 25,
+  "seed"              : 420,
+  "num_actions"       : 4,
+  "render_test"       : 0,
+  "render_train"      : 0,
+  "render_plots"      : 0,
+  "lr"                : 0.0001,
+  "train_episodes"    : 2000,
+  "test_episodes"     : 10,
+  "train_iters"       : 100,
+  "test_iters"        : 100,
+  "collision_p"       : 100,
+  "conv_channels"     : [
+    {
+      "_" : 64
+    },
+    {
+      "_" : 32
+    }
+  ],
+  "conv_filters"      : [
+    {
+      "_" : 9
+    },
+    {
+      "_" : 7
+    }
+  ],
+  "conv_activation"   : "relu",
+  "hidden_sizes"      : [
+    {
+      "_" : 500
+    },
+    {
+      "_" : 100
+    }
+  ],
+  "hidden_activation" : "relu",
+  "output_activation" : "none",
+  "gamma"             : 0.99,
+  "tau"               : 0.9,
+  "weight_decay"      : 0,
+  "buffer"            : 0,
+  "buffer_size"       : 10000,
+  "GAE"               : 0
+}

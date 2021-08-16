@@ -1,1 +1,0 @@
-Trained policy covered 94.93919999999999 percent of the environment on average!

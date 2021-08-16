@@ -1,0 +1,6 @@
+cd ../..
+
+for i in {1..15}
+do
+   python grid_rl_main.py Experiments/grid_rl/dqn_arash_mass_exp_$i/config.json
+done

@@ -1,11 +1,7 @@
 import numpy as np
 import torch
-import itertools
 from . base_policy import Base_Policy
-from . Networks.grid_rl_conv import Grid_RL_Conv
-from . Networks.Qnet import Critic
 from . replaybuffer import ReplayBuffer
-from torch.distributions.categorical import Categorical
 from copy import deepcopy
 
 
@@ -13,7 +9,7 @@ class DQN(Base_Policy):
 
     def __init__(self, q_net, num_actions, learning_rate, epsilon=0.999, min_epsilon=0.1,
                  buffer_size=1000, batch_size=100,
-                 gamma=0.9, tau=0.9, weight_decay=0.1, model_path=None):
+                 gamma=0.99, tau=0.9, weight_decay=0.1, model_path=None):
         super().__init__()
 
         # init q net
@@ -24,7 +20,7 @@ class DQN(Base_Policy):
         if model_path is not None:
             self.q_net.load_state_dict(torch.load(model_path))
 
-        # init q net
+        # init q target net
         self.target_net = deepcopy(self.q_net)
 
         #setting requires gradient in target net to false for all params
@@ -56,9 +52,6 @@ class DQN(Base_Policy):
         This method takes the state as input and returns a list of actions, one
         for each robot.
         '''
-        # calc qvals, using no grad to avoid computing gradients
-        with torch.no_grad():
-            qvals = self.q_net(torch.from_numpy(state).float())
 
         #epsilon greedy check
         s = np.random.uniform()
@@ -66,6 +59,9 @@ class DQN(Base_Policy):
         #epsilon greedy policy
         #if we are testing then we use a smaller testing epsilon
         if(s > self._epsilon or (self._testing and s > self._testing_epsilon)):
+            # calc qvals, using no grad to avoid computing gradients
+            with torch.no_grad():
+                qvals = self.q_net(torch.from_numpy(state).float())
             #greedy
             u = torch.argmax(qvals)
         else:
