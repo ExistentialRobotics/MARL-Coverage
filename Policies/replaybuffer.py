@@ -4,55 +4,42 @@ class ReplayBuffer(object):
     '''
     Stores state transitions (state, action, reward, next state)
     '''
-    def __init__(self, maxsize):
+    def __init__(self, obs_dim, act_dim, size):
         super().__init__()
-        self.resetbuffer()
-        self._maxsize = maxsize
+        self._maxsize = size
         self._size = 0
 
-    def resetbuffer(self):
-        self._state = []
-        self._action = []
-        self._reward = []
-        self._nextstate = []
+        #creating all arrays
+        self._state = np.zeros(combined_shape(size, obs_dim), dtype=np.float32)
+        self._action = np.zeros(combined_shape(size, act_dim), dtype=np.float32)
+        self._reward = np.zeros(size, dtype=np.float32)
+        self._nextstate = np.zeros(combined_shape(size, obs_dim), dtype=np.float32)
+        # self._done = np.zeros(size, dtype=np.float32)
+
+        #tracking where we need to write next to array
+        self._ptr = 0
 
     def addtransition(self, state, action, reward, next_state):
-        #checking if buffer is full and removing first element
-        if self._size == self._maxsize:
-            self._state.pop(0)
-            self._action.pop(0)
-            self._reward.pop(0)
-            self._nextstate.pop(0)
-
-            self._size -= 1
-
         #adding new data
-        self._state.append(state)
-        self._action.append(action)
-        self._reward.append(reward)
-        self._nextstate.append(next_state)
+        self._state[self._ptr] = state
+        self._action[self._ptr] = action
+        self._reward[self._ptr] = reward
+        self._nextstate[self._ptr] = next_state
+        # self._done[self._ptr] = done
 
         #incrementing size
-        self._size += 1
+        self._ptr += 1
+        self._ptr = self._ptr % self._maxsize
+        self._size = min(self._size + 1, self._maxsize)
 
     def addepisode(self, episode):
         for i in range(len(episode)):
             self.addtransition(episode[i][0], episode[i][1], episode[i][2], episode[i][3])
-
-    def sampletransition(self):
-        #returns a random transition in the replay buffer
-        index = np.random.randint(self._size)
-        return self._state[index], self._action[index], self._reward[index], self._nextstate[index]
-
     def samplebatch(self, N):
-        states = []
-        actions = []
-        rewards = []
-        next_states = []
-        for i in range(N):
-            state, action, reward, next_state = self.sampletransition()
-            states.append(state)
-            actions.append(action)
-            rewards.append(reward)
-            next_states.append(next_state)
-        return states, actions, rewards, next_states
+        indices = np.random.randint(0, self._size, size=N)
+        return self._state[indices], self._action[indices], self._reward[indices], self._nextstate[indices]
+
+def combined_shape(length, shape=None):
+    if shape is None:
+        return (length,)
+    return (length, shape) if np.isscalar(shape) else (length, *shape)
