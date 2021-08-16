@@ -57,6 +57,7 @@ class SuperGridRL(object):
         self._num_actions = 4**self._numrobot
 
     def step(self, action):
+        # print(self._free)
         #handling case where action is an integer that identifies the action
         if type(action) != list:
             ulis = np.zeros((self._numrobot,))
@@ -71,8 +72,8 @@ class SuperGridRL(object):
         reward = np.zeros((self._numrobot,))
 
         #update robot positions using controls
-        newx = self._xinds
-        newy = self._yinds
+        newx = np.copy(self._xinds)
+        newy = np.copy(self._yinds)
 
         #making pq for sorting by minimum scan score
         pq = PriorityQueue()
@@ -87,6 +88,9 @@ class SuperGridRL(object):
         collisions = np.zeros((self._numrobot,), dtype=bool)
 
         # apply controls to each robot
+        # print("---------------------------------------------------------------")
+        # print(str(self._xinds) + " " + str(self._yinds))
+        # print(str(newx) + " " + str(newy))
         for i in range(len(ulis)):
             u = ulis[i]
 
@@ -101,6 +105,7 @@ class SuperGridRL(object):
 
                 if(self.isInBounds(x,y) and self._grid[x][y]>=0):
                     newx[z] = x
+                    # print("move left " + str(newx[z]) + " " + str(self._xinds))
                 else:
                     reward[i] -= self._collision_penalty
                     collisions[z] = True
@@ -111,6 +116,7 @@ class SuperGridRL(object):
 
                 if(self.isInBounds(x,y) and self._grid[x][y]>=0):
                     newx[z] = x
+                    # print("move right " + str(newx) + " " + str(self._xinds))
                 else:
                     reward[i] -= self._collision_penalty
                     collisions[z] = True
@@ -121,6 +127,7 @@ class SuperGridRL(object):
 
                 if(self.isInBounds(x,y) and self._grid[x][y]>=0):
                     newy[z] = y
+                    # print("move up " + str(newy) + " " + str(self._yinds))
                 else:
                     reward[i] -= self._collision_penalty
                     collisions[z] = True
@@ -131,12 +138,20 @@ class SuperGridRL(object):
 
                 if(self.isInBounds(x,y) and self._grid[x][y]>=0):
                     newy[z]= y
+                    # print("move down " + str(newy) + " " + str(self._yinds))
                 else:
                     reward[i] -= self._collision_penalty
                     collisions[z] = True
 
-        #checking if any robots are at same position
+        # init coord dict with robot current positions
         coord_dict = {}
+        for i in range(self._numrobot):
+            coord_dict[(self._xinds[i], self._yinds[i])] = [i]
+
+        #checking if any robots are at same position or at the current position of another robot
+        # print(str(self._xinds) + " " + str(self._yinds))
+        # print(coord_dict)
+        # print(str(newx) + " " + str(newy))
         for i in range(self._numrobot):
             if (newx[i], newy[i]) in coord_dict:
                 coord_dict[(newx[i], newy[i])].append(i)
