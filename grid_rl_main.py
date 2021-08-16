@@ -191,7 +191,8 @@ else:
 
         # init policy
         policy = DQN(net, num_actions, lr, batch_size=batch_size,
-                     buffer_size=buffer_maxsize, model_path=model_path)
+                     buffer_size=buffer_maxsize, model_path=model_path,
+                     weight_decay=weight_decay)
         #TODO could add weight_decay, gamma, tau as parameters
         #if we want to change them
 
