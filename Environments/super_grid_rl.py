@@ -59,7 +59,6 @@ class SuperGridRL(object):
         self._maxsteps = maxsteps
 
     def step(self, action):
-        # print(self._free)
         #handling case where action is an integer that identifies the action
         if type(action) != list:
             ulis = np.zeros((self._numrobot,))

@@ -27,7 +27,7 @@ def generate_episode(env, policy, logger, render=False, makevid=False, ignore_do
         #adding variables to episode
         episode.append((state, action, reward, next_state, new_done))
         state = next_state
-        total_reward += np.sum(reward)
+        total_reward += reward
 
         # render if necessary
         if render:
@@ -60,6 +60,7 @@ def train_RLalg(env, policy, logger, episodes=1000, render=False,
         reward_per_episode.append(total_reward)
 
         # letting us know when we beat previous best
+        print(total_reward)
         if total_reward > best_reward:
             print("New best reward on episode " + str(_) + ": " + str(total_reward))
             best_reward = total_reward

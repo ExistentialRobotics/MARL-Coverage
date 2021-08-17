@@ -8,8 +8,8 @@ from copy import deepcopy
 class DQN(Base_Policy):
 
     def __init__(self, q_net, buff, num_actions, learning_rate, epsilon=0.999, min_epsilon=0.1,
-                 batch_size=100,
-                 gamma=0.99, tau=0.9, weight_decay=0.1, model_path=None):
+                 batch_size=100, gamma=0.99, tau=0.9, weight_decay=0.1,
+                 model_path=None):
         super().__init__()
 
         # init q net

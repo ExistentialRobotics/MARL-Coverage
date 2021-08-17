@@ -7,6 +7,7 @@ from Action_Spaces.discrete import Discrete
 from Policies.basic_random import Basic_Random
 from Policies.vpg import VPG
 from Policies.dqn import DQN
+from Policies.ac import AC
 from Policies.replaybuffer import ReplayBuffer
 from Logger.logger import Logger
 from Utils.utils import train_RLalg, test_RLalg
@@ -106,10 +107,7 @@ seed           = exp_parameters["seed"]
 lr             = exp_parameters["lr"]
 train_episodes = exp_parameters["train_episodes"]
 test_episodes  = exp_parameters["test_episodes"]
-# train_iters    = exp_parameters["train_iters"]
-# test_iters     = exp_parameters["test_iters"]
 maxsteps       = exp_parameters['maxsteps']
-ignore_done    = exp_parameters['ignore_done']
 collision_p    = exp_parameters["collision_p"]
 gamma          = exp_parameters["gamma"]
 
@@ -165,6 +163,7 @@ obs_dim = env._obs_dim
 '''Init action space'''
 action_space = Discrete(num_actions)
 
+ignore_done = False
 '''Init policy'''
 random_policy = False
 if exp_parameters["policy_type"] == "random":
@@ -176,18 +175,10 @@ else:
                          conv_activation, hidden_sizes, hidden_activation)
 
     if exp_parameters["policy_type"] == "vpg":
-        #vpg specific params
-        gae = False
-        if exp_parameters["GAE"] > 0:
-            gae = True
-
-        # init critic using same structure as actor
-        critic = Grid_RL_Conv(1, obs_dim, conv_channels, conv_filters,
-                             conv_activation, hidden_sizes, hidden_activation)
-
         # init vpg policy
-        policy = VPG(net, critic, numrobot, action_space, lr,
-                     weight_decay=weight_decay, model_path=model_path, gae=gae)
+        policy = VPG(net, numrobot, action_space, lr,
+                     weight_decay=weight_decay, gamma=gamma,
+                     model_path=model_path)
     elif exp_parameters["policy_type"] == "dqn":
         #determines batch size for q-network
         batch_size = None
@@ -197,14 +188,28 @@ else:
         #dqn specific parameters
         tau            = exp_parameters["tau"]
         buffer_maxsize = exp_parameters["buffer_size"]
+        ignore_done    = exp_parameters['ignore_done']
 
         #creating buffer
         buff = ReplayBuffer(obs_dim, None, buffer_maxsize)
 
         # init policy
         policy = DQN(net, buff, num_actions, lr, batch_size=batch_size,
-                     model_path=model_path,
-                     weight_decay=weight_decay, gamma=gamma, tau=tau)
+                     model_path=model_path, weight_decay=weight_decay,
+                     gamma=gamma, tau=tau)
+    elif exp_parameters["policy_type"] == "ac":
+        #ac specific params
+        gae = False
+        if exp_parameters["GAE"] > 0:
+            gae = True
+
+        # init critic using same structure as actor
+        critic = Grid_RL_Conv(1, obs_dim, conv_channels, conv_filters,
+                             conv_activation, hidden_sizes, hidden_activation)
+
+        # init policy
+        policy = AC(net, critic, numrobot, action_space, lr,
+                     weight_decay=weight_decay, model_path=model_path, gae=gae)
 
 # train a policy if not testing a saved model
 if not saved_model:
