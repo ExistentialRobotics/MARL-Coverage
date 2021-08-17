@@ -60,7 +60,6 @@ def train_RLalg(env, policy, logger, episodes=1000, render=False,
         reward_per_episode.append(total_reward)
 
         # letting us know when we beat previous best
-        print(total_reward)
         if total_reward > best_reward:
             print("New best reward on episode " + str(_) + ": " + str(total_reward))
             best_reward = total_reward
