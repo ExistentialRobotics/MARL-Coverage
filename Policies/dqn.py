@@ -12,6 +12,9 @@ class DQN(Base_Policy):
                  model_path=None):
         super().__init__()
 
+        #cpu vs gpu code
+        self._device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
         # init q net
         self.q_net = q_net
         self.num_actions = num_actions
@@ -22,6 +25,10 @@ class DQN(Base_Policy):
 
         # init q target net
         self.target_net = deepcopy(self.q_net)
+
+        #moving nets to gpu
+        self.q_net.to(self._device)
+        self.target_net.to(self._device)
 
         #setting requires gradient in target net to false for all params
         for p in self.target_net.parameters():
@@ -61,7 +68,8 @@ class DQN(Base_Policy):
         if(s > self._epsilon or (self._testing and s > self._testing_epsilon)):
             # calc qvals, using no grad to avoid computing gradients
             with torch.no_grad():
-                qvals = self.q_net(torch.from_numpy(state).float())
+                state_tensor = (torch.from_numpy(state).float()).to(self._device)
+                qvals = self.q_net(state_tensor)
             #greedy
             u = torch.argmax(qvals)
         else:
@@ -77,6 +85,12 @@ class DQN(Base_Policy):
         #decaying epsilon
         self.decayEpsilon()
 
+        #performing one gradient step per env step (like spinning up ddpg)
+        # for i in range(len(episode)):
+        self.update_policy_step()
+
+
+    def update_policy_step(self):
         #zero gradients
         self.optimizer.zero_grad()
 
@@ -89,6 +103,14 @@ class DQN(Base_Policy):
         rewards = torch.from_numpy(rewards).float()
         next_states = torch.from_numpy(next_states).float()
         done = torch.from_numpy(done).long()
+
+        #moving tensors to gpu
+        states = states.to(self._device)
+        actions = actions.to(self._device)
+        rewards = rewards.to(self._device)
+        next_states = next_states.to(self._device)
+        done = done.to(self._device)
+
         # states = torch.squeeze(states, axis=1)
         # next_states = torch.squeeze(next_states, axis=1)
 
@@ -125,7 +147,7 @@ class DQN(Base_Policy):
             y = rewards + self._gamma*(1-done)*next_q
 
         #TODO vectorize this for loop
-        currq = torch.zeros(batch_size)
+        currq = torch.zeros(batch_size).to(self._device)
         for j in range(qvals.shape[0]):
             currq[j] = qvals[j, actions[j]]
 

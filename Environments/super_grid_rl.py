@@ -7,7 +7,8 @@ class SuperGridRL(object):
     """
     A Multi-Agent Grid Environment with a discrete action space for RL testing.
     """
-    def __init__(self, numrobot, gridlen, gridwidth, maxsteps, discrete_grid_values=2, collision_penalty=5, sensesize=1, grid=None, seed=None, free_penalty=0):
+    def __init__(self, numrobot, gridlen, gridwidth, maxsteps, discrete_grid_values=2, collision_penalty=5,
+                 sensesize=1, grid=None, seed=None, free_penalty=0, use_scanning=True):
         super().__init__()
 
         self._numrobot = numrobot
@@ -45,6 +46,10 @@ class SuperGridRL(object):
         # history of free cells
         self._free = np.ones((gridwidth, gridlen))
 
+        #use scanning tells us if we should assign actions by scanning, or encode
+        #the state of each robot in a different image channel
+        self._use_scanning = use_scanning
+
         #generating robot positions
         self.reset()
 
@@ -56,7 +61,9 @@ class SuperGridRL(object):
         self._obs_dim = np.squeeze(self.get_state(), axis=0).shape
         self._num_actions = 4**self._numrobot
 
+        #maximum steps in an episode
         self._maxsteps = maxsteps
+
 
     def step(self, action):
         #handling case where action is an integer that identifies the action
@@ -93,7 +100,10 @@ class SuperGridRL(object):
             u = ulis[i]
 
             #z is the robot index we are assigning controls to
-            z = pq.get()[1]
+            if self._use_scanning:
+                z = pq.get()[1]
+            else:
+                z = i
             r2c[z] = i
 
             #left
@@ -217,7 +227,7 @@ class SuperGridRL(object):
         return False
 
     def get_state(self):
-        arrays = np.array([self.get_pos_image(), self._observed_obstacles, self._free] + self._observed_cells)
+        arrays = np.array(self.get_pos_image() + [self._observed_obstacles, self._free] + self._observed_cells)
         return np.expand_dims(np.stack(arrays, axis=0), axis=0)
 
     def get_pos_image(self):
@@ -231,9 +241,17 @@ class SuperGridRL(object):
         ------
         Image encoding the robot positions
         """
-        ret = np.zeros((self._gridwidth, self._gridlen))
-        for i, j in zip(self._xinds, self._yinds):
-            ret[i, j] = 1
+        if self._use_scanning:
+            ret = np.zeros((self._gridwidth, self._gridlen))
+            for i, j in zip(self._xinds, self._yinds):
+                ret[i, j] = 1
+            ret = [ret]
+        else:
+            ret = []
+            for i, j in zip(self._xinds, self._yinds):
+                robotlayer = np.zeros((self._gridwidth, self._gridlen))
+                robotlayer[i, j] = 1
+                ret.append(robotlayer)
         return ret
 
     def reset(self):
