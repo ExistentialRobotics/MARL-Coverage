@@ -8,10 +8,11 @@ from Policies.basic_random import Basic_Random
 from Policies.vpg import VPG
 from Policies.dqn import DQN
 from Policies.ac import AC
+from Policies.ddpg import DDPG
 from Policies.replaybuffer import ReplayBuffer
 from Logger.logger import Logger
-from Utils.utils import train_RLalg, test_RLalg
-from Policies.Networks.grid_rl_conv import Grid_RL_Conv
+from Utils.utils import train_RLalg, train_RLalg_ddpg, test_RLalg
+from Policies.Networks.grid_rl_conv import Grid_RL_Conv, Critic
 import torch.nn as nn
 
 DASH = "-----------------------------------------------------------------------"
@@ -198,19 +199,38 @@ else:
         policy = DQN(net, buff, num_actions, lr, batch_size=batch_size,
                      model_path=model_path, weight_decay=weight_decay,
                      gamma=gamma, tau=tau)
-    elif exp_parameters["policy_type"] == "ac":
-        #ac specific params
-        gae = False
-        if exp_parameters["GAE"] > 0:
-            gae = True
+    else:
+        if exp_parameters["policy_type"] == "ac":
+            # init critic using same structure as actor
+            critic = Grid_RL_Conv(1, obs_dim, conv_channels, conv_filters,
+                                 conv_activation, hidden_sizes, hidden_activation)
+            #ac specific params
+            gae = False
+            if exp_parameters["GAE"] > 0:
+                gae = True
+            # init policy
+            policy = AC(net, critic, numrobot, action_space, lr,
+                         weight_decay=weight_decay, model_path=model_path, gae=gae)
+        elif exp_parameters["policy_type"] == "ddpg":
+            #determines batch size for q-network
+            batch_size = None
+            if exp_parameters["batch_size"] > 0:
+                batch_size = exp_parameters["batch_size"]
 
-        # init critic using same structure as actor
-        critic = Grid_RL_Conv(1, obs_dim, conv_channels, conv_filters,
-                             conv_activation, hidden_sizes, hidden_activation)
+            #dqn specific parameters
+            tau            = exp_parameters["tau"]
+            buffer_maxsize = exp_parameters["buffer_size"]
+            ignore_done    = exp_parameters['ignore_done']
 
-        # init policy
-        policy = AC(net, critic, numrobot, action_space, lr,
-                     weight_decay=weight_decay, model_path=model_path, gae=gae)
+            #creating buffer
+            buff = ReplayBuffer(obs_dim, num_actions, buffer_maxsize)
+
+            critic = Critic(num_actions, obs_dim, conv_channels, conv_filters,
+                                 conv_activation, hidden_sizes, hidden_activation)
+            # init policy
+            policy = DDPG(net, critic, buff, numrobot, num_actions, lr, batch_size=batch_size,
+                         model_path=model_path, weight_decay=weight_decay,
+                         gamma=gamma, tau=tau)
 
 # train a policy if not testing a saved model
 if not saved_model:
@@ -220,8 +240,13 @@ if not saved_model:
     if not random_policy:
         print("----------Running {} for ".format(exp_parameters["policy_type"]) + str(train_episodes) + " episodes-----------")
         policy.printNumParams()
-        train_rewardlis, losslist, test_percent_covered = train_RLalg(env, policy, logger, episodes=train_episodes,
-                                                                      render=render_train, ignore_done=ignore_done)
+
+        if exp_parameters["policy_type"] == "ddpg":
+            train_rewardlis, losslist, test_percent_covered = train_RLalg_ddpg(env, policy, logger, episodes=train_episodes,
+                                                                          render=render_train, ignore_done=ignore_done)
+        else:
+            train_rewardlis, losslist, test_percent_covered = train_RLalg(env, policy, logger, episodes=train_episodes,
+                                                                          render=render_train, ignore_done=ignore_done)
     else:
         print("-----------------------Running Random Policy-----------------------")
 
