@@ -166,6 +166,7 @@ obs_dim = env._obs_dim
 action_space = Discrete(num_actions)
 
 ignore_done = False
+dd = False
 '''Init policy'''
 random_policy = False
 if exp_parameters["policy_type"] == "random":
@@ -212,6 +213,8 @@ else:
             policy = AC(net, critic, numrobot, action_space, lr,
                          weight_decay=weight_decay, model_path=model_path, gae=gae)
         elif exp_parameters["policy_type"] == "ddpg":
+            dd = True
+
             #determines batch size for q-network
             batch_size = None
             if exp_parameters["batch_size"] > 0:
@@ -254,7 +257,7 @@ if not saved_model:
 print("-----------------------------Testing Policy----------------------------")
 #testing the policy and collecting data
 test_rewardlis, average_percent_covered = test_RLalg(env, policy, logger, episodes=test_episodes, render_test=render_test,
-                                                     makevid=makevid)
+                                                     makevid=makevid, ddpg=dd)
 test_percent_covered.append(average_percent_covered)
 
 '''Display results'''
