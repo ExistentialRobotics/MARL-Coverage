@@ -73,7 +73,7 @@ def train_RLalg(env, policy, logger, episodes=1000, render=False,
             logger.saveModelWeights(policy.getnet())
 
             #testing policy
-            testrewards, average_percent_covered = test_RLalg(env, policy, logger, episodes=10, render_test=render, ddpg=True)
+            testrewards, average_percent_covered = test_RLalg(env, policy, logger, episodes=10, render_test=render)
             test_percent_covered.append(average_percent_covered)
             policy.set_train()
 

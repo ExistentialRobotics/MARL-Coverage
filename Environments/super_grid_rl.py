@@ -8,7 +8,7 @@ class SuperGridRL(object):
     A Multi-Agent Grid Environment with a discrete action space for RL testing.
     """
     def __init__(self, numrobot, gridlen, gridwidth, maxsteps, discrete_grid_values=2, collision_penalty=5,
-                 sensesize=1, grid=None, seed=None, free_penalty=0, use_scanning=True):
+                 sensesize=1, grid=None, seed=None, free_penalty=0, use_scanning=True, p_obs=0):
         super().__init__()
 
         self._numrobot = numrobot
@@ -24,7 +24,8 @@ class SuperGridRL(object):
 
         #blank/uniform grid by default
         if grid is None:
-            self._grid = np.ones((gridwidth, gridlen))
+            # self._grid = np.ones((gridwidth, gridlen))
+            self._grid = np.random.choice(a=[1.0,-1.0], size=(gridwidth, gridlen), p=[1-p_obs, p_obs])
         else:
             self._grid = grid
 
@@ -79,10 +80,6 @@ class SuperGridRL(object):
         #initialize reward for this step
         reward = np.zeros((self._numrobot,))
 
-        #update robot positions using controls
-        newx = np.copy(self._xinds)
-        newy = np.copy(self._yinds)
-
         #making pq for sorting by minimum scan score
         pq = PriorityQueue()
         for i in range(self._numrobot):
@@ -91,9 +88,6 @@ class SuperGridRL(object):
 
         #robot 2 control, storing what robot got what control
         r2c = np.zeros((self._numrobot,), dtype=int)
-
-        # array tracking if a robot had a collision
-        collisions = np.zeros((self._numrobot,), dtype=bool)
 
         # apply controls to each robot
         for i in range(len(ulis)):
@@ -111,65 +105,39 @@ class SuperGridRL(object):
                 x = self._xinds[z] - 1
                 y = self._yinds[z]
 
-                if(self.isInBounds(x,y) and self._grid[x][y]>=0):
-                    newx[z] = x
+                if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
+                    self._xinds[z] = x
                 else:
                     reward[i] -= self._collision_penalty
-                    collisions[z] = True
             #right
             elif(u == 1):
                 x = self._xinds[z] + 1
                 y = self._yinds[z]
 
-                if(self.isInBounds(x,y) and self._grid[x][y]>=0):
-                    newx[z] = x
+                if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
+                    self._xinds[z] = x
                 else:
                     reward[i] -= self._collision_penalty
-                    collisions[z] = True
             #up
             elif(u == 2):
                 x = self._xinds[z]
                 y = self._yinds[z] + 1
 
-                if(self.isInBounds(x,y) and self._grid[x][y]>=0):
-                    newy[z] = y
+                if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
+                    self._yinds[z] = y
                 else:
                     reward[i] -= self._collision_penalty
-                    collisions[z] = True
+                    # collisions[z] = True
             #down
             elif(u == 3):
                 x = self._xinds[z]
                 y = self._yinds[z] - 1
 
-                if(self.isInBounds(x,y) and self._grid[x][y]>=0):
-                    newy[z]= y
+                if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
+                    self._yinds[z]= y
                 else:
                     reward[i] -= self._collision_penalty
-                    collisions[z] = True
 
-        # init coord dict with robot current positions
-        coord_dict = {}
-        for i in range(self._numrobot):
-            coord_dict[(self._xinds[i], self._yinds[i])] = [i]
-
-        #checking if any robots are at same position or at the current position of another robot
-        for i in range(self._numrobot):
-            if (newx[i], newy[i]) in coord_dict:
-                coord_dict[(newx[i], newy[i])].append(i)
-            else:
-                coord_dict[(newx[i], newy[i])] = [i]
-
-        #only updating positions of robots that ended in a unique position
-        for coord in coord_dict:
-            robots = coord_dict[coord]
-            if(len(robots) == 1):
-                self._xinds[robots[0]] = newx[robots[0]]
-                self._yinds[robots[0]] = newy[robots[0]]
-            else:
-                #penalizing all robots that tried to end up in the same place
-                for r in robots:
-                    reward[r2c[r]] -= self._collision_penalty
-                    collisions[r] = True
 
         #sense from all the current robot positions
         for i in range(self._numrobot):
@@ -177,31 +145,30 @@ class SuperGridRL(object):
             y = self._yinds[i]
 
             #looping over all grid cells to sense
-            if not collisions[i]:
-                for j in range(x - self._sensesize, x + self._sensesize + 1):
-                    for k in range(y - self._sensesize, y + self._sensesize + 1):
-                        #checking if cell is not visited, in bounds, not an obstacle
-                        if(self.isInBounds(j,k) and self._grid[j][k]>=0 and
-                           self._free[j][k] == 1):
-                            # add reward
-                            reward[r2c[i]] += self._grid[j][k]
+            for j in range(x - self._sensesize, x + self._sensesize + 1):
+                for k in range(y - self._sensesize, y + self._sensesize + 1):
+                    #checking if cell is not visited, in bounds, not an obstacle
+                    if(self.isInBounds(j,k) and self._grid[j][k]>=0 and
+                        self._free[j][k] == 1):
+                        # add reward
+                        reward[r2c[i]] += self._grid[j][k]
 
-                            # record observation value
-                            sensing_level = self._grid[j][k]
-                            if(sensing_level > 0):
-                                self._observed_cells[sensing_level - 1][j][k] = 1
+                        # record observation value
+                        sensing_level = self._grid[j][k]
+                        if(sensing_level > 0):
+                            self._observed_cells[sensing_level - 1][j][k] = 1
 
-                            # mark as not free
-                            self._free[j][k] = 0
+                        # mark as not free
+                        self._free[j][k] = 0
 
-                        elif(self.isInBounds(j,k) and self._grid[j][k]>=0 and
-                           self._free[j][k] == 0):
-                            reward[r2c[i]] -= self._free_penalty
+                    elif(self.isInBounds(j,k) and self._grid[j][k]>=0 and
+                        self._free[j][k] == 0):
+                        reward[r2c[i]] -= self._free_penalty
 
-                        elif(self.isInBounds(j,k) and self._grid[j][k]<0 and
-                             self._observed_obstacles[j][k] == 0):
-                             # track observed obstacles
-                             self._observed_obstacles[j][k] = 1
+                    elif(self.isInBounds(j,k) and self._grid[j][k]<0 and
+                            self._observed_obstacles[j][k] == 0):
+                            # track observed obstacles
+                            self._observed_obstacles[j][k] = 1
 
         #calculate current state
         state = self.get_state()
@@ -214,6 +181,7 @@ class SuperGridRL(object):
     def isInBounds(self, x, y):
         return x >= 0 and x < self._gridwidth and y >= 0 and y < self._gridlen
 
+    #TODO remove the for loop so this is actually fast
     def isOccupied(self, x, y):
         #checking if no obstacle in that spot
         if(self._grid[x][y] < 0):
@@ -319,7 +287,11 @@ class SuperGridRL(object):
         plt.gca().set_yticks(np.arange(0, self._gridlen, 1))
         plt.grid()
 
-        plt.imshow(np.transpose(self._free), extent=[0, self._gridwidth, self._gridlen, 0])
+        #preprocessing grid to graph
+        obs = np.clip(self._grid, -1, 0)
+        grid = 2*self._free + obs
+
+        plt.imshow(np.transpose(grid), extent=[0, self._gridwidth, self._gridlen, 0])
 
         #drawing everything
         plt.draw()
