@@ -112,6 +112,7 @@ maxsteps       = exp_parameters['maxsteps']
 collision_p    = exp_parameters["collision_p"]
 gamma          = exp_parameters["gamma"]
 use_scanning   = exp_parameters['use_scanning']
+prob_obst      = exp_parameters['prob_obst']
 
 weight_decay = 0
 if exp_parameters["weight_decay"] > 0:
@@ -158,7 +159,7 @@ print(DASH)
 logger = Logger(exp_name, makevid, 0.05)
 
 '''Making the environment'''
-env = SuperGridRL(numrobot, gridlen, gridwidth, maxsteps ,collision_penalty=collision_p, use_scanning=use_scanning)
+env = SuperGridRL(numrobot, gridlen, gridwidth, maxsteps ,collision_penalty=collision_p, use_scanning=use_scanning, p_obs=prob_obst)
 num_actions = env._num_actions
 obs_dim = env._obs_dim
 
