@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from . environment import Environment
 from queue import PriorityQueue
+import cv2
 
 class SuperGridRL(object):
     """
@@ -45,7 +46,7 @@ class SuperGridRL(object):
         self._observed_obstacles = np.zeros((gridwidth, gridlen))
 
         # history of free cells
-        self._free = np.ones((gridwidth, gridlen))
+        self._free = np.ones((gridwidth, gridlen), dtype='int')
 
         #use scanning tells us if we should assign actions by scanning, or encode
         #the state of each robot in a different image channel
@@ -127,7 +128,6 @@ class SuperGridRL(object):
                     self._yinds[z] = y
                 else:
                     reward[i] -= self._collision_penalty
-                    # collisions[z] = True
             #down
             elif(u == 3):
                 x = self._xinds[z]
@@ -137,7 +137,6 @@ class SuperGridRL(object):
                     self._yinds[z]= y
                 else:
                     reward[i] -= self._collision_penalty
-
 
         #sense from all the current robot positions
         for i in range(self._numrobot):
@@ -169,6 +168,10 @@ class SuperGridRL(object):
                             self._observed_obstacles[j][k] == 0):
                             # track observed obstacles
                             self._observed_obstacles[j][k] = 1
+
+        # calc distance from sensed cells to unsensed cells
+        inv = np.bitwise_not(self._free.astype('?')).astype(np.uint8)
+        distance_map = cv2.distanceTransform(inv, cv2.DIST_L1, cv2.DIST_MASK_PRECISE)
 
         #calculate current state
         state = self.get_state()
