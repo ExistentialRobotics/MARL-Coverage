@@ -259,7 +259,6 @@ print("-----------------------------Testing Policy----------------------------")
 #testing the policy and collecting data
 test_rewardlis, average_percent_covered = test_RLalg(env, policy, logger, episodes=test_episodes, render_test=render_test,
                                                      makevid=makevid, ddpg=dd)
-test_percent_covered.append(average_percent_covered)
 
 '''Display results'''
 print(DASH)
@@ -267,6 +266,7 @@ print("Trained policy covered " + str(average_percent_covered) + " percent of th
 print(DASH)
 
 if not saved_model:
+    test_percent_covered.append(average_percent_covered)
     # plot training rewards
     logger.plot(train_rewardlis, 2, "Training Reward per Episode", 'Episodes', 'Reward', "Training Reward",
                 "Training Reward", show_fig=show_fig)

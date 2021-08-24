@@ -86,7 +86,7 @@ class DQN(Base_Policy):
         self.decayEpsilon()
 
         #performing one gradient step per env step (like spinning up ddpg)
-        # for i in range(len(episode)):
+        # for i in range(5):
         self.update_policy_step()
 
 

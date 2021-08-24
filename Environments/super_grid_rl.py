@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from . environment import Environment
 from queue import PriorityQueue
-import cv2
+# import cv2
 
 class SuperGridRL(object):
     """
@@ -170,8 +170,8 @@ class SuperGridRL(object):
                             self._observed_obstacles[j][k] = 1
 
         # calc distance from sensed cells to unsensed cells
-        inv = np.bitwise_not(self._free.astype('?')).astype(np.uint8)
-        distance_map = cv2.distanceTransform(inv, cv2.DIST_L1, cv2.DIST_MASK_PRECISE)
+        # inv = np.bitwise_not(self._free.astype('?')).astype(np.uint8)
+        # distance_map = cv2.distanceTransform(inv, cv2.DIST_L1, cv2.DIST_MASK_PRECISE)
 
         #calculate current state
         state = self.get_state()
@@ -291,8 +291,8 @@ class SuperGridRL(object):
         plt.grid()
 
         #preprocessing grid to graph
-        obs = np.clip(self._grid, -1, 0)
-        grid = 2*self._free + obs
+        # obs = np.clip(self._grid, -1, 0)
+        grid = 2*self._free - self._observed_obstacles
 
         plt.imshow(np.transpose(grid), extent=[0, self._gridwidth, self._gridlen, 0])
 
