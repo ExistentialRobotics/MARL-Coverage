@@ -1,17 +1,22 @@
 import ray
 from ray import tune
 from ray.rllib.agents.ppo import PPOTrainer
+from ray.rllib.agents.dqn import DQNTrainer
 from ray.tune.registry import register_env
 from super_grid_rl import SuperGridRL
 
 ray.init()
 tune.run(PPOTrainer,
          stop={
-             "episode_reward_mean": 200,
-             "timesteps_total": 100000,
+             # "episode_reward_mean": 200,
+             "timesteps_total": 100000
          },
          config={
              "env": SuperGridRL,
+             "rollout_fragment_length" : 100,
+             "num_sgd_iter" : 30,
+             "train_batch_size" : 4000,
+             "num_gpus": 1,
              "env_config": {
                  "numrobot" : 3,
                  "gridlen"  : 25,
@@ -27,9 +32,13 @@ tune.run(PPOTrainer,
                  "p_obs"  : 0
                  },
              "model" : {
-                 "conv_filters" : [[64, [5,5], 2], [32, [5,5], 1]],
+                 "dim" : 25,
+                 "conv_filters" :
+                 [[64, [5, 5], 2],
+                 [32, [5, 5], 2],
+                 [512, [7, 7], 1]],
                  "conv_activation": "relu",
-                 "post_fcnet_hiddens": [500, 100],
+                 "post_fcnet_hiddens": [512, 100],
                  "post_fcnet_activation": "relu"
                  },
              "framework" : "torch"
