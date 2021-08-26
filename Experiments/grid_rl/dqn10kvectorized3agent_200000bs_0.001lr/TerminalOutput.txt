@@ -1,6 +1,0 @@
-----------Running dqn for 10000 episodes-----------
-2818760 in the Q Network
-Training Episode: 0 out of 10000
-New best reward on episode 0: 123.0
-past models exist, overwriting them
-Testing Episode: 0 out of 10

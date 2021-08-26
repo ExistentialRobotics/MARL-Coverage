@@ -139,6 +139,7 @@ class SuperGridRL(object):
                     reward[i] -= self._collision_penalty
 
         #sense from all the current robot positions
+        new_cell = False
         for i in range(self._numrobot):
             x = self._xinds[i]
             y = self._yinds[i]
@@ -149,6 +150,9 @@ class SuperGridRL(object):
                     #checking if cell is not visited, in bounds, not an obstacle
                     if(self.isInBounds(j,k) and self._grid[j][k]>=0 and
                         self._free[j][k] == 1):
+                        # at least one new cell has been sensed
+                        new_cell = True
+
                         # add reward
                         reward[r2c[i]] += self._grid[j][k]
 
@@ -173,13 +177,18 @@ class SuperGridRL(object):
         inv = np.bitwise_not(self._free.astype('?')).astype(np.uint8)
         distance_map = cv2.distanceTransform(inv, cv2.DIST_L1, cv2.DIST_MASK_PRECISE)
 
+        # increment reward if a new cell has been sensed
+        inc = 0
+        # if new_cell:
+        #     inc = distance_map.mean()
+
         #calculate current state
         state = self.get_state()
 
         #incrementing step count
         self._currstep += 1
 
-        return state, np.sum(reward)
+        return state, (np.sum(reward) + inc)
 
     def isInBounds(self, x, y):
         return x >= 0 and x < self._gridwidth and y >= 0 and y < self._gridlen

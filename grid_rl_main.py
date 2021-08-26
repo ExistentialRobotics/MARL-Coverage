@@ -149,7 +149,6 @@ if exp_parameters["conv_activation"] == "relu":
 if exp_parameters["hidden_activation"] == "relu":
     hidden_activation = nn.ReLU
 
-
 print(DASH)
 print("Running experiment using: " + str(config_path))
 print(DASH)

@@ -1,7 +1,7 @@
 import numpy as np
 import sys
 
-def generate_episode(env, policy, logger, render=False, makevid=False, ignore_done=True, ddpg=False):
+def generate_episode(env, policy, logger, render=False, makevid=False, ignore_done=True, ddpg=False, testing=False):
     # reset env at the start of each episode
     episode = []
     state = env.reset()
@@ -18,6 +18,9 @@ def generate_episode(env, policy, logger, render=False, makevid=False, ignore_do
 
         # step environment and save episode results
         next_state, reward = env.step(action)
+
+        # if testing:
+        #     print(reward)
 
         # determine if episode is completed
         done = env.done()
@@ -108,7 +111,7 @@ def test_RLalg(env, policy, logger, episodes=100, render_test=False, makevid=Fal
             print("Testing Episode: " + str(_) + " out of " + str(episodes))
 
         # obtain episode
-        episode, total_reward = generate_episode(env, policy, logger, render=render, makevid=makevid, ddpg=ddpg)
+        episode, total_reward = generate_episode(env, policy, logger, render=render, makevid=makevid, ddpg=ddpg, testing=True)
 
         # track test related statistics
         percent_covered += env.percent_covered()
