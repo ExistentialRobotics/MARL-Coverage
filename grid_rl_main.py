@@ -9,6 +9,7 @@ from Policies.vpg import VPG
 from Policies.dqn import DQN
 from Policies.ac import AC
 from Policies.ddpg import DDPG
+from Policies.vdn import VDN
 from Policies.replaybuffer import ReplayBuffer
 from Logger.logger import Logger
 from Utils.utils import train_RLalg, train_RLalg_ddpg, test_RLalg
@@ -174,7 +175,11 @@ if exp_parameters["policy_type"] == "random":
     random_policy = True
 else:
     #creating neural net, same constructor params for both vpg and dqn
-    net = Grid_RL_Conv(num_actions, obs_dim, conv_channels, conv_filters,
+    if exp_parameters["policy_type"] == 'vdn':
+        net = Grid_RL_Conv(4*numrobot, obs_dim, conv_channels, conv_filters,
+                         conv_activation, hidden_sizes, hidden_activation)
+    else:
+        net = Grid_RL_Conv(num_actions, obs_dim, conv_channels, conv_filters,
                          conv_activation, hidden_sizes, hidden_activation)
 
     if exp_parameters["policy_type"] == "vpg":
@@ -198,6 +203,24 @@ else:
 
         # init policy
         policy = DQN(net, buff, num_actions, lr, batch_size=batch_size,
+                     model_path=model_path, weight_decay=weight_decay,
+                     gamma=gamma, tau=tau)
+    elif exp_parameters["policy_type"] == "vdn":
+        #determines batch size for q-network
+        batch_size = None
+        if exp_parameters["batch_size"] > 0:
+            batch_size = exp_parameters["batch_size"]
+
+        #dqn specific parameters
+        tau            = exp_parameters["tau"]
+        buffer_maxsize = exp_parameters["buffer_size"]
+        ignore_done    = exp_parameters['ignore_done']
+
+        #creating buffer
+        buff = ReplayBuffer(obs_dim, numrobot, buffer_maxsize)
+
+        # init policy
+        policy = VDN(net, buff, numrobot, 4, lr, batch_size=batch_size,
                      model_path=model_path, weight_decay=weight_decay,
                      gamma=gamma, tau=tau)
     else:
