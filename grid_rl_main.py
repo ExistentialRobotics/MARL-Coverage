@@ -114,6 +114,9 @@ collision_p    = exp_parameters["collision_p"]
 gamma          = exp_parameters["gamma"]
 use_scanning   = exp_parameters['use_scanning']
 prob_obst      = exp_parameters['prob_obst']
+done_thresh    = exp_parameters['done_thresh']
+done_incr      = exp_parameters['done_incr']
+terminal_reward= exp_parameters['terminal_reward']
 
 weight_decay = 0
 if exp_parameters["weight_decay"] > 0:

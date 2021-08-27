@@ -9,7 +9,7 @@ class SuperGridRL(object):
     A Multi-Agent Grid Environment with a discrete action space for RL testing.
     """
     def __init__(self, numrobot, gridlen, gridwidth, maxsteps, discrete_grid_values=2, collision_penalty=5,
-                 sensesize=1, grid=None, seed=None, free_penalty=0, use_scanning=True, p_obs=0):
+                 sensesize=1, grid=None, seed=None, free_penalty=0, use_scanning=True, p_obs=0, done_thresh=1, done_incr=0, terminal_reward=0):
         super().__init__()
 
         self._numrobot = numrobot
@@ -65,6 +65,11 @@ class SuperGridRL(object):
 
         #maximum steps in an episode
         self._maxsteps = maxsteps
+
+        #done threshold
+        self._done_thresh = done_thresh
+        self._done_incr = done_incr
+        self._terminal_reward = terminal_reward
 
 
     def step(self, action):
@@ -179,7 +184,11 @@ class SuperGridRL(object):
         #incrementing step count
         self._currstep += 1
 
-        return state, np.sum(reward)
+        reward = np.sum(reward)
+        if self.done():
+            reward += self._terminal_reward
+
+        return state, reward
 
     def isInBounds(self, x, y):
         return x >= 0 and x < self._gridwidth and y >= 0 and y < self._gridlen
@@ -262,9 +271,10 @@ class SuperGridRL(object):
 
         return self.get_state()
 
-    def done(self, thres=1):
-        if thres <= self.percent_covered():
+    def done(self):
+        if min(self._done_thresh, 1) <= self.percent_covered():
             print("Full Environment Covered")
+            self._done_thresh += self._done_incr
             return True
         if self._currstep == self._maxsteps:
             return True
