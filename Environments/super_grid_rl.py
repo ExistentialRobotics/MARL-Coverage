@@ -187,7 +187,7 @@ class SuperGridRL(object):
         self._currstep += 1
 
         reward = np.sum(reward)
-        if self.done():
+        if min(self._done_thresh, 1) <= self.percent_covered():
             reward += self._terminal_reward
 
         return state, reward
