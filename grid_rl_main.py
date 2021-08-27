@@ -166,7 +166,10 @@ print(DASH)
 logger = Logger(exp_name, makevid, 0.05)
 
 '''Making the environment'''
-env = SuperGridRL(numrobot, gridlen, gridwidth, maxsteps ,collision_penalty=collision_p, use_scanning=use_scanning, p_obs=prob_obst, free_penalty=free_p)
+env = SuperGridRL(numrobot, gridlen, gridwidth, maxsteps ,
+                  collision_penalty=collision_p, use_scanning=use_scanning,
+                  p_obs=prob_obst, free_penalty=free_p, done_thresh=done_thresh,
+                  done_incr=done_incr, terminal_reward=terminal_reward)
 num_actions = env._num_actions
 obs_dim = env._obs_dim
 
