@@ -118,6 +118,10 @@ done_thresh    = exp_parameters['done_thresh']
 done_incr      = exp_parameters['done_incr']
 terminal_reward= exp_parameters['terminal_reward']
 
+free_p = 0
+if exp_parameters["free_penalty"] > 0:
+    free_p = exp_parameters["free_penalty"]
+
 weight_decay = 0
 if exp_parameters["weight_decay"] > 0:
     weight_decay = exp_parameters["weight_decay"]
@@ -154,7 +158,6 @@ if exp_parameters["conv_activation"] == "relu":
 if exp_parameters["hidden_activation"] == "relu":
     hidden_activation = nn.ReLU
 
-
 print(DASH)
 print("Running experiment using: " + str(config_path))
 print(DASH)
@@ -163,7 +166,7 @@ print(DASH)
 logger = Logger(exp_name, makevid, 0.05)
 
 '''Making the environment'''
-env = SuperGridRL(numrobot, gridlen, gridwidth, maxsteps ,collision_penalty=collision_p, use_scanning=use_scanning, p_obs=prob_obst)
+env = SuperGridRL(numrobot, gridlen, gridwidth, maxsteps ,collision_penalty=collision_p, use_scanning=use_scanning, p_obs=prob_obst, free_penalty=free_p)
 num_actions = env._num_actions
 obs_dim = env._obs_dim
 
