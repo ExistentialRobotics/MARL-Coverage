@@ -54,7 +54,7 @@ class ReplayBuffer(object):
         indices = np.random.randint(0, self._size, size=N)
         return self._state[indices], self._action[indices], self._reward[indices], self._nextstate[indices], self._done[indices]
 
-    def samplebatchsequential(self, N):
+    def samplesequential(self, N):
         #checking for valid input
         assert N > 0, "you need to sample at least 1 step"
 
@@ -71,6 +71,55 @@ class ReplayBuffer(object):
 
         #returning the correct samples
         return self._state[indices], self._action[indices], self._reward[indices], self._nextstate[indices], self._done[indices]
+
+    def samplebatchsequential(self, batchsize, N):
+        #checking for valid input
+        assert N > 0, "you need to sample at least 1 step"
+
+        #storing intermediate results
+        statelis = []
+        actionlis = []
+        rewardlis = []
+        nextstatelis = []
+        donelis = []
+
+        #getting all the batches
+        for i in range(batchsize):
+            #picking an episode at random (this is an approximately incorrect
+            #assumption but it simplifies the coding a lot)
+            ep_num = np.random.randint(0, len(self._start_lis))
+
+            #choosing the start increment(within the episode) for sequential sampling
+            start_incr = np.random.randint(0, self._len_lis[ep_num] - N + 1)
+            start_ind = self._start_lis[ep_num] + start_incr
+
+            #making the indices, mod to handle the overlap
+            indices = np.remainder(np.arange(start_ind, start_ind + N), self._maxsize)
+            statelis.append(self._state[indices])
+            actionlis.append(self._action[indices])
+            rewardlis.append(self._reward[indices])
+            nextstatelis.append(self._nextstate[indices])
+            donelis.append(self._done[indices])
+
+        statelis = np.swapaxes(statelis, 0, 1)
+        actionlis = np.swapaxes(actionlis, 0, 1)
+        rewardlis = np.swapaxes(rewardlis, 0, 1)
+        nextstatelis = np.swapaxes(nextstatelis, 0, 1)
+        donelis = np.swapaxes(donelis, 0, 1)
+
+        statelis = np.array(statelis)
+        actionlis = np.array(actionlis)
+        rewardlis = np.array(rewardlis)
+        nextstatelis = np.array(nextstatelis)
+        donelis = np.array(donelis)
+
+        # print(statelis.shape)
+        # print(actionlis.shape)
+        # print(rewardlis.shape)
+        # print(nextstatelis.shape)
+        # print(donelis.shape)
+
+        return statelis, actionlis, rewardlis, nextstatelis, donelis
 
 
 def combined_shape(length, shape=None):

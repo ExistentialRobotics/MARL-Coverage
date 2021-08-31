@@ -104,9 +104,9 @@ class DRQN(Base_Policy):
         self.optimizer.zero_grad()
 
         #sampling batch from buffer
-        # states, actions, rewards, next_states, done = self._buff.samplesequential(self.N)
+        states, actions, rewards, next_states, done = self._buff.samplesequential(self.N)
 
-        states, actions, rewards, next_states, done = self._buff.samplebatchsequential(self.batch_size, self.N)
+        # states, actions, rewards, next_states, done = self._buff.samplebatchsequential(self.batch_size, self.N)
 
         # convert to tensors
         states = torch.from_numpy(states).float()
@@ -127,8 +127,8 @@ class DRQN(Base_Policy):
         # print(rewards.shape)
 
         # gradient calculation
-        # loss = self.calc_gradient(states, actions, rewards, next_states, done, self.batch_size, self.N)
-        loss = self.calc_batch_gradient(states, actions, rewards, next_states, done, self.batch_size, self.N)
+        loss = self.calc_gradient(states, actions, rewards, next_states, done, self.batch_size, self.N)
+        # loss = self.calc_batch_gradient(states, actions, rewards, next_states, done, self.batch_size, self.N)
 
         #tracking loss
         self._lastloss = loss.item()
@@ -154,12 +154,18 @@ class DRQN(Base_Policy):
         for i in range(self.N):
             # calc q and next q
             qvals, hidden = self.q_net(states[i], hidden)
+            print(qvals.shape)
+            print(hidden.shape)
             next_qvals, hidden_t = self.target_net(next_states[i], hidden_t)
+            print(next_qvals.shape)
+            print(hidden_t.shape)
 
             # calculate gradient for q function
             with torch.no_grad():
                 next_q = torch.max(next_qvals, 0).values
-                y = rewards[i] + self._gamma*(1-done[i])*next_q
+                print(next_q.shape)
+                y = rewards + self._gamma*(1-done[i])*next_q
+                print(y.shape)
 
             #calculating mean squared error
             currq = qvals[actions[i]]
@@ -170,10 +176,10 @@ class DRQN(Base_Policy):
         return loss
 
     def calc_batch_gradient(self, states, actions, rewards, next_states, done, batch_size, N):
-        hidden = (torch.zeros((1, batch_size, self.hidden_size)).to(self._device),
-                  torch.zeros((1, batch_size, self.hidden_size)).to(self._device))
-        hidden_t = (torch.zeros((1, batch_size, self.hidden_size)).to(self._device),
-                    torch.zeros((1, batch_size, self.hidden_size)).to(self._device))
+        hidden = (torch.zeros((batch_size, 1, 1, self.hidden_size)).to(self._device),
+                  torch.zeros((batch_size, 1, 1, self.hidden_size)).to(self._device))
+        hidden_t = (torch.zeros((batch_size, 1, 1, self.hidden_size)).to(self._device),
+                    torch.zeros((batch_size, 1, 1, self.hidden_size)).to(self._device))
 
         loss = 0
         for i in range(self.N):
@@ -183,13 +189,13 @@ class DRQN(Base_Policy):
 
             # calculate gradient for q function
             with torch.no_grad():
-                next_q = torch.max(next_qvals, 1).values
-                y = rewards[i] + self._gamma*(1-done[i])*next_q
+                next_q = torch.max(next_qvals, 0).values
+                y = rewards + self._gamma*(1-done[i])*next_q
 
             #TODO vectorize this for loop
             currq = torch.zeros(batch_size).to(self._device)
             for j in range(batch_size):
-                currq[j] = qvals[j, actions[i][j]]
+                currq[j] = qvals[j, actions[j]]
 
             #calculating mean squared error
             loss += ((y-currq)**2).mean()
