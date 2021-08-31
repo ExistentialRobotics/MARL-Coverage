@@ -1,7 +1,7 @@
 import numpy as np
 import sys
 
-def generate_episode(env, policy, logger, render=False, makevid=False, ignore_done=True, ddpg=False, testing=False):
+def generate_episode(env, policy, logger, render=False, makevid=False, ignore_done=True, ddpg=False, drqn=False, testing=False):
     # reset env at the start of each episode
     episode = []
     state = env.reset()
@@ -9,12 +9,16 @@ def generate_episode(env, policy, logger, render=False, makevid=False, ignore_do
     done = False
 
     # iterate till episode completion
+    start = True
     while not done:
         # determine action
         if ddpg:
             action, probs = policy.pi(state)
+        elif drqn:
+            action = policy.pi(state, start=start)
         else:
             action = policy.pi(state)
+        start = False
 
         # step environment and save episode results
         next_state, reward = env.step(action)
@@ -44,7 +48,7 @@ def generate_episode(env, policy, logger, render=False, makevid=False, ignore_do
     return episode, total_reward
 
 def train_RLalg(env, policy, logger, episodes=1000, render=False,
-                checkpoint_interval=500, ignore_done=True):
+                checkpoint_interval=500, drqn=False, ignore_done=True):
     # set policy network to train mode
     policy.set_train()
 
@@ -60,7 +64,7 @@ def train_RLalg(env, policy, logger, episodes=1000, render=False,
             print("Training Episode: " + str(_) + " out of " + str(episodes))
 
         # obtain the next episode
-        episode, total_reward = generate_episode(env, policy, logger, render=False, makevid=False, ignore_done=ignore_done)
+        episode, total_reward = generate_episode(env, policy, logger, render=False, makevid=False, drqn=drqn, ignore_done=ignore_done)
 
         # track reward per episode
         reward_per_episode.append(total_reward)
@@ -76,7 +80,7 @@ def train_RLalg(env, policy, logger, episodes=1000, render=False,
             logger.saveModelWeights(policy.getnet())
 
             #testing policy
-            testrewards, average_percent_covered = test_RLalg(env, policy, logger, episodes=10, render_test=render, ddpg=False)
+            testrewards, average_percent_covered = test_RLalg(env, policy, logger, episodes=1, render_test=render, ddpg=False)
             test_percent_covered.append(average_percent_covered)
             policy.set_train()
 

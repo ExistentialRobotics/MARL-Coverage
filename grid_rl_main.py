@@ -10,10 +10,12 @@ from Policies.dqn import DQN
 from Policies.ac import AC
 from Policies.ddpg import DDPG
 from Policies.vdn import VDN
+from Policies.drqn import DRQN
 from Policies.replaybuffer import ReplayBuffer
 from Logger.logger import Logger
 from Utils.utils import train_RLalg, train_RLalg_ddpg, test_RLalg
 from Policies.Networks.grid_rl_conv import Grid_RL_Conv, Critic
+from Policies.Networks.grid_rl_recur import Grid_RL_Recur
 import torch.nn as nn
 
 DASH = "-----------------------------------------------------------------------"
@@ -178,6 +180,7 @@ action_space = Discrete(num_actions)
 
 ignore_done = False
 dd = False
+drqn = False
 '''Init policy'''
 random_policy = False
 if exp_parameters["policy_type"] == "random":
@@ -187,6 +190,9 @@ else:
     #creating neural net, same constructor params for both vpg and dqn
     if exp_parameters["policy_type"] == 'vdn':
         net = Grid_RL_Conv(4*numrobot, obs_dim, conv_channels, conv_filters,
+                         conv_activation, hidden_sizes, hidden_activation)
+    elif exp_parameters["policy_type"] == "drqn":
+        net = Grid_RL_Recur(num_actions, obs_dim, conv_channels, conv_filters,
                          conv_activation, hidden_sizes, hidden_activation)
     else:
         net = Grid_RL_Conv(num_actions, obs_dim, conv_channels, conv_filters,
@@ -215,6 +221,27 @@ else:
         policy = DQN(net, buff, num_actions, lr, batch_size=batch_size,
                      model_path=model_path, weight_decay=weight_decay,
                      gamma=gamma, tau=tau)
+    elif exp_parameters["policy_type"] == "drqn":
+        #determines batch size for q-network
+        batch_size = None
+        if exp_parameters["batch_size"] > 0:
+            batch_size = exp_parameters["batch_size"]
+
+        #drqn specific parameters
+        hidden_size    = hidden_sizes[0]
+        steps          = exp_parameters["steps"]
+        tau            = exp_parameters["tau"]
+        buffer_maxsize = exp_parameters["buffer_size"]
+        ignore_done    = exp_parameters['ignore_done']
+
+        #creating buffer
+        buff = ReplayBuffer(obs_dim, None, buffer_maxsize)
+
+        # init policy
+        policy = DRQN(net, buff, num_actions, lr, hidden_size, model_path=model_path,
+                      weight_decay=weight_decay, gamma=gamma, tau=tau,
+                      steps=steps)
+        drqn = True
     elif exp_parameters["policy_type"] == "vdn":
         #determines batch size for q-network
         batch_size = None
@@ -282,7 +309,7 @@ if not saved_model:
                                                                           render=render_train, ignore_done=ignore_done)
         else:
             train_rewardlis, losslist, test_percent_covered = train_RLalg(env, policy, logger, episodes=train_episodes,
-                                                                          render=render_train, ignore_done=ignore_done)
+                                                                          render=render_train, ignore_done=ignore_done, drqn=drqn)
     else:
         print("-----------------------Running Random Policy-----------------------")
 
