@@ -186,9 +186,6 @@ class SuperGridRL(gym.Env):
                             # track observed obstacles
                             self._observed_obstacles[j][k] = 1
 
-        # calc distance from sensed cells to unsensed cells
-        # inv = np.bitwise_not(self._free.astype('?')).astype(np.uint8)
-        # distance_map = cv2.distanceTransform(inv, cv2.DIST_L1, cv2.DIST_MASK_PRECISE)
         #calculate current state
         state = self.get_state()
 
@@ -282,8 +279,8 @@ class SuperGridRL(gym.Env):
         if thres <= self.percent_covered():
             print("Full Environment Covered")
             return True
-        if self._currstep == self._maxsteps:
-            return True
+        # if self._currstep == self._maxsteps:
+        #     return True
         return False
 
     def percent_covered(self):
