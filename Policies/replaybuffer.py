@@ -16,6 +16,10 @@ class ReplayBuffer(object):
         self._nextstate = np.zeros(combined_shape(size, obs_dim), dtype=np.float32)
         self._done = np.zeros(size, dtype=np.float32)
 
+        #creating episode tracking lists
+        self._start_lis = []
+        self._len_lis = []
+
         #tracking where we need to write next to array
         self._ptr = 0
 
@@ -33,11 +37,41 @@ class ReplayBuffer(object):
         self._size = min(self._size + 1, self._maxsize)
 
     def addepisode(self, episode):
+        #tracking episode information
+        self._start_lis.append(self._ptr)
+        self._len_lis.append(len(episode))
+
+        #adding all transitions
         for i in range(len(episode)):
             self.addtransition(episode[i][0], episode[i][1], episode[i][2], episode[i][3], episode[i][4])
+
+        #reducing the episode information list to only contain complete episodes
+        while sum(self._len_lis) > self._maxsize:
+            self._len_lis.pop(0)
+            self._start_lis.pop(0)
+
     def samplebatch(self, N):
         indices = np.random.randint(0, self._size, size=N)
         return self._state[indices], self._action[indices], self._reward[indices], self._nextstate[indices], self._done[indices]
+
+    def samplebatchsequential(self, N):
+        #checking for valid input
+        assert N > 0, "you need to sample at least 1 step"
+
+        #picking an episode at random (this is an approximately incorrect
+        #assumption but it simplifies the coding a lot)
+        ep_num = np.random.randint(0, len(self._start_lis))
+
+        #choosing the start increment(within the episode) for sequential sampling
+        start_incr = np.random.randint(0, self._len_lis[ep_num] - N + 1)
+        start_ind = self._start_lis[ep_num] + start_incr
+
+        #making the indices, mod to handle the overlap
+        indices = np.remainder(np.arange(start_ind, start_ind + N), self._maxsize)
+
+        #returning the correct samples
+        return self._state[indices], self._action[indices], self._reward[indices], self._nextstate[indices], self._done[indices]
+
 
 def combined_shape(length, shape=None):
     if shape is None:
