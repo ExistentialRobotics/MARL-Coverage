@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from . environment import Environment
 from queue import PriorityQueue
-# import cv2
+import cv2
 
 class SuperGridRL(object):
     """
@@ -95,6 +95,10 @@ class SuperGridRL(object):
         #robot 2 control, storing what robot got what control
         r2c = np.zeros((self._numrobot,), dtype=int)
 
+        # calc distance from observed to free cells
+        inv = np.bitwise_not(self._free.astype('?')).astype(np.uint8)
+        distance_map = cv2.distanceTransform(inv, cv2.DIST_L1, cv2.DIST_MASK_PRECISE)
+
         # apply controls to each robot
         for i in range(len(ulis)):
             u = ulis[i]
@@ -113,6 +117,7 @@ class SuperGridRL(object):
 
                 if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
                     self._xinds[z] = x
+                    reward[i] += (1 - distance_map[x, y])
                 else:
                     reward[i] -= self._collision_penalty
             #right
@@ -122,6 +127,7 @@ class SuperGridRL(object):
 
                 if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
                     self._xinds[z] = x
+                    reward[i] += (1 - distance_map[x, y])
                 else:
                     reward[i] -= self._collision_penalty
             #up
@@ -131,6 +137,7 @@ class SuperGridRL(object):
 
                 if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
                     self._yinds[z] = y
+                    reward[i] += (1 - distance_map[x, y])
                 else:
                     reward[i] -= self._collision_penalty
             #down
@@ -140,6 +147,7 @@ class SuperGridRL(object):
 
                 if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
                     self._yinds[z]= y
+                    reward[i] += (1 - distance_map[x, y])
                 else:
                     reward[i] -= self._collision_penalty
 
