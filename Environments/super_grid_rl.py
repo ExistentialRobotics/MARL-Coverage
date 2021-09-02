@@ -9,7 +9,8 @@ class SuperGridRL(object):
     A Multi-Agent Grid Environment with a discrete action space for RL testing.
     """
     def __init__(self, numrobot, gridlen, gridwidth, maxsteps, discrete_grid_values=2, collision_penalty=5,
-                 sensesize=1, grid=None, seed=None, free_penalty=0, use_scanning=True, p_obs=0, done_thresh=1, done_incr=0, terminal_reward=0):
+                 sensesize=1, grid=None, seed=None, free_penalty=0, use_scanning=True, p_obs=0, done_thresh=1, done_incr=0, terminal_reward=0,
+                 dist_reward=False):
         super().__init__()
 
         self._numrobot = numrobot
@@ -17,6 +18,7 @@ class SuperGridRL(object):
         self._gridwidth = gridwidth
         self._collision_penalty = collision_penalty
         self._free_penalty = free_penalty
+        self._dist_r = dist_reward
 
         #sensing radius using chess metric(like how a king moves) -> "Chebyshev distance"
         self._sensesize = sensesize
@@ -117,7 +119,8 @@ class SuperGridRL(object):
 
                 if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
                     self._xinds[z] = x
-                    reward[i] += (1 - distance_map[x, y])
+                    if self._dist_r:
+                        reward[i] += (1 - distance_map[x, y])
                 else:
                     reward[i] -= self._collision_penalty
             #right
@@ -127,7 +130,8 @@ class SuperGridRL(object):
 
                 if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
                     self._xinds[z] = x
-                    reward[i] += (1 - distance_map[x, y])
+                    if self._dist_r:
+                        reward[i] += (1 - distance_map[x, y])
                 else:
                     reward[i] -= self._collision_penalty
             #up
@@ -137,7 +141,8 @@ class SuperGridRL(object):
 
                 if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
                     self._yinds[z] = y
-                    reward[i] += (1 - distance_map[x, y])
+                    if self._dist_r:
+                        reward[i] += (1 - distance_map[x, y])
                 else:
                     reward[i] -= self._collision_penalty
             #down
@@ -147,7 +152,8 @@ class SuperGridRL(object):
 
                 if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
                     self._yinds[z]= y
-                    reward[i] += (1 - distance_map[x, y])
+                    if self._dist_r:
+                        reward[i] += (1 - distance_map[x, y])
                 else:
                     reward[i] -= self._collision_penalty
 

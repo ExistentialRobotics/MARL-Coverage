@@ -120,6 +120,10 @@ done_thresh    = exp_parameters['done_thresh']
 done_incr      = exp_parameters['done_incr']
 terminal_reward= exp_parameters['terminal_reward']
 
+dist_reward = False
+if exp_parameters["dist_reward"] > 0:
+    dist_reward = True
+
 free_p = 0
 if exp_parameters["free_penalty"] > 0:
     free_p = exp_parameters["free_penalty"]
@@ -171,7 +175,7 @@ logger = Logger(exp_name, makevid, 0.05)
 env = SuperGridRL(numrobot, gridlen, gridwidth, maxsteps ,
                   collision_penalty=collision_p, use_scanning=use_scanning,
                   p_obs=prob_obst, free_penalty=free_p, done_thresh=done_thresh,
-                  done_incr=done_incr, terminal_reward=terminal_reward)
+                  done_incr=done_incr, terminal_reward=terminal_reward, dist_reward=dist_reward)
 num_actions = env._num_actions
 obs_dim = env._obs_dim
 
