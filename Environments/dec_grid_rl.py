@@ -250,7 +250,7 @@ class DecGridRL(object):
         return False
 
     def percent_covered(self):
-        return (np.count_nonzero(self._free < 1) / (self._gridlen * self._gridwidth))
+        return np.count_nonzero(self._free < 1) / np.count_nonzero(self._grid > 0)
 
     def render(self):
         #clear canvas
