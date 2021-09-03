@@ -67,6 +67,9 @@ class Grid_RL_Conv(nn.Module):
         self.layers.apply(init_weights)
 
     def forward(self, x):
+        # reshape input if not the right dims
+        if len(x.shape) != 4:
+            x = torch.unsqueeze(x, axis=0)
         return torch.squeeze(self.layers(x), axis=0)
 
 class Critic(nn.Module):

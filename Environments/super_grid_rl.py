@@ -62,7 +62,7 @@ class SuperGridRL(object):
             np.random.seed(seed)
 
         #observation and action dimensions
-        self._obs_dim = np.squeeze(self.get_state(), axis=0).shape
+        self._obs_dim = self.get_state().shape
         self._num_actions = 4**self._numrobot
 
         #maximum steps in an episode
@@ -224,7 +224,8 @@ class SuperGridRL(object):
 
     def get_state(self):
         arrays = np.array(self.get_pos_image() + [self._observed_obstacles, self._free] + self._observed_cells)
-        return np.expand_dims(np.stack(arrays, axis=0), axis=0)
+        state = np.stack(arrays, axis=0)
+        return state
 
     def get_pos_image(self):
         """

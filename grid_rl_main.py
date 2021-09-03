@@ -3,6 +3,7 @@ import getopt, sys
 import json
 
 from Environments.super_grid_rl import SuperGridRL
+from Environments.dec_grid_rl import DecGridRL
 from Action_Spaces.discrete import Discrete
 from Policies.basic_random import Basic_Random
 from Policies.vpg import VPG
@@ -172,10 +173,15 @@ print(DASH)
 logger = Logger(exp_name, makevid, 0.05)
 
 '''Making the environment'''
-env = SuperGridRL(numrobot, gridlen, gridwidth, maxsteps ,
-                  collision_penalty=collision_p, use_scanning=use_scanning,
-                  p_obs=prob_obst, free_penalty=free_p, done_thresh=done_thresh,
-                  done_incr=done_incr, terminal_reward=terminal_reward, dist_reward=dist_reward)
+# env = SuperGridRL(numrobot, gridlen, gridwidth, maxsteps ,
+#                   collision_penalty=collision_p, use_scanning=use_scanning,
+#                   p_obs=prob_obst, free_penalty=free_p, done_thresh=done_thresh,
+#                   done_incr=done_incr, terminal_reward=terminal_reward, dist_reward=dist_reward)
+gridlis = [np.ones((11, 11))]
+env = DecGridRL(numrobot, gridlis, maxsteps, collision_penalty=collision_p,
+                egoradius=5, free_penalty=free_p, done_thresh=done_thresh,
+                done_incr=done_incr, terminal_reward=terminal_reward)
+
 num_actions = env._num_actions
 obs_dim = env._obs_dim
 
