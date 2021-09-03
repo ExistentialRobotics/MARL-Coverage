@@ -104,6 +104,7 @@ except:
     sys.exit(1)
 
 '''Environment Parameters'''
+env_name       = exp_parameters["env_name"]
 exp_name       = exp_parameters["experiment_name"]
 numrobot       = exp_parameters["numrobot"]
 gridwidth      = exp_parameters["gridwidth"]
@@ -173,14 +174,17 @@ print(DASH)
 logger = Logger(exp_name, makevid, 0.05)
 
 '''Making the environment'''
-# env = SuperGridRL(numrobot, gridlen, gridwidth, maxsteps ,
-#                   collision_penalty=collision_p, use_scanning=use_scanning,
-#                   p_obs=prob_obst, free_penalty=free_p, done_thresh=done_thresh,
-#                   done_incr=done_incr, terminal_reward=terminal_reward, dist_reward=dist_reward)
-gridlis = [np.ones((11, 11))]
-env = DecGridRL(numrobot, gridlis, maxsteps, collision_penalty=collision_p,
-                egoradius=5, free_penalty=free_p, done_thresh=done_thresh,
-                done_incr=done_incr, terminal_reward=terminal_reward)
+if env_name == 'SuperGridRL':
+    env = SuperGridRL(numrobot, gridlen, gridwidth, maxsteps ,
+                      collision_penalty=collision_p, use_scanning=use_scanning,
+                      p_obs=prob_obst, free_penalty=free_p,
+                      done_thresh=done_thresh, done_incr=done_incr,
+                      terminal_reward=terminal_reward, dist_reward=dist_reward)
+elif env_name == 'DecGridRL':
+    gridlis = [np.ones((11, 11))]
+    env = DecGridRL(numrobot, gridlis, maxsteps, collision_penalty=collision_p,
+                    egoradius=5, free_penalty=free_p, done_thresh=done_thresh,
+                    done_incr=done_incr, terminal_reward=terminal_reward)
 
 num_actions = env._num_actions
 obs_dim = env._obs_dim
@@ -200,13 +204,13 @@ else:
     #creating neural net, same constructor params for both vpg and dqn
     if exp_parameters["policy_type"] == 'vdn':
         net = Grid_RL_Conv(4*numrobot, obs_dim, conv_channels, conv_filters,
-                         conv_activation, hidden_sizes, hidden_activation)
+                           conv_activation, hidden_sizes, hidden_activation)
     elif exp_parameters["policy_type"] == "drqn":
         net = Grid_RL_Recur(num_actions, obs_dim, conv_channels, conv_filters,
-                         conv_activation, hidden_sizes, hidden_activation)
+                            conv_activation, hidden_sizes, hidden_activation)
     else:
         net = Grid_RL_Conv(num_actions, obs_dim, conv_channels, conv_filters,
-                         conv_activation, hidden_sizes, hidden_activation)
+                           conv_activation, hidden_sizes, hidden_activation)
 
     if exp_parameters["policy_type"] == "vpg":
         # init vpg policy
@@ -223,6 +227,8 @@ else:
         tau            = exp_parameters["tau"]
         buffer_maxsize = exp_parameters["buffer_size"]
         ignore_done    = exp_parameters['ignore_done']
+        epsilon        = exp_parameters['epsilon']
+        min_epsilon    = exp_parameters['min_epsilon']
 
         #creating buffer
         buff = ReplayBuffer(obs_dim, None, buffer_maxsize)
@@ -230,7 +236,8 @@ else:
         # init policy
         policy = DQN(net, buff, num_actions, lr, batch_size=batch_size,
                      model_path=model_path, weight_decay=weight_decay,
-                     gamma=gamma, tau=tau)
+                     gamma=gamma, tau=tau, epsilon=epsilon,
+                     min_epsilon=min_epsilon)
     elif exp_parameters["policy_type"] == "drqn":
         #determines batch size for q-network
         batch_size = None
@@ -243,14 +250,17 @@ else:
         tau            = exp_parameters["tau"]
         buffer_maxsize = exp_parameters["buffer_size"]
         ignore_done    = exp_parameters['ignore_done']
+        epsilon        = exp_parameters['epsilon']
+        min_epsilon    = exp_parameters['min_epsilon']
 
         #creating buffer
         buff = ReplayBuffer(obs_dim, None, buffer_maxsize)
 
         # init policy
-        policy = DRQN(net, buff, num_actions, lr, hidden_size, model_path=model_path,
-                      weight_decay=weight_decay, gamma=gamma, tau=tau,
-                      steps=steps)
+        policy = DRQN(net, buff, num_actions, lr, hidden_size,
+                      model_path=model_path, weight_decay=weight_decay,
+                      gamma=gamma, tau=tau, steps=steps, epsilon=epsilon,
+                      min_epsilon=min_epsilon)
         drqn = True
     elif exp_parameters["policy_type"] == "vdn":
         #determines batch size for q-network
@@ -274,14 +284,16 @@ else:
         if exp_parameters["policy_type"] == "ac":
             # init critic using same structure as actor
             critic = Grid_RL_Conv(1, obs_dim, conv_channels, conv_filters,
-                                 conv_activation, hidden_sizes, hidden_activation)
+                                  conv_activation, hidden_sizes,
+                                  hidden_activation)
             #ac specific params
             gae = False
             if exp_parameters["GAE"] > 0:
                 gae = True
             # init policy
             policy = AC(net, critic, numrobot, action_space, lr,
-                         weight_decay=weight_decay, model_path=model_path, gae=gae)
+                        weight_decay=weight_decay, model_path=model_path,
+                        gae=gae)
         elif exp_parameters["policy_type"] == "ddpg":
             dd = True
 
@@ -299,11 +311,12 @@ else:
             buff = ReplayBuffer(obs_dim, num_actions, buffer_maxsize)
 
             critic = Critic(num_actions, obs_dim, conv_channels, conv_filters,
-                                 conv_activation, hidden_sizes, hidden_activation)
+                            conv_activation, hidden_sizes,
+                            hidden_activation)
             # init policy
-            policy = DDPG(net, critic, buff, numrobot, num_actions, lr, batch_size=batch_size,
-                         model_path=model_path, weight_decay=weight_decay,
-                         gamma=gamma, tau=tau)
+            policy = DDPG(net, critic, buff, numrobot, num_actions, lr,
+                          batch_size=batch_size, model_path=model_path,
+                          weight_decay=weight_decay, gamma=gamma, tau=tau)
 
 # train a policy if not testing a saved model
 if not saved_model:
@@ -315,8 +328,12 @@ if not saved_model:
         policy.printNumParams()
 
         if exp_parameters["policy_type"] == "ddpg":
-            train_rewardlis, losslist, test_percent_covered = train_RLalg_ddpg(env, policy, logger, episodes=train_episodes,
-                                                                          render=render_train, ignore_done=ignore_done)
+            train_rewardlis, losslist, test_percent_covered =train_RLalg_ddpg(env,
+                             policy,
+                             logger,
+                             episodes=train_episodes,
+                             render=render_train,
+                             ignore_done=ignore_done)
         else:
             train_rewardlis, losslist, test_percent_covered = train_RLalg(env, policy, logger, episodes=train_episodes,
                                                                           render=render_train, ignore_done=ignore_done, drqn=drqn)
@@ -337,8 +354,9 @@ print(DASH)
 if not saved_model:
     test_percent_covered.append(average_percent_covered)
     # plot training rewards
-    logger.plot(train_rewardlis, 2, "Training Reward per Episode", 'Episodes', 'Reward', "Training Reward",
-                "Training Reward", show_fig=show_fig)
+    logger.plot(train_rewardlis, 2, "Training Reward per Episode", 'Episodes',
+                'Reward', "Training Reward", "Training Reward",
+                show_fig=show_fig)
 
     # plot training loss
     logger.plot(losslist, 3, "Training Loss per Episode", 'Episodes', 'Loss', "Training Loss",
@@ -354,17 +372,3 @@ if not saved_model:
 
 #closing logger
 logger.close()
-
-# from Policies.Networks.grid_rl_conv import Grid_RL_Conv
-# import torch
-# import torch.nn as nn
-# print(num_actions)
-# print(obs_dim)
-# print(conv_channels)
-# print(conv_filters)
-# print(conv_activation)
-# print(hidden_sizes)
-# print(hidden_activation)
-# net = Grid_RL_Conv(64, (4, 25, 25), [64, 32], [(9, 9), (7, 7)], nn.ReLU, [500, 100], nn.ReLU)
-# net.load_state_dict(torch.load('Experiments/grid_rl_dqn_arash_3/checkpoint3.pt'))
-# a = net.layers._modules['11'].weight.data.numpy()

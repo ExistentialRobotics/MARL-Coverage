@@ -7,9 +7,9 @@ from copy import deepcopy
 
 class DRQN(Base_Policy):
 
-    def __init__(self, q_net, buff, num_actions, learning_rate, hidden_size, epsilon=0.999, min_epsilon=0.1,
-                 batch_size=100, gamma=0.99, tau=0.9, weight_decay=0.1, steps=10,
-                 model_path=None):
+    def __init__(self, q_net, buff, num_actions, learning_rate, hidden_size,
+                 epsilon=0.9995, min_epsilon=0.02, batch_size=100, gamma=0.99,
+                 tau=0.9, weight_decay=0.1, steps=10, model_path=None):
         super().__init__()
 
         #cpu vs gpu code
@@ -45,7 +45,7 @@ class DRQN(Base_Policy):
         self._min_epsilon = min_epsilon
 
         #testing parameters
-        self._testing_epsilon = 0.05
+        self._testing_epsilon = 0
         self._testing = False
 
         #replay buffer creation
