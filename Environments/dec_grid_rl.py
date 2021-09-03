@@ -196,6 +196,11 @@ class DecGridRL(object):
     def reset(self):
         #picking a map at random
         self._grid = self._gridlis[np.random.randint(len(self._gridlis))]
+
+        #padding the grid with obstacles at the edges so the agent can sense walls
+        self._grid = np.pad(self._grid, (1,), 'constant', constant_values=(-1,))
+
+        #dimensions
         self._gridwidth = self._grid.shape[0]
         self._gridlen = self._grid.shape[1]
 

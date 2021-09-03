@@ -181,7 +181,7 @@ if env_name == 'SuperGridRL':
                       done_thresh=done_thresh, done_incr=done_incr,
                       terminal_reward=terminal_reward, dist_reward=dist_reward)
 elif env_name == 'DecGridRL':
-    gridlis = [np.ones((11, 11))]
+    gridlis = [np.ones((gridwidth, gridlen))]
     env = DecGridRL(numrobot, gridlis, maxsteps, collision_penalty=collision_p,
                     egoradius=5, free_penalty=free_p, done_thresh=done_thresh,
                     done_incr=done_incr, terminal_reward=terminal_reward)
