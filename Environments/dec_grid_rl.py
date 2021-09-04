@@ -2,11 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from . environment import Environment
 from queue import PriorityQueue
-import cv2
 
-class SuperGridRL(object):
+class DecGridRL(object):
     """
-    A Centralized Multi-Agent Grid Environment with a discrete action
+    A Decentralized Multi-Agent Grid Environment with a discrete action
     space. The objective of the environment is to cover as much of the region
     as possible.
     """
@@ -25,15 +24,15 @@ class SuperGridRL(object):
         self._done_thresh = env_config['done_thresh']
         self._done_incr = env_config['done_incr']
         self._terminal_reward = env_config['terminal_reward']
-        self._dist_r = env_config['dist_reward']
-        self._use_scanning = env_config['use_scanning']
 
         #pick random map and generate robot positions
         self.reset()
 
         #observation and action dimensions
-        self._obs_dim = self.get_state().shape
-        self._num_actions = 4**self._numrobot
+        #TODO fix this stuff for multiagent
+        self._obs_dim = self.get_egocentric_observations()[0].shape
+        self._num_actions = 4
+
 
     def step(self, action):
         #handling case where action is an integer that identifies the action
@@ -47,165 +46,152 @@ class SuperGridRL(object):
             ulis = action
 
         #initialize reward for this step
-        reward = np.zeros((self._numrobot,))
-
-        #making pq for sorting by minimum scan score
-        pq = PriorityQueue()
-        for i in range(self._numrobot):
-            score = self._xinds[i] + self._yinds[i]*self._gridwidth
-            pq.put((score, i))
-
-        #robot 2 control, storing what robot got what control
-        r2c = np.zeros((self._numrobot,), dtype=int)
-
-        # calc distance from observed to free cells
-        if self._dist_r:
-            inv = np.bitwise_not(self._free.astype('?')).astype(np.uint8)
-            distance_map = cv2.distanceTransform(inv, cv2.DIST_L1,
-                                                 cv2.DIST_MASK_PRECISE)
+        reward = 0
 
         # apply controls to each robot
-        for i in range(len(ulis)):
+        for i in range(self._numrobot):
             u = ulis[i]
-
-            #z is the robot index we are assigning controls to
-            if self._use_scanning:
-                z = pq.get()[1]
-            else:
-                z = i
-            r2c[z] = i
 
             #left
             if(u == 0):
-                x = self._xinds[z] - 1
-                y = self._yinds[z]
+                x = self._xinds[i] - 1
+                y = self._yinds[i]
 
                 if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
-                    self._xinds[z] = x
-                    if self._dist_r:
-                        reward[i] += (1 - distance_map[x, y])
+                    self._robot_pos_map[self._xinds[i]][self._yinds[i]] = 0
+                    self._xinds[i] = x
+                    self._robot_pos_map[x][y] = 1
                 else:
-                    reward[i] -= self._collision_penalty
+                    reward -= self._collision_penalty
             #right
             elif(u == 1):
-                x = self._xinds[z] + 1
-                y = self._yinds[z]
+                x = self._xinds[i] + 1
+                y = self._yinds[i]
 
                 if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
-                    self._xinds[z] = x
-                    if self._dist_r:
-                        reward[i] += (1 - distance_map[x, y])
+                    self._robot_pos_map[self._xinds[i]][self._yinds[i]] = 0
+                    self._xinds[i] = x
+                    self._robot_pos_map[x][y] = 1
                 else:
-                    reward[i] -= self._collision_penalty
+                    reward -= self._collision_penalty
             #up
             elif(u == 2):
-                x = self._xinds[z]
-                y = self._yinds[z] + 1
+                x = self._xinds[i]
+                y = self._yinds[i] + 1
 
                 if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
-                    self._yinds[z] = y
-                    if self._dist_r:
-                        reward[i] += (1 - distance_map[x, y])
+                    self._robot_pos_map[self._xinds[i]][self._yinds[i]] = 0
+                    self._yinds[i] = y
+                    self._robot_pos_map[x][y] = 1
                 else:
-                    reward[i] -= self._collision_penalty
+                    reward -= self._collision_penalty
             #down
             elif(u == 3):
-                x = self._xinds[z]
-                y = self._yinds[z] - 1
+                x = self._xinds[i]
+                y = self._yinds[i] - 1
 
                 if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
-                    self._yinds[z]= y
-                    if self._dist_r:
-                        reward[i] += (1 - distance_map[x, y])
+                    self._robot_pos_map[self._xinds[i]][self._yinds[i]] = 0
+                    self._yinds[i]= y
+                    self._robot_pos_map[x][y] = 1
                 else:
-                    reward[i] -= self._collision_penalty
+                    reward -= self._collision_penalty
 
+        #performing observation
+        reward += self.observe()
+
+        #getting observations
+        observations = self.get_egocentric_observations()
+
+        #incrementing step count
+        self._currstep += 1
+
+        if min(self._done_thresh, 1) <= self.percent_covered():
+            reward += self._terminal_reward
+
+        return observations[0], reward
+
+    def observe(self):
+        '''
+        Computes the observation from each of the robot positions and updates the shared map,
+        which includes the observed cell and free cell layers
+        '''
+        obs_reward = 0
         #sense from all the current robot positions
         for i in range(self._numrobot):
             x = self._xinds[i]
             y = self._yinds[i]
 
             #looping over all grid cells to sense
-            for j in range(x - self._sensesize, x + self._sensesize + 1):
-                for k in range(y - self._sensesize, y + self._sensesize + 1):
+            for j in range(x - self._senseradius, x + self._senseradius + 1):
+                for k in range(y - self._senseradius, y + self._senseradius + 1):
                     #checking if cell is not visited, in bounds, not an obstacle
                     if(self.isInBounds(j,k) and self._grid[j][k]>=0 and
                         self._free[j][k] == 1):
                         # add reward
-                        reward[r2c[i]] += self._grid[j][k]
+                        obs_reward += 1
 
                         # mark as not free
                         self._free[j][k] = 0
 
                     elif(self.isInBounds(j,k) and self._grid[j][k]>=0 and
                         self._free[j][k] == 0):
-                        reward[r2c[i]] -= self._free_penalty
+                        obs_reward -= self._free_penalty
 
                     elif(self.isInBounds(j,k) and self._grid[j][k]<0 and
                             self._observed_obstacles[j][k] == 0):
                             # track observed obstacles
                             self._observed_obstacles[j][k] = 1
-
-        #calculate current state
-        state = self.get_state()
-
-        #incrementing step count
-        self._currstep += 1
-
-        reward = np.sum(reward)
-        if min(self._done_thresh, 1) <= self.percent_covered():
-            reward += self._terminal_reward
-
-        return state, reward
+        return obs_reward
 
     def isInBounds(self, x, y):
         return x >= 0 and x < self._gridwidth and y >= 0 and y < self._gridlen
 
-    #TODO remove the for loop so this is actually fast
     def isOccupied(self, x, y):
-        #checking if no obstacle in that spot
-        if(self._grid[x][y] < 0):
-            return True
+        #checking if no obstacle in that spot and that no robots are there
+        return self._grid[x][y] < 0 or self._robot_pos_map[x][y] == 1
 
-        #checking if no other robots are there
-        for a,b in zip(self._xinds, self._yinds):
-            if(a == x and b == y):
-                return True
+    def get_egocentric_observations(self):
+        '''
+        Returns a list of observations, one for each agent, all from an egocentric
+        perspective (centered at the agents' current positions). Draws data from the
+        shared map.
+        '''
+        zlis = []
+        #construct state for each robot
+        for i in range(self._numrobot):
+            x = self._xinds[i]
+            y = self._yinds[i]
 
-        return False
+            z = np.zeros((3, 2*self._egoradius + 1, 2*self._egoradius + 1))
 
-    def get_state(self):
-        arrays = np.array(self.get_pos_image() + [self._observed_obstacles, self._free])
-        state = np.stack(arrays, axis=0)
-        return state
+            #looping over all grid cells to sense
+            for j in range(x - self._egoradius, x + self._egoradius + 1):
+                for k in range(y - self._egoradius, y + self._egoradius + 1):
+                    #ego centric coordinates
+                    a = j - (x - self._egoradius)
+                    b = k - (y - self._egoradius)
 
-    def get_pos_image(self):
-        """
-        get_pos_image uses the list of robot positions to generate an image of
-        the size of the overall map, where 1 denotes a space that a robot
-        occupies and 0 denotes a free space. It uses only info determined from
-        the current timestep.
+                    #checking if in bounds
+                    if(self.isInBounds(j,k)):
+                       z[0][a][b] = self._robot_pos_map[j][k]
+                       z[1][a][b] = self._free[j][k]
+                       z[2][a][b] = self._observed_obstacles[j][k]
 
-        Return
-        ------
-        Image encoding the robot positions
-        """
-        if self._use_scanning:
-            ret = np.zeros((self._gridwidth, self._gridlen))
-            for i, j in zip(self._xinds, self._yinds):
-                ret[i, j] = 1
-            ret = [ret]
-        else:
-            ret = []
-            for i, j in zip(self._xinds, self._yinds):
-                robotlayer = np.zeros((self._gridwidth, self._gridlen))
-                robotlayer[i, j] = 1
-                ret.append(robotlayer)
-        return ret
+                    #cannot give any information about where grid ends (that would be cheating)
+                    else:
+                        z[1][a][b] = 1
+
+            #adding observation
+            zlis.append(z)
+        return zlis
 
     def reset(self):
         #picking a map at random
         self._grid = self._gridlis[np.random.randint(len(self._gridlis))]
+
+        #padding the grid with obstacles at the edges so the agent can sense walls
+        self._grid = np.pad(self._grid, (1,), 'constant', constant_values=(-1,))
 
         #dimensions
         self._gridwidth = self._grid.shape[0]
@@ -218,8 +204,10 @@ class SuperGridRL(object):
         self._xinds = np.zeros(self._numrobot, dtype=int)
         self._yinds = np.zeros(self._numrobot, dtype=int)
 
+        #map of robot positions
+        self._robot_pos_map = np.zeros((self._gridwidth, self._gridlen))
+
         #repeatedly trying to insert robots
-        coord_dict = {}
         count = 0
         while(count != self._numrobot):
             #generating random coordinate
@@ -227,8 +215,8 @@ class SuperGridRL(object):
             y = np.random.randint(self._gridlen)
 
             #testing if coordinate is not an obstacle or other robot
-            if(self._grid[x][y] >= 0 and (x,y) not in coord_dict):
-                coord_dict[(x,y)] = 1
+            if(self._grid[x][y] >= 0 and self._robot_pos_map[x][y] == 0):
+                self._robot_pos_map[x][y] = 1
                 self._xinds[count] = x
                 self._yinds[count] = y
                 count += 1
@@ -239,7 +227,11 @@ class SuperGridRL(object):
         # history of free cells
         self._free = np.ones((self._gridwidth, self._gridlen))
 
-        return self.get_state()
+        # #performing observation
+        # self.observe()
+
+        #return observations
+        return self.get_egocentric_observations()[0]
 
     def done(self):
         if min(self._done_thresh, 1) <= self.percent_covered():
