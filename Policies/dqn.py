@@ -7,14 +7,22 @@ from copy import deepcopy
 
 class DQN(Base_Policy):
 
-    def __init__(self, q_net, buff, num_actions, learning_rate, epsilon=0.999, min_epsilon=0.1,
-                 batch_size=100, gamma=0.99, tau=0.9, weight_decay=0.1,
-                 model_path=None):
+    def __init__(self, q_net, buff, num_actions, policy_config, model_path=None):
         super().__init__()
+
+        #policy config parameters
+        self._epsilon = 1
+        self._e_decay = policy_config['epsilon_decay']
+        self._min_epsilon = policy_config['min_epsilon']
+        self._testing = False
+        self._testing_epsilon = policy_config['testing_epsilon']
+        self._buff = buff
+        self.batch_size = policy_config['batch_size']
+        self._gamma = policy_config['gamma']
+        self._tau = policy_config['tau']
 
         #cpu vs gpu code
         self._device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
         # init q net
         self.q_net = q_net
         self.num_actions = num_actions
@@ -36,23 +44,8 @@ class DQN(Base_Policy):
 
         #optimizer
         self.optimizer = torch.optim.Adam(self.q_net.parameters(),
-                                          lr=learning_rate, weight_decay=weight_decay)
-        #epsilon-greedy parameters
-        self._epsilon = 1
-        self._e_decay = epsilon
-        self._min_epsilon = min_epsilon
-
-        #testing parameters
-        self._testing_epsilon = 0.05
-        self._testing = False
-
-        #replay buffer creation
-        self.batch_size = batch_size
-        self._buff = buff
-
-        #discount rate and q-net weighted average
-        self._gamma = gamma
-        self._tau = tau
+                        lr=policy_config['learning_rate'],
+                        weight_decay=policy_config['weight_decay'])
 
     def pi(self, state):
         '''
@@ -97,7 +90,7 @@ class DQN(Base_Policy):
         #sampling batch from buffer
         states, actions, rewards, next_states, done = self._buff.samplebatch(self.batch_size)
 
-        # convert to tensors
+        # convert to tensors and move to gpu
         states = torch.from_numpy(states).float()
         actions = torch.from_numpy(actions).long()
         rewards = torch.from_numpy(rewards).float()
@@ -105,7 +98,7 @@ class DQN(Base_Policy):
         done = torch.from_numpy(done).long()
 
         #moving tensors to gpu
-        states = states.to(self._device)
+        states = states
         actions = actions.to(self._device)
         rewards = rewards.to(self._device)
         next_states = next_states.to(self._device)

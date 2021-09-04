@@ -6,73 +6,34 @@ import cv2
 
 class SuperGridRL(object):
     """
-    A Multi-Agent Grid Environment with a discrete action space for RL testing.
+    A Centralized Multi-Agent Grid Environment with a discrete action
+    space. The objective of the environment is to cover as much of the region
+    as possible.
     """
-    def __init__(self, numrobot, gridlen, gridwidth, maxsteps, discrete_grid_values=2, collision_penalty=5,
-                 sensesize=1, grid=None, seed=None, free_penalty=0, use_scanning=True, p_obs=0, done_thresh=1, done_incr=0, terminal_reward=0,
-                 dist_reward=False):
+    def __init__(self, gridlis, env_config):
         super().__init__()
+        #list of grids to use in training
+        self._gridlis = gridlis
 
-        self._numrobot = numrobot
-        self._gridlen = gridlen
-        self._gridwidth = gridwidth
-        self._collision_penalty = collision_penalty
-        self._free_penalty = free_penalty
-        self._dist_r = dist_reward
+        #environment config parameters
+        self._numrobot = env_config['numrobot']
+        self._maxsteps = env_config['maxsteps']
+        self._collision_penalty = env_config['collision_penalty']
+        self._senseradius = env_config['senseradius']
+        self._egoradius = env_config['egoradius']
+        self._free_penalty = env_config['free_penalty']
+        self._done_thresh = env_config['done_thresh']
+        self._done_incr = env_config['done_incr']
+        self._terminal_reward = env_config['terminal_reward']
+        self._dist_r = env_config['dist_reward']
+        self._use_scanning = env_config['use_scanning']
 
-        #sensing radius using chess metric(like how a king moves) -> "Chebyshev distance"
-        self._sensesize = sensesize
-
-        self._discrete_grid_values = discrete_grid_values
-
-        #blank/uniform grid by default
-        if grid is None:
-            # self._grid = np.ones((gridwidth, gridlen))
-            self._grid = np.random.choice(a=[1.0,-1.0], size=(gridwidth, gridlen), p=[1-p_obs, p_obs])
-        else:
-            self._grid = grid
-
-        #normalizing grid into discrete sensing levels
-        gridmax = np.amax(self._grid) + 1e-3
-        self._grid *= 1.0/gridmax
-        self._grid *= discrete_grid_values
-        self._grid = self._grid.astype(int)
-
-        # history of observed cells (their values)
-        self._observed_cells = []
-        #making one layer for each sensing level
-        for i in range(discrete_grid_values - 1): #-1 is there because we don't want to include a grid for zero value
-            self._observed_cells.append(np.zeros((gridwidth, gridlen)))
-
-        # history of observed obstacles
-        self._observed_obstacles = np.zeros((gridwidth, gridlen))
-
-        # history of free cells
-        self._free = np.ones((gridwidth, gridlen), dtype='int')
-
-        #use scanning tells us if we should assign actions by scanning, or encode
-        #the state of each robot in a different image channel
-        self._use_scanning = use_scanning
-
-        #generating robot positions
+        #pick random map and generate robot positions
         self.reset()
-
-        # create seed if user specifies it
-        if seed is not None:
-            np.random.seed(seed)
 
         #observation and action dimensions
         self._obs_dim = self.get_state().shape
         self._num_actions = 4**self._numrobot
-
-        #maximum steps in an episode
-        self._maxsteps = maxsteps
-
-        #done threshold
-        self._done_thresh = done_thresh
-        self._done_incr = done_incr
-        self._terminal_reward = terminal_reward
-
 
     def step(self, action):
         #handling case where action is an integer that identifies the action
@@ -98,8 +59,10 @@ class SuperGridRL(object):
         r2c = np.zeros((self._numrobot,), dtype=int)
 
         # calc distance from observed to free cells
-        inv = np.bitwise_not(self._free.astype('?')).astype(np.uint8)
-        distance_map = cv2.distanceTransform(inv, cv2.DIST_L1, cv2.DIST_MASK_PRECISE)
+        if self._dist_r:
+            inv = np.bitwise_not(self._free.astype('?')).astype(np.uint8)
+            distance_map = cv2.distanceTransform(inv, cv2.DIST_L1,
+                                                 cv2.DIST_MASK_PRECISE)
 
         # apply controls to each robot
         for i in range(len(ulis)):
@@ -158,8 +121,6 @@ class SuperGridRL(object):
                     reward[i] -= self._collision_penalty
 
         #sense from all the current robot positions
-        free_p = 0
-        new_cell = False
         for i in range(self._numrobot):
             x = self._xinds[i]
             y = self._yinds[i]
@@ -170,16 +131,8 @@ class SuperGridRL(object):
                     #checking if cell is not visited, in bounds, not an obstacle
                     if(self.isInBounds(j,k) and self._grid[j][k]>=0 and
                         self._free[j][k] == 1):
-                        # at least one new cell has been sensed
-                        new_cell = True
-
                         # add reward
                         reward[r2c[i]] += self._grid[j][k]
-
-                        # record observation value
-                        sensing_level = self._grid[j][k]
-                        if(sensing_level > 0):
-                            self._observed_cells[sensing_level - 1][j][k] = 1
 
                         # mark as not free
                         self._free[j][k] = 0
@@ -187,7 +140,6 @@ class SuperGridRL(object):
                     elif(self.isInBounds(j,k) and self._grid[j][k]>=0 and
                         self._free[j][k] == 0):
                         reward[r2c[i]] -= self._free_penalty
-                        free_p -= self._free_penalty
 
                     elif(self.isInBounds(j,k) and self._grid[j][k]<0 and
                             self._observed_obstacles[j][k] == 0):
@@ -223,7 +175,7 @@ class SuperGridRL(object):
         return False
 
     def get_state(self):
-        arrays = np.array(self.get_pos_image() + [self._observed_obstacles, self._free] + self._observed_cells)
+        arrays = np.array(self.get_pos_image() + [self._observed_obstacles, self._free])
         state = np.stack(arrays, axis=0)
         return state
 
@@ -252,6 +204,13 @@ class SuperGridRL(object):
         return ret
 
     def reset(self):
+        #picking a map at random
+        self._grid = self._gridlis[np.random.randint(len(self._gridlis))]
+
+        #dimensions
+        self._gridwidth = self._grid.shape[0]
+        self._gridlen = self._grid.shape[1]
+
         #resetting step count
         self._currstep = 0
 
@@ -273,12 +232,6 @@ class SuperGridRL(object):
                 self._xinds[count] = x
                 self._yinds[count] = y
                 count += 1
-
-        # history of observed cells (their values)
-        self._observed_cells = []
-        #making one layer for each sensing level
-        for i in range(self._discrete_grid_values - 1): #-1 is there because we don't want to include a grid for zero value
-            self._observed_cells.append(np.zeros((self._gridwidth, self._gridlen)))
 
         # history of observed obstacles
         self._observed_obstacles = np.zeros((self._gridwidth, self._gridlen))

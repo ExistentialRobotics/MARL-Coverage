@@ -12,10 +12,19 @@ breaking the performance, ideally it shouldn't be but who knows.
 
 class Grid_RL_Conv(nn.Module):
 
-    def __init__(self, action_dim, obs_dim, conv_channels, conv_filters,
-                 conv_activation, hidden_sizes, hidden_activation,
-                 output_activation=None):
+    def __init__(self, action_dim, obs_dim, model_config):
         super(Grid_RL_Conv, self).__init__()
+
+        #getting all model config params
+        conv_channels = model_config['conv_channels']
+        conv_filters = model_config['conv_filters']
+        for i in range(len(conv_filters)):
+            conv_filters[i] = (conv_filters[i], conv_filters[i])
+        if model_config['conv_activation'] == 'relu':
+            conv_activation = nn.ReLU
+        hidden_size = model_config['hidden_sizes']
+        if model_config['hidden_activation'] == 'relu':
+            hidden_activation = nn.ReLU
 
         # ensure that the number of channels and filters match
         assert len(conv_channels) == len(conv_filters)

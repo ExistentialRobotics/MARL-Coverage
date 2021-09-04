@@ -5,24 +5,25 @@ from queue import PriorityQueue
 
 class DecGridRL(object):
     """
-    A Multi-Agent Grid Environment with a discrete action space for RL testing.
+    A Decentralized Multi-Agent Grid Environment with a discrete action
+    space. The objective of the environment is to cover as much of the region
+    as possible.
     """
-    def __init__(self, numrobot, gridlis, maxsteps, collision_penalty=5,
-                 senseradius=1, egoradius=12, seed=None, free_penalty=0,
-                 done_thresh=1, done_incr=0, terminal_reward=0):
+    def __init__(self, gridlis, env_config):
         super().__init__()
-        self._numrobot = numrobot
+        #list of grids to use in training
         self._gridlis = gridlis
-        self._collision_penalty = collision_penalty
-        self._free_penalty = free_penalty
 
-        #sensing radius using chess metric(like how a king moves) -> "Chebyshev distance"
-        self._senseradius = senseradius
-        self._egoradius = egoradius
-
-        # create seed if user specifies it
-        if seed is not None:
-            np.random.seed(seed)
+        #environment config parameters
+        self._numrobot = env_config['numrobot']
+        self._maxsteps = env_config['maxsteps']
+        self._collision_penalty = env_config['collision_penalty']
+        self._senseradius = env_config['senseradius']
+        self._egoradius = env_config['egoradius']
+        self._free_penalty = env_config['free_penalty']
+        self._done_thresh = env_config['done_thresh']
+        self._done_incr = env_config['done_incr']
+        self._terminal_reward = env_config['terminal_reward']
 
         #pick random map and generate robot positions
         self.reset()
@@ -31,14 +32,6 @@ class DecGridRL(object):
         #TODO fix this stuff for multiagent
         self._obs_dim = self.get_egocentric_observations()[0].shape
         self._num_actions = 4
-
-        #maximum steps in an episode
-        self._maxsteps = maxsteps
-
-        #done threshold
-        self._done_thresh = done_thresh
-        self._done_incr = done_incr
-        self._terminal_reward = terminal_reward
 
 
     def step(self, action):

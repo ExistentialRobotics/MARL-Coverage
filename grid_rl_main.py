@@ -105,66 +105,27 @@ except:
 
 '''Environment Parameters'''
 env_name       = exp_parameters["env_name"]
-exp_name       = exp_parameters["experiment_name"]
-numrobot       = exp_parameters["numrobot"]
+env_config     = exp_parameters['env_config']
 gridwidth      = exp_parameters["gridwidth"]
 gridlen        = exp_parameters["gridlen"]
-seed           = exp_parameters["seed"]
-lr             = exp_parameters["lr"]
-train_episodes = exp_parameters["train_episodes"]
-test_episodes  = exp_parameters["test_episodes"]
-maxsteps       = exp_parameters['maxsteps']
-collision_p    = exp_parameters["collision_p"]
-gamma          = exp_parameters["gamma"]
-use_scanning   = exp_parameters['use_scanning']
-prob_obst      = exp_parameters['prob_obst']
-done_thresh    = exp_parameters['done_thresh']
-done_incr      = exp_parameters['done_incr']
-terminal_reward= exp_parameters['terminal_reward']
 
-dist_reward = False
-if exp_parameters["dist_reward"] > 0:
-    dist_reward = True
+'''Experiment Parameters'''
+exp_name       = exp_parameters["exp_name"]
+exp_config     = exp_parameters['exp_config']
+train_episodes = exp_config["train_episodes"]
+test_episodes  = exp_config["test_episodes"]
+show_fig       = exp_config["render_plots"]
+render_test    = exp_config['render_test']
+render_train   = exp_config['render_train']
+makevid        = exp_config["makevid"]
+ignore_done    = exp_config['ignore_done']
 
-free_p = 0
-if exp_parameters["free_penalty"] > 0:
-    free_p = exp_parameters["free_penalty"]
+'''Model Parameters'''
+model_config   = exp_parameters['model_config']
 
-weight_decay = 0
-if exp_parameters["weight_decay"] > 0:
-    weight_decay = exp_parameters["weight_decay"]
-
-makevid = False
-if exp_parameters["makevid"] == 1:
-    makevid = True
-
-render_test = False
-if exp_parameters["render_test"] == 1:
-    render_test = True
-
-render_train = False
-if exp_parameters["render_train"] == 1:
-    render_train = True
-
-show_fig = exp_parameters["render_plots"]
-
-conv_channels = []
-for channel in exp_parameters["conv_channels"]:
-    conv_channels.append(channel["_"])
-
-conv_filters = []
-for filter in exp_parameters["conv_filters"]:
-    conv_filters.append((filter["_"], filter["_"]))
-
-hidden_sizes = []
-for size in exp_parameters["hidden_sizes"]:
-    hidden_sizes.append(size["_"])
-
-if exp_parameters["conv_activation"] == "relu":
-    conv_activation = nn.ReLU
-
-if exp_parameters["hidden_activation"] == "relu":
-    hidden_activation = nn.ReLU
+'''Policy Parameters'''
+policy_name    = exp_parameters['policy_name']
+policy_config  = exp_parameters['policy_config']
 
 print(DASH)
 print("Running experiment using: " + str(config_path))
@@ -174,17 +135,11 @@ print(DASH)
 logger = Logger(exp_name, makevid, 0.05)
 
 '''Making the environment'''
+gridlis = [np.ones((gridwidth, gridlen))]
 if env_name == 'SuperGridRL':
-    env = SuperGridRL(numrobot, gridlen, gridwidth, maxsteps ,
-                      collision_penalty=collision_p, use_scanning=use_scanning,
-                      p_obs=prob_obst, free_penalty=free_p,
-                      done_thresh=done_thresh, done_incr=done_incr,
-                      terminal_reward=terminal_reward, dist_reward=dist_reward)
+    env = SuperGridRL(gridlis, env_config)
 elif env_name == 'DecGridRL':
-    gridlis = [np.ones((gridwidth, gridlen))]
-    env = DecGridRL(numrobot, gridlis, maxsteps, collision_penalty=collision_p,
-                    egoradius=5, free_penalty=free_p, done_thresh=done_thresh,
-                    done_incr=done_incr, terminal_reward=terminal_reward)
+    env = DecGridRL(gridlis, env_config)
 
 num_actions = env._num_actions
 obs_dim = env._obs_dim
@@ -195,139 +150,109 @@ action_space = Discrete(num_actions)
 ignore_done = False
 dd = False
 drqn = False
+
 '''Init policy'''
 random_policy = False
-if exp_parameters["policy_type"] == "random":
+if policy_name == "random":
     policy = Basic_Random(action_space)
     random_policy = True
 else:
     #creating neural net, same constructor params for both vpg and dqn
-    if exp_parameters["policy_type"] == 'vdn':
-        net = Grid_RL_Conv(4*numrobot, obs_dim, conv_channels, conv_filters,
-                           conv_activation, hidden_sizes, hidden_activation)
-    elif exp_parameters["policy_type"] == "drqn":
-        net = Grid_RL_Recur(num_actions, obs_dim, conv_channels, conv_filters,
-                            conv_activation, hidden_sizes, hidden_activation)
+    if policy_name == 'vdn':
+        net = Grid_RL_Conv(4*numrobot, obs_dim, model_config)
+    elif policy_name == "drqn":
+        net = Grid_RL_Recur(num_actions, obs_dim, model_config)
     else:
-        net = Grid_RL_Conv(num_actions, obs_dim, conv_channels, conv_filters,
-                           conv_activation, hidden_sizes, hidden_activation)
+        net = Grid_RL_Conv(num_actions, obs_dim, model_config)
 
-    if exp_parameters["policy_type"] == "vpg":
-        # init vpg policy
-        policy = VPG(net, numrobot, action_space, lr,
-                     weight_decay=weight_decay, gamma=gamma,
+    # if policy_name == "vpg":
+    #     # init vpg policy
+    #     policy = VPG(net, numrobot, action_space, lr,
+    #                  weight_decay=weight_decay, gamma=gamma,
+    #                  model_path=model_path)
+    if policy_name == "dqn":
+        buffer_maxsize = exp_parameters["buffer_size"]
+
+        #creating buffer
+        buff = ReplayBuffer(obs_dim, None, buffer_maxsize)
+
+        # init policy
+        policy = DQN(net, buff, num_actions, policy_config,
                      model_path=model_path)
-    elif exp_parameters["policy_type"] == "dqn":
-        #determines batch size for q-network
-        batch_size = None
-        if exp_parameters["batch_size"] > 0:
-            batch_size = exp_parameters["batch_size"]
-
-        #dqn specific parameters
-        tau            = exp_parameters["tau"]
+    elif policy_name == "drqn":
         buffer_maxsize = exp_parameters["buffer_size"]
-        ignore_done    = exp_parameters['ignore_done']
-        epsilon        = exp_parameters['epsilon']
-        min_epsilon    = exp_parameters['min_epsilon']
 
         #creating buffer
         buff = ReplayBuffer(obs_dim, None, buffer_maxsize)
 
         # init policy
-        policy = DQN(net, buff, num_actions, lr, batch_size=batch_size,
-                     model_path=model_path, weight_decay=weight_decay,
-                     gamma=gamma, tau=tau, epsilon=epsilon,
-                     min_epsilon=min_epsilon)
-    elif exp_parameters["policy_type"] == "drqn":
-        #determines batch size for q-network
-        batch_size = None
-        if exp_parameters["batch_size"] > 0:
-            batch_size = exp_parameters["batch_size"]
-
-        #drqn specific parameters
-        hidden_size    = hidden_sizes[0]
-        steps          = exp_parameters["steps"]
-        tau            = exp_parameters["tau"]
-        buffer_maxsize = exp_parameters["buffer_size"]
-        ignore_done    = exp_parameters['ignore_done']
-        epsilon        = exp_parameters['epsilon']
-        min_epsilon    = exp_parameters['min_epsilon']
-
-        #creating buffer
-        buff = ReplayBuffer(obs_dim, None, buffer_maxsize)
-
-        # init policy
-        policy = DRQN(net, buff, num_actions, lr, hidden_size,
-                      model_path=model_path, weight_decay=weight_decay,
-                      gamma=gamma, tau=tau, steps=steps, epsilon=epsilon,
-                      min_epsilon=min_epsilon)
+        policy = DRQN(net, buff, num_actions, policy_config,
+                      model_path=model_path)
         drqn = True
-    elif exp_parameters["policy_type"] == "vdn":
-        #determines batch size for q-network
-        batch_size = None
-        if exp_parameters["batch_size"] > 0:
-            batch_size = exp_parameters["batch_size"]
+    # elif exp_parameters["policy_type"] == "vdn":
+    #     #determines batch size for q-network
+    #     batch_size = None
+    #     if exp_parameters["batch_size"] > 0:
+    #         batch_size = exp_parameters["batch_size"]
 
-        #dqn specific parameters
-        tau            = exp_parameters["tau"]
-        buffer_maxsize = exp_parameters["buffer_size"]
-        ignore_done    = exp_parameters['ignore_done']
+    #     #dqn specific parameters
+    #     tau            = exp_parameters["tau"]
+    #     buffer_maxsize = exp_parameters["buffer_size"]
+    #     ignore_done    = exp_parameters['ignore_done']
 
-        #creating buffer
-        buff = ReplayBuffer(obs_dim, numrobot, buffer_maxsize)
+    #     #creating buffer
+    #     buff = ReplayBuffer(obs_dim, numrobot, buffer_maxsize)
 
-        # init policy
-        policy = VDN(net, buff, numrobot, 4, lr, batch_size=batch_size,
-                     model_path=model_path, weight_decay=weight_decay,
-                     gamma=gamma, tau=tau)
-    else:
-        if exp_parameters["policy_type"] == "ac":
-            # init critic using same structure as actor
-            critic = Grid_RL_Conv(1, obs_dim, conv_channels, conv_filters,
-                                  conv_activation, hidden_sizes,
-                                  hidden_activation)
-            #ac specific params
-            gae = False
-            if exp_parameters["GAE"] > 0:
-                gae = True
-            # init policy
-            policy = AC(net, critic, numrobot, action_space, lr,
-                        weight_decay=weight_decay, model_path=model_path,
-                        gae=gae)
-        elif exp_parameters["policy_type"] == "ddpg":
-            dd = True
+    #     # init policy
+    #     policy = VDN(net, buff, numrobot, 4, lr, batch_size=batch_size,
+    #                  model_path=model_path, weight_decay=weight_decay,
+    #                  gamma=gamma, tau=tau)
+    # else:
+    #     if exp_parameters["policy_type"] == "ac":
+    #         # init critic using same structure as actor
+    #         critic = Grid_RL_Conv(1, obs_dim, conv_channels, conv_filters,
+    #                               conv_activation, hidden_sizes,
+    #                               hidden_activation)
+    #         #ac specific params
+    #         gae = False
+    #         if exp_parameters["GAE"] > 0:
+    #             gae = True
+    #         # init policy
+    #         policy = AC(net, critic, numrobot, action_space, lr,
+    #                     weight_decay=weight_decay, model_path=model_path,
+    #                     gae=gae)
+    #     elif exp_parameters["policy_type"] == "ddpg":
+    #         dd = True
 
-            #determines batch size for q-network
-            batch_size = None
-            if exp_parameters["batch_size"] > 0:
-                batch_size = exp_parameters["batch_size"]
+    #         #determines batch size for q-network
+    #         batch_size = None
+    #         if exp_parameters["batch_size"] > 0:
+    #             batch_size = exp_parameters["batch_size"]
 
-            #dqn specific parameters
-            tau            = exp_parameters["tau"]
-            buffer_maxsize = exp_parameters["buffer_size"]
-            ignore_done    = exp_parameters['ignore_done']
+    #         #dqn specific parameters
+    #         tau            = exp_parameters["tau"]
+    #         buffer_maxsize = exp_parameters["buffer_size"]
+    #         ignore_done    = exp_parameters['ignore_done']
 
-            #creating buffer
-            buff = ReplayBuffer(obs_dim, num_actions, buffer_maxsize)
+    #         #creating buffer
+    #         buff = ReplayBuffer(obs_dim, num_actions, buffer_maxsize)
 
-            critic = Critic(num_actions, obs_dim, conv_channels, conv_filters,
-                            conv_activation, hidden_sizes,
-                            hidden_activation)
-            # init policy
-            policy = DDPG(net, critic, buff, numrobot, num_actions, lr,
-                          batch_size=batch_size, model_path=model_path,
-                          weight_decay=weight_decay, gamma=gamma, tau=tau)
+    #         critic = Critic(num_actions, obs_dim, conv_channels, conv_filters,
+    #                         conv_activation, hidden_sizes,
+    #                         hidden_activation)
+    #         # init policy
+    #         policy = DDPG(net, critic, buff, numrobot, num_actions, lr,
+    #                       batch_size=batch_size, model_path=model_path,
+    #                       weight_decay=weight_decay, gamma=gamma, tau=tau)
 
 # train a policy if not testing a saved model
 if not saved_model:
     '''Train policy'''
-    train_rewardlis = []
-    losslist = []
     if not random_policy:
-        print("----------Running {} for ".format(exp_parameters["policy_type"]) + str(train_episodes) + " episodes-----------")
+        print("----------Running {} for ".format(policy_name) + str(train_episodes) + " episodes-----------")
         policy.printNumParams()
 
-        if exp_parameters["policy_type"] == "ddpg":
+        if policy_name == "ddpg":
             train_rewardlis, losslist, test_percent_covered =train_RLalg_ddpg(env,
                              policy,
                              logger,

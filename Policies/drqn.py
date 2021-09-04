@@ -7,10 +7,23 @@ from copy import deepcopy
 
 class DRQN(Base_Policy):
 
-    def __init__(self, q_net, buff, num_actions, learning_rate, hidden_size,
-                 epsilon=0.9995, min_epsilon=0.02, batch_size=100, gamma=0.99,
-                 tau=0.9, weight_decay=0.1, steps=10, model_path=None):
+    def __init__(self, q_net, buff, num_actions, policy_config, model_path=None):
         super().__init__()
+
+        #policy config parameters
+        self._epsilon = 1
+        self._e_decay = policy_config['epsilon_decay']
+        self._min_epsilon = policy_config['min_epsilon']
+        self._testing = False
+        self._testing_epsilon = policy_config['testing_epsilon']
+        self._buff = buff
+        self.batch_size = policy_config['batch_size']
+        self._gamma = policy_config['gamma']
+        self._tau = policy_config['tau']
+        self.N = policy_config['steps']
+        # self.hidden_size = policy_config['hidden_size']
+        self.hidden_size = 500
+        self.curr_hidden = None
 
         #cpu vs gpu code
         self._device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -18,8 +31,6 @@ class DRQN(Base_Policy):
         # init q net
         self.q_net = q_net
         self.num_actions = num_actions
-        self.hidden_size = hidden_size
-        self.curr_hidden = None
 
         # init with saved weights if testing saved model
         if model_path is not None:
@@ -38,24 +49,8 @@ class DRQN(Base_Policy):
 
         #optimizer
         self.optimizer = torch.optim.Adam(self.q_net.parameters(),
-                                          lr=learning_rate, weight_decay=weight_decay)
-        #epsilon-greedy parameters
-        self._epsilon = 1
-        self._e_decay = epsilon
-        self._min_epsilon = min_epsilon
-
-        #testing parameters
-        self._testing_epsilon = 0
-        self._testing = False
-
-        #replay buffer creation
-        self.batch_size = batch_size
-        self._buff = buff
-        self.N = steps
-
-        #discount rate and q-net weighted average
-        self._gamma = gamma
-        self._tau = tau
+                        lr=policy_config['lr'],
+                        weight_decay=policy_config['weight_decay'])
 
     def pi(self, state, start=False):
         '''
