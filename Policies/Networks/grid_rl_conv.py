@@ -22,9 +22,10 @@ class Grid_RL_Conv(nn.Module):
             conv_filters[i] = (conv_filters[i], conv_filters[i])
         if model_config['conv_activation'] == 'relu':
             conv_activation = nn.ReLU
-        hidden_size = model_config['hidden_sizes']
+        hidden_sizes = model_config['hidden_sizes']
         if model_config['hidden_activation'] == 'relu':
             hidden_activation = nn.ReLU
+        output_activation = None
 
         # ensure that the number of channels and filters match
         assert len(conv_channels) == len(conv_filters)

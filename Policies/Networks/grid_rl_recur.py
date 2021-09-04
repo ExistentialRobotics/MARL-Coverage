@@ -8,8 +8,6 @@ from Policies.Networks.Qnet import init_weights
 Switched Padding back to what it was earlier to test if that is
 breaking the performance, ideally it shouldn't be but who knows.
 '''
-
-
 class Grid_RL_Recur(nn.Module):
 
     def __init__(self, action_dim, obs_dim, model_config):

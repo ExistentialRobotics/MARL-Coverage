@@ -44,7 +44,7 @@ class DQN(Base_Policy):
 
         #optimizer
         self.optimizer = torch.optim.Adam(self.q_net.parameters(),
-                        lr=policy_config['learning_rate'],
+                        lr=policy_config['lr'],
                         weight_decay=policy_config['weight_decay'])
 
     def pi(self, state):
