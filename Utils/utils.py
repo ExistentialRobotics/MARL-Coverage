@@ -1,5 +1,6 @@
 import numpy as np
 import sys
+import time
 
 def generate_episode(env, policy, logger, render=False, makevid=False, ignore_done=True, ddpg=False, drqn=False, testing=False):
     # reset env at the start of each episode
