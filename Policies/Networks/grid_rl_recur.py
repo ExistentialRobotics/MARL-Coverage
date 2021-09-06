@@ -30,6 +30,10 @@ class Grid_RL_Recur(nn.Module):
         lstm_cell_size = model_config['lstm_cell_size']
         num_recurr_layers = model_config['num_recurr_layers']
 
+        #if recurr_end, recurrent layer will be at end, otherwise it will be
+        #after the conv layer
+        self._recurr_end = model_config['recurr_end']
+
         # ensure that the number of channels and filters match
         assert len(conv_channels) == len(conv_filters)
 
@@ -69,41 +73,63 @@ class Grid_RL_Recur(nn.Module):
         # add flatten layer to made conv output 1D for the fc layers
         conv_layers += [nn.Flatten()]
 
-        # add LSTM layer between conv and fc layers
-        self.lstm = nn.LSTM(int(np.prod(conv_output_size)), lstm_cell_size,
-                            num_recurr_layers, batch_first=True)
-
         # add hidden layers to network
         lin_layers = []
         for i in range(len(hidden_sizes)):
             if i == 0:
                 # num in features of first layer input is flat output dim of the last conv layer
-                lin_layers += [nn.Linear(lstm_cell_size, hidden_sizes[i]),
-                           hidden_activation()]
+                if self._recurr_end:
+                    lin_layers += [nn.Linear(int(np.prod(conv_output_size)),
+                                            hidden_sizes[i]), hidden_activation()]
+                else:
+                    lin_layers += [nn.Linear(lstm_cell_size, hidden_sizes[i]),
+                            hidden_activation()]
             else:
                 lin_layers += [nn.Linear(hidden_sizes[i - 1], hidden_sizes[i]),
                            hidden_activation()]
 
+        # add LSTM layer between conv and fc layers
+        if self._recurr_end:
+            self.lstm = nn.LSTM(hidden_sizes[-1], lstm_cell_size,
+                                num_recurr_layers, batch_first=True)
+        else:
+            self.lstm = nn.LSTM(int(np.prod(conv_output_size)), lstm_cell_size,
+                                num_recurr_layers, batch_first=True)
 
 
         # last fc layer output features is the number of actions
-        if output_activation == None:
+        if not self._recurr_end:
             lin_layers += [nn.Linear(hidden_sizes[-1], action_dim)]
         else:
-            lin_layers += [nn.Linear(hidden_sizes[-1], action_dim), output_activation()]
+            final_lin = [nn.Linear(lstm_cell_size, action_dim)]
+
+        #output activation if specified
+        if output_activation and not self._recurr_end:
+            lin_layers += output_activation()
+
 
         self.conv_layers = nn.Sequential(*conv_layers)
         self.conv_layers.apply(init_weights)
         self.lin_layers = nn.Sequential(*lin_layers)
         self.lin_layers.apply(init_weights)
 
+        if self._recurr_end:
+            self.final_lin = nn.Sequential(*final_lin)
+            self.final_lin.apply(init_weights)
+
+
+
     def forward(self, x, hidden):
         # reshape input if not the right dims
         if len(x.shape) != 4:
             x = torch.unsqueeze(x, axis=0)
-
-        x = torch.unsqueeze(self.conv_layers(x), axis=1)
-        x, hidden = self.lstm(x, hidden)
-        # print("hidden: " + str(hidden[1].shape))
-        x = self.lin_layers(torch.squeeze(x, axis=1))
-        return torch.squeeze(x, axis=0), hidden
+        if self._recurr_end:
+            x = self.conv_layers(x)
+            x = self.lin_layers(x)
+            x, hidden = self.lstm(torch.unsqueeze(x, axis=0), hidden)
+            return torch.squeeze(x, axis=0), hidden
+        else:
+            x = torch.unsqueeze(self.conv_layers(x), axis=1)
+            x, hidden = self.lstm(x, hidden)
+            x = self.lin_layers(torch.squeeze(x, axis=1))
+            return torch.squeeze(x, axis=0), hidden

@@ -64,7 +64,10 @@ class DRQN(Base_Policy):
 
         # init hidden state if necessary
         if start:
-            self.curr_hidden = (torch.zeros((self._num_recurr_layers, 1, self._lstm_cell_size)).to(self._device), torch.zeros((self._num_recurr_layers, 1, self._lstm_cell_size)).to(self._device))
+            self.curr_hidden = (torch.zeros((self._num_recurr_layers, 1,
+                                             self._lstm_cell_size)).to(self._device),
+                                torch.zeros((self._num_recurr_layers, 1,
+                                             self._lstm_cell_size)).to(self._device))
 
         #epsilon greedy policy
         #if we are testing then we use a smaller testing epsilon
@@ -100,8 +103,6 @@ class DRQN(Base_Policy):
         self.optimizer.zero_grad()
 
         #sampling batch from buffer
-        # states, actions, rewards, next_states, done = self._buff.samplesequential(self.N)
-
         states, actions, rewards, next_states, done = self._buff.samplebatchsequential(self.batch_size, self.N)
 
         # convert to tensors

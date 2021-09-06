@@ -170,11 +170,6 @@ else:
     else:
         net = Grid_RL_Conv(num_actions, obs_dim, model_config)
 
-    # if policy_name == "vpg":
-    #     # init vpg policy
-    #     policy = VPG(net, numrobot, action_space, lr,
-    #                  weight_decay=weight_decay, gamma=gamma,
-    #                  model_path=model_path)
     if policy_name == "dqn":
         # init policy
         policy = DQN(net, num_actions, obs_dim, policy_config,
