@@ -84,6 +84,5 @@ class Grid_RL_Recur(nn.Module):
 
         x = torch.unsqueeze(self.conv_layers(x), axis=1)
         x, hidden = self.lstm(x, hidden)
-        # print("hidden: " + str(hidden[1].shape))
         x = self.lin_layers(torch.squeeze(x, axis=1))
         return torch.squeeze(x, axis=0), hidden
