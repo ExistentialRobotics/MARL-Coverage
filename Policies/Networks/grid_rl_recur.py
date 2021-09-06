@@ -126,8 +126,11 @@ class Grid_RL_Recur(nn.Module):
         if self._recurr_end:
             x = self.conv_layers(x)
             x = self.lin_layers(x)
-            x, hidden = self.lstm(torch.unsqueeze(x, axis=0), hidden)
-            return torch.squeeze(x, axis=0), hidden
+            x = torch.unsqueeze(x, axis=1)
+            x, hidden = self.lstm(x , hidden)
+            x = torch.squeeze(x, axis=1)
+            x = self.final_lin(x)
+            return x, hidden
         else:
             x = torch.unsqueeze(self.conv_layers(x), axis=1)
             x, hidden = self.lstm(x, hidden)
