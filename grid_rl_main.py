@@ -17,7 +17,8 @@ from Logger.logger import Logger
 from Utils.utils import train_RLalg, train_RLalg_ddpg, test_RLalg
 from Policies.Networks.grid_rl_conv import Grid_RL_Conv, Critic
 from Policies.Networks.grid_rl_recur import Grid_RL_Recur
-import torch.nn as nn
+from Utils.gridmaker import gridgen, gridload
+
 
 DASH = "-----------------------------------------------------------------------"
 
@@ -106,8 +107,6 @@ except:
 '''Environment Parameters'''
 env_name       = exp_parameters["env_name"]
 env_config     = exp_parameters['env_config']
-gridwidth      = exp_parameters["gridwidth"]
-gridlen        = exp_parameters["gridlen"]
 
 '''Experiment Parameters'''
 exp_name       = exp_parameters["exp_name"]
@@ -134,8 +133,14 @@ print(DASH)
 '''Init logger'''
 logger = Logger(exp_name, makevid, 0.05)
 
+
+'''Making the list of grids'''
+if exp_parameters['gridload']:
+    gridlis = gridload(exp_parameters['grid_config'])
+else:
+    gridlis = gridgen(exp_parameters['grid_config'])
+
 '''Making the environment'''
-gridlis = [np.ones((gridwidth, gridlen))]
 if env_name == 'SuperGridRL':
     env = SuperGridRL(gridlis, env_config)
 elif env_name == 'DecGridRL':

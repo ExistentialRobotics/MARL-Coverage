@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from . environment import Environment
 from queue import PriorityQueue
+import pygame
+import cv2
 
 class DecGridRL(object):
     """
@@ -32,6 +34,10 @@ class DecGridRL(object):
         #TODO fix this stuff for multiagent
         self._obs_dim = self.get_egocentric_observations()[0].shape
         self._num_actions = 4
+
+        #experimental pygame shite
+        pygame.init()
+        self._display = pygame.display.set_mode((1075, 1075))
 
 
     def step(self, action):
@@ -131,6 +137,8 @@ class DecGridRL(object):
                         # add reward
                         obs_reward += 1
 
+                        self._numobserved += 1
+
                         # mark as not free
                         self._free[j][k] = 0
 
@@ -227,6 +235,10 @@ class DecGridRL(object):
         # history of free cells
         self._free = np.ones((self._gridwidth, self._gridlen))
 
+        #finding number of free cells
+        self._numfree = np.count_nonzero(self._grid > 0)
+        self._numobserved = 0
+
         # #performing observation
         # self.observe()
 
@@ -243,31 +255,32 @@ class DecGridRL(object):
         return False
 
     def percent_covered(self):
-        return np.count_nonzero(self._free < 1) / np.count_nonzero(self._grid > 0)
+        return self._numobserved / self._numfree
 
     def render(self):
-        #clear canvas
-        plt.clf()
+        #base image
+        image = np.zeros((self._gridwidth, self._gridlen, 3))
 
-        #render all robots
-        for i in range(self._numrobot):
-            plt.scatter(self._xinds[i] + 0.5, self._yinds[i] + 0.5, s=50)
+        #adding observed obstacles to the base
+        obslayer = np.stack([200*self._observed_obstacles,
+                             0*self._observed_obstacles,
+                             255*self._observed_obstacles], -1)
+        image += obslayer
 
-        plt.gca().set_aspect('equal', adjustable='box')
-        plt.xlim([0, self._gridwidth])
-        plt.ylim([0, self._gridlen])
+        #adding observed free cells to the base
+        inv_free = 1 - self._free
+        freelayer = np.stack([0*inv_free, 225*inv_free, 255*inv_free], -1)
+        image += freelayer
 
-        #setting gridlines to be every 1
-        plt.gca().set_xticks(np.arange(0, self._gridwidth, 1))
-        plt.gca().set_yticks(np.arange(0, self._gridlen, 1))
-        plt.grid()
+        #adding robot positions to the base
+        freelayer = np.stack([255*self._robot_pos_map,
+                              0*self._robot_pos_map,
+                              0*self._robot_pos_map], -1)
+        image += freelayer
 
-        #preprocessing grid to graph
-        # obs = np.clip(self._grid, -1, 0)
-        grid = 2*self._free - self._observed_obstacles
+        scaling = max(min(1024//self._gridwidth, 1024//self._gridlen), 1)
+        image = cv2.resize(image, (0,0), fx=scaling, fy=scaling, interpolation=cv2.INTER_NEAREST)
 
-        plt.imshow(np.transpose(grid), extent=[0, self._gridwidth, self._gridlen, 0])
-
-        #drawing everything
-        plt.draw()
-        plt.pause(0.02)
+        surf = pygame.surfarray.make_surface(image)
+        self._display.blit(surf, (0, 0))
+        pygame.display.update()
