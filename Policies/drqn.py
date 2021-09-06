@@ -99,7 +99,6 @@ class DRQN(Base_Policy):
 
         #sampling batch from buffer
         # states, actions, rewards, next_states, done = self._buff.samplesequential(self.N)
-
         states, actions, rewards, next_states, done = self._buff.samplebatchsequential(self.batch_size, self.N)
 
         # convert to tensors

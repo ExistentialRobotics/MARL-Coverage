@@ -1,6 +1,7 @@
 import numpy as np
 import os
 from PIL import Image
+import matplotlib.pyplot as plt
 
 def gridload(grid_config):
     '''
@@ -9,12 +10,20 @@ def gridload(grid_config):
     and white is 1.
     '''
     grid_dir = grid_config['grid_dir']
+    numgrids = grid_config['numgrids']
+
     gridlis = []
+    i = 0
     for fname in os.listdir(grid_dir):
-        image = np.array(Image.open(os.path.join(grid_dir, fname)))
-        image = image.astype(float)
-        image = np.clip((image - 1), -1, 1)
-        gridlis.append(image)
+        if i < numgrids:
+            image = np.array(Image.open(os.path.join(grid_dir, fname)))
+            image = image.astype(float)
+            image = np.clip((image - 1), -1, 1)
+            print(image.shape)
+            plt.imshow(image)
+            plt.show()
+            gridlis.append(image)
+        i += 1
     return gridlis
 
 def gridgen(grid_config):
@@ -33,5 +42,3 @@ def gridgen(grid_config):
         gridlis.append(np.random.choice(a=[1.0,-1.0], size=(gridwidth, gridlen),
                                         p=[1-prob_obst, prob_obst]))
     return gridlis
-
-

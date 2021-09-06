@@ -98,7 +98,7 @@ class DQN(Base_Policy):
         done = torch.from_numpy(done).long()
 
         #moving tensors to gpu
-        states = states
+        states = states.to(self._device)
         actions = actions.to(self._device)
         rewards = rewards.to(self._device)
         next_states = next_states.to(self._device)
