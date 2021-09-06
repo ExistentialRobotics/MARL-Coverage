@@ -176,22 +176,12 @@ else:
     #                  weight_decay=weight_decay, gamma=gamma,
     #                  model_path=model_path)
     if policy_name == "dqn":
-        buffer_maxsize = exp_parameters["buffer_size"]
-
-        #creating buffer
-        buff = ReplayBuffer(obs_dim, None, buffer_maxsize)
-
         # init policy
-        policy = DQN(net, buff, num_actions, policy_config,
+        policy = DQN(net, num_actions, obs_dim, policy_config,
                      model_path=model_path)
     elif policy_name == "drqn":
-        buffer_maxsize = exp_parameters["buffer_size"]
-
-        #creating buffer
-        buff = ReplayBuffer(obs_dim, None, buffer_maxsize)
-
         # init policy
-        policy = DRQN(net, buff, num_actions, policy_config,
+        policy = DRQN(net, num_actions, obs_dim, policy_config, model_config,
                       model_path=model_path)
         drqn = True
     # elif exp_parameters["policy_type"] == "vdn":

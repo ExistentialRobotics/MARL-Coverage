@@ -7,7 +7,7 @@ from copy import deepcopy
 
 class DRQN(Base_Policy):
 
-    def __init__(self, q_net, buff, num_actions, policy_config, model_path=None):
+    def __init__(self, q_net, num_actions, obs_dim, policy_config, model_config, model_path=None):
         super().__init__()
 
         #policy config parameters
@@ -16,13 +16,14 @@ class DRQN(Base_Policy):
         self._min_epsilon = policy_config['min_epsilon']
         self._testing = False
         self._testing_epsilon = policy_config['testing_epsilon']
-        self._buff = buff
+        buffer_maxsize = policy_config['buffer_size']
+        self._buff = ReplayBuffer(obs_dim, None, buffer_maxsize)
         self.batch_size = policy_config['batch_size']
         self._gamma = policy_config['gamma']
         self._tau = policy_config['tau']
         self.N = policy_config['steps']
-        # self.hidden_size = policy_config['hidden_size']
-        self.hidden_size = 500
+        self._lstm_cell_size = model_config['lstm_cell_size']
+        self._num_recurr_layers = model_config['num_recurr_layers']
         self.curr_hidden = None
 
         #cpu vs gpu code
@@ -63,7 +64,7 @@ class DRQN(Base_Policy):
 
         # init hidden state if necessary
         if start:
-            self.curr_hidden = (torch.zeros((1, 1, self.hidden_size)).to(self._device), torch.zeros((1, 1, self.hidden_size)).to(self._device))
+            self.curr_hidden = (torch.zeros((self._num_recurr_layers, 1, self._lstm_cell_size)).to(self._device), torch.zeros((self._num_recurr_layers, 1, self._lstm_cell_size)).to(self._device))
 
         #epsilon greedy policy
         #if we are testing then we use a smaller testing epsilon
@@ -117,12 +118,7 @@ class DRQN(Base_Policy):
         next_states = next_states.to(self._device)
         done = done.to(self._device)
 
-        # print(states.shape)
-        # print(actions.shape)
-        # print(rewards.shape)
-
         # gradient calculation
-        # loss = self.calc_gradient(states, actions, rewards, next_states, done, self.batch_size, self.N)
         loss = self.calc_batch_gradient(states, actions, rewards, next_states, done, self.batch_size, self.N)
 
         #tracking loss
@@ -141,34 +137,11 @@ class DRQN(Base_Policy):
         #paranoid about memory leak
         del states, next_states, rewards, actions
 
-    def calc_gradient(self, states, actions, rewards, next_states, done, batch_size, N):
-        hidden = (torch.zeros((1, 1, self.hidden_size)).to(self._device), torch.zeros((1, 1, self.hidden_size)).to(self._device))
-        hidden_t = (torch.zeros((1, 1, self.hidden_size)).to(self._device), torch.zeros((1, 1, self.hidden_size)).to(self._device))
-
-        loss = 0
-        for i in range(self.N):
-            # calc q and next q
-            qvals, hidden = self.q_net(states[i], hidden)
-            next_qvals, hidden_t = self.target_net(next_states[i], hidden_t)
-
-            # calculate gradient for q function
-            with torch.no_grad():
-                next_q = torch.max(next_qvals, 0).values
-                y = rewards[i] + self._gamma*(1-done[i])*next_q
-
-            #calculating mean squared error
-            currq = qvals[actions[i]]
-            loss += ((y-currq)**2).mean()
-        loss = loss/N
-        loss.backward()
-
-        return loss
-
     def calc_batch_gradient(self, states, actions, rewards, next_states, done, batch_size, N):
-        hidden = (torch.zeros((1, batch_size, self.hidden_size)).to(self._device),
-                  torch.zeros((1, batch_size, self.hidden_size)).to(self._device))
-        hidden_t = (torch.zeros((1, batch_size, self.hidden_size)).to(self._device),
-                    torch.zeros((1, batch_size, self.hidden_size)).to(self._device))
+        hidden = (torch.zeros((self._num_recurr_layers, batch_size, self._lstm_cell_size)).to(self._device),
+                  torch.zeros((self._num_recurr_layers, batch_size, self._lstm_cell_size)).to(self._device))
+        hidden_t = (torch.zeros((self._num_recurr_layers, batch_size, self._lstm_cell_size)).to(self._device),
+                  torch.zeros((self._num_recurr_layers, batch_size, self._lstm_cell_size)).to(self._device))
 
         loss = 0
         for i in range(self.N):

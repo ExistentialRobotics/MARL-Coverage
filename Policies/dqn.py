@@ -7,7 +7,7 @@ from copy import deepcopy
 
 class DQN(Base_Policy):
 
-    def __init__(self, q_net, buff, num_actions, policy_config, model_path=None):
+    def __init__(self, q_net, num_actions, obs_dim, policy_config, model_path=None):
         super().__init__()
 
         #policy config parameters
@@ -16,7 +16,8 @@ class DQN(Base_Policy):
         self._min_epsilon = policy_config['min_epsilon']
         self._testing = False
         self._testing_epsilon = policy_config['testing_epsilon']
-        self._buff = buff
+        buffer_maxsize = policy_config['buffer_size']
+        self._buff = ReplayBuffer(obs_dim, None, buffer_maxsize)
         self.batch_size = policy_config['batch_size']
         self._gamma = policy_config['gamma']
         self._tau = policy_config['tau']

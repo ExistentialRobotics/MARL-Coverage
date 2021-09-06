@@ -20,10 +20,15 @@ class Grid_RL_Recur(nn.Module):
             conv_filters[i] = (conv_filters[i], conv_filters[i])
         if model_config['conv_activation'] == 'relu':
             conv_activation = nn.ReLU
+
         hidden_sizes = model_config['hidden_sizes']
         if model_config['hidden_activation'] == 'relu':
             hidden_activation = nn.ReLU
+
         output_activation = None
+
+        lstm_cell_size = model_config['lstm_cell_size']
+        num_recurr_layers = model_config['num_recurr_layers']
 
         # ensure that the number of channels and filters match
         assert len(conv_channels) == len(conv_filters)
@@ -40,36 +45,53 @@ class Grid_RL_Recur(nn.Module):
             if i == 0:
                 # add stride on first conv layer to reduce img dims
                 stride = 2
-                conv_layers += [nn.Conv2d(obs_dim[0], conv_channels[i], conv_filters[i], padding=padding,
-                                stride=stride), nn.BatchNorm2d(conv_channels[i], affine=False),
-                                                conv_activation()]
+                conv_layers += [nn.Conv2d(obs_dim[0], conv_channels[i],
+                                          conv_filters[i], padding=padding,
+                                          stride=stride),
+                                nn.BatchNorm2d(conv_channels[i], affine=False),
+                                conv_activation()]
             else:
                 stride = 1
-                conv_layers += [nn.Conv2d(conv_channels[i - 1], conv_channels[i], conv_filters[i], padding=padding,
-                                                        stride=stride), nn.BatchNorm2d(conv_channels[i], affine=False),
-                                                conv_activation()]
-            # calculate the output of the current layer based on the output of the last layer
+                conv_layers += [nn.Conv2d(conv_channels[i - 1],
+                                          conv_channels[i],
+                                          conv_filters[i],
+                                          padding=padding,
+                                          stride=stride),
+                                nn.BatchNorm2d(conv_channels[i],
+                                               affine=False),
+                                conv_activation()]
+                # calculate the output of the current layer based on the output of the last layer
 
-            conv_output_size[1:] = np.floor((conv_output_size[1:] + 2 * padding - np.array(conv_filters[i])) / stride + 1)
+            conv_output_size[1:] = np.floor((conv_output_size[1:] + 2 * padding
+                                             - np.array(conv_filters[i])) / stride + 1)
             conv_output_size[0] = conv_channels[i]
 
         # add flatten layer to made conv output 1D for the fc layers
         conv_layers += [nn.Flatten()]
 
         # add LSTM layer between conv and fc layers
-        self.lstm = nn.LSTM(int(np.prod(conv_output_size)), hidden_sizes[0], 1, batch_first=True)
+        self.lstm = nn.LSTM(int(np.prod(conv_output_size)), lstm_cell_size,
+                            num_recurr_layers, batch_first=True)
 
         # add hidden layers to network
         lin_layers = []
-        for i in range(1, len(hidden_sizes)):
-            lin_layers += [nn.Linear(hidden_sizes[i - 1], hidden_sizes[i]),
-                       hidden_activation()]
+        for i in range(len(hidden_sizes)):
+            if i == 0:
+                # num in features of first layer input is flat output dim of the last conv layer
+                lin_layers += [nn.Linear(lstm_cell_size, hidden_sizes[i]),
+                           hidden_activation()]
+            else:
+                lin_layers += [nn.Linear(hidden_sizes[i - 1], hidden_sizes[i]),
+                           hidden_activation()]
+
+
 
         # last fc layer output features is the number of actions
         if output_activation == None:
             lin_layers += [nn.Linear(hidden_sizes[-1], action_dim)]
         else:
             lin_layers += [nn.Linear(hidden_sizes[-1], action_dim), output_activation()]
+
         self.conv_layers = nn.Sequential(*conv_layers)
         self.conv_layers.apply(init_weights)
         self.lin_layers = nn.Sequential(*lin_layers)
