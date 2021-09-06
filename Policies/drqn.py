@@ -21,8 +21,7 @@ class DRQN(Base_Policy):
         self._gamma = policy_config['gamma']
         self._tau = policy_config['tau']
         self.N = policy_config['steps']
-        # self.hidden_size = policy_config['hidden_size']
-        self.hidden_size = 500
+        self.hidden_size = policy_config['hidden_size']
         self.curr_hidden = None
 
         #cpu vs gpu code

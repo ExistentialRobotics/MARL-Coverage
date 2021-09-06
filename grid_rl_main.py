@@ -16,7 +16,8 @@ from Policies.replaybuffer import ReplayBuffer
 from Logger.logger import Logger
 from Utils.utils import train_RLalg, train_RLalg_ddpg, test_RLalg
 from Policies.Networks.grid_rl_conv import Grid_RL_Conv, Critic
-from Policies.Networks.grid_rl_recur import Grid_RL_Recur
+from Policies.Networks.grid_rl_recur_state import Grid_RL_Recur_State
+from Policies.Networks.grid_rl_recur_action import Grid_RL_Recur_Action
 from Utils.gridmaker import gridgen, gridload
 
 
@@ -166,15 +167,13 @@ else:
     if policy_name == 'vdn':
         net = Grid_RL_Conv(4*numrobot, obs_dim, model_config)
     elif policy_name == "drqn":
-        net = Grid_RL_Recur(num_actions, obs_dim, model_config)
+        if policy_config["recur_type"] == "state":
+            net = Grid_RL_Recur_State(num_actions, obs_dim, model_config)
+        elif policy_config["recur_type"] == "action":
+            net = Grid_RL_Recur_Action(num_actions, obs_dim, model_config)
     else:
         net = Grid_RL_Conv(num_actions, obs_dim, model_config)
 
-    # if policy_name == "vpg":
-    #     # init vpg policy
-    #     policy = VPG(net, numrobot, action_space, lr,
-    #                  weight_decay=weight_decay, gamma=gamma,
-    #                  model_path=model_path)
     if policy_name == "dqn":
         buffer_maxsize = exp_parameters["buffer_size"]
 

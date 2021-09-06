@@ -126,8 +126,8 @@ class SuperGridRL(object):
             y = self._yinds[i]
 
             #looping over all grid cells to sense
-            for j in range(x - self._sensesize, x + self._sensesize + 1):
-                for k in range(y - self._sensesize, y + self._sensesize + 1):
+            for j in range(x - self._senseradius, x + self._senseradius + 1):
+                for k in range(y - self._senseradius, y + self._senseradius + 1):
                     #checking if cell is not visited, in bounds, not an obstacle
                     if(self.isInBounds(j,k) and self._grid[j][k]>=0 and
                         self._free[j][k] == 1):
