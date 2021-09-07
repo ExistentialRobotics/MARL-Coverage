@@ -1,17 +1,16 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.animation as ani
 import os, sys
 import torch
+import cv2
 
 class Logger(object):
     """
     class to log videos, graphs, text files of runs to output directory
     """
-    def __init__(self, experiment_name, make_video, dt=None):
+    def __init__(self, experiment_name, make_video):
         super().__init__()
         self._output_dir = "./Experiments/grid_rl/{}/".format(experiment_name)
-        self._dt = dt
         self._make_vid = make_video
 
         #checking if output directory exists and making it if it doesn't
@@ -21,8 +20,7 @@ class Logger(object):
             os.makedirs(self._output_dir)
 
         if make_video:
-            self._writer = ani.FFMpegWriter(fps= int(1/dt))
-            self._writer.setup(plt.gcf(), self._output_dir + experiment_name + ".mp4", dpi=100)
+            self._writer = cv2.VideoWriter(self._output_dir + experiment_name + ".mp4", cv2.VideoWriter_fourcc(*'mp4v'), 30, (1075, 1075))
 
         self._timeseries = {}
 
@@ -32,10 +30,11 @@ class Logger(object):
         #creating terminal write for saving console output
         sys.stdout = TerminalWriter(self._output_dir + "TerminalOutput.txt")
 
-    def update(self):
+    def addFrame(self, frame):
+        frame = np.uint8(frame)
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         if(self._make_vid):
-            #getting current simulation frame
-            self._writer.grab_frame()
+            self._writer.write(frame)
 
     def addTimeSeries(self, label, data):
         '''
@@ -84,7 +83,7 @@ class Logger(object):
         '''
         if self._make_vid:
             #saving video
-            self._writer.finish()
+            self._writer.release()
 
         sys.stdout.log.close()
         #check if there is any timeseries data and save to text file

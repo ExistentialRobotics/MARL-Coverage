@@ -42,9 +42,9 @@ def generate_episode(env, policy, logger, render=False, makevid=False, ignore_do
 
         # render if necessary
         if render:
-            env.render()
+            frame = env.render()
             if(makevid):
-                logger.update()
+                logger.addFrame(frame)
 
     return episode, total_reward
 

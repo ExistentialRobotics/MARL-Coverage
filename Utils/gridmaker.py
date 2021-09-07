@@ -19,9 +19,6 @@ def gridload(grid_config):
             image = np.array(Image.open(os.path.join(grid_dir, fname)))
             image = image.astype(float)
             image = np.clip((image - 1), -1, 1)
-            print(image.shape)
-            plt.imshow(image)
-            plt.show()
             gridlis.append(image)
         i += 1
     return gridlis

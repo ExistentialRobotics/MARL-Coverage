@@ -131,7 +131,7 @@ print("Running experiment using: " + str(config_path))
 print(DASH)
 
 '''Init logger'''
-logger = Logger(exp_name, makevid, 0.05)
+logger = Logger(exp_name, makevid)
 
 
 '''Making the list of grids'''

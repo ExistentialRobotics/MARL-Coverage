@@ -281,6 +281,11 @@ class DecGridRL(object):
         scaling = max(min(1024//self._gridwidth, 1024//self._gridlen), 1)
         image = cv2.resize(image, (0,0), fx=scaling, fy=scaling, interpolation=cv2.INTER_NEAREST)
 
+        image = cv2.copyMakeBorder(image, 0, 1075 - image.shape[1], 0, 1075 - image.shape[0], cv2.BORDER_CONSTANT, value=[0,0,0])
+
         surf = pygame.surfarray.make_surface(image)
         self._display.blit(surf, (0, 0))
         pygame.display.update()
+
+        #returning the image that was used
+        return image
