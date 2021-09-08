@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from . environment import Environment
+from . graph_data import Graph_Data
 from queue import PriorityQueue
 import pygame
 import cv2
@@ -22,6 +23,7 @@ class DecGridRL(object):
         self._collision_penalty = env_config['collision_penalty']
         self._senseradius = env_config['senseradius']
         self._egoradius = env_config['egoradius']
+        self._commradius = env_config['commradius']
         self._free_penalty = env_config['free_penalty']
         self._done_thresh = env_config['done_thresh']
         self._done_incr = env_config['done_incr']
@@ -29,6 +31,9 @@ class DecGridRL(object):
 
         #pick random map and generate robot positions
         self.reset()
+
+        # init graph data object
+        self.graph = Graph_Data(self._xinds, self._yinds, self._commradius)
 
         #observation and action dimensions
         #TODO fix this stuff for multiagent
@@ -102,6 +107,9 @@ class DecGridRL(object):
                     self._robot_pos_map[x][y] = 1
                 else:
                     reward -= self._collision_penalty
+
+        # update graph
+        self._graph.set_data(self._xinds, self._yinds)
 
         #performing observation
         reward += self.observe()

@@ -107,7 +107,6 @@ class Grid_RL_Recur(nn.Module):
         if output_activation and not self._recurr_end:
             lin_layers += output_activation()
 
-
         self.conv_layers = nn.Sequential(*conv_layers)
         self.conv_layers.apply(init_weights)
         self.lin_layers = nn.Sequential(*lin_layers)
@@ -116,8 +115,6 @@ class Grid_RL_Recur(nn.Module):
         if self._recurr_end:
             self.final_lin = nn.Sequential(*final_lin)
             self.final_lin.apply(init_weights)
-
-
 
     def forward(self, x, hidden):
         # reshape input if not the right dims

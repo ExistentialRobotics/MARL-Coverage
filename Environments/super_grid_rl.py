@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from . environment import Environment
+from . graph_data import Graph_Data
 from queue import PriorityQueue
 import cv2
 import pygame
@@ -22,6 +23,7 @@ class SuperGridRL(object):
         self._collision_penalty = env_config['collision_penalty']
         self._senseradius = env_config['senseradius']
         self._egoradius = env_config['egoradius']
+        self._commradius = env_config['commradius']
         self._free_penalty = env_config['free_penalty']
         self._done_thresh = env_config['done_thresh']
         self._done_incr = env_config['done_incr']
@@ -31,6 +33,9 @@ class SuperGridRL(object):
 
         #pick random map and generate robot positions
         self.reset()
+
+        # init graph data object
+        self._graph = Graph_Data(self._xinds, self._yinds, self._commradius)
 
         #observation and action dimensions
         self._obs_dim = self.get_state().shape
@@ -151,6 +156,9 @@ class SuperGridRL(object):
                             # track observed obstacles
                             self._observed_obstacles[j][k] = 1
 
+        # update graph
+        self._graph.set_data(self._xinds, self._yinds)
+
         #calculate current state
         state = self.get_state()
 
@@ -259,6 +267,8 @@ class SuperGridRL(object):
         return np.count_nonzero(self._free < 1) / np.count_nonzero(self._grid > 0)
 
     def render(self):
+        self._graph.display_connections()
+
         #base image
         image = np.zeros((self._gridwidth, self._gridlen, 3))
 
