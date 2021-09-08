@@ -23,7 +23,6 @@ class DecGridRL(object):
         self._collision_penalty = env_config['collision_penalty']
         self._senseradius = env_config['senseradius']
         self._egoradius = env_config['egoradius']
-        self._commradius = env_config['commradius']
         self._free_penalty = env_config['free_penalty']
         self._done_thresh = env_config['done_thresh']
         self._done_incr = env_config['done_incr']
@@ -33,7 +32,7 @@ class DecGridRL(object):
         self.reset()
 
         # init graph data object
-        self.graph = Graph_Data(self._xinds, self._yinds, self._commradius)
+        self.graph = Graph_Data(env_config['numfeatures'], self._xinds, self._yinds, env_config['commradius'])
 
         #observation and action dimensions
         #TODO fix this stuff for multiagent

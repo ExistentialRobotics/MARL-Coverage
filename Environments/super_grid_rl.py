@@ -23,7 +23,6 @@ class SuperGridRL(object):
         self._collision_penalty = env_config['collision_penalty']
         self._senseradius = env_config['senseradius']
         self._egoradius = env_config['egoradius']
-        self._commradius = env_config['commradius']
         self._free_penalty = env_config['free_penalty']
         self._done_thresh = env_config['done_thresh']
         self._done_incr = env_config['done_incr']
@@ -35,15 +34,15 @@ class SuperGridRL(object):
         self.reset()
 
         # init graph data object
-        self._graph = Graph_Data(self._xinds, self._yinds, self._commradius)
+        self._graph = Graph_Data(env_config['numfeatures'], self._xinds, self._yinds, env_config['commradius'])
 
         #observation and action dimensions
         self._obs_dim = self.get_state().shape
         self._num_actions = 4**self._numrobot
 
         #experimental pygame shite
-        pygame.init()
-        self._display = pygame.display.set_mode((1075, 1075))
+        # pygame.init()
+        # self._display = pygame.display.set_mode((1075, 1075))
 
     def step(self, action):
         #handling case where action is an integer that identifies the action
@@ -267,36 +266,63 @@ class SuperGridRL(object):
         return np.count_nonzero(self._free < 1) / np.count_nonzero(self._grid > 0)
 
     def render(self):
+        #clear canvas
+        plt.clf()
+
+        # display robot connections for debugging purposes
         self._graph.display_connections()
 
-        #base image
-        image = np.zeros((self._gridwidth, self._gridlen, 3))
+        #render all robots
+        for i in range(self._numrobot):
+            plt.scatter(self._xinds[i] + 0.5, self._yinds[i] + 0.5, s=50)
 
-        #adding observed obstacles to the base
-        obslayer = np.stack([200*self._observed_obstacles,
-                             0*self._observed_obstacles,
-                             255*self._observed_obstacles], -1)
-        image += obslayer
+        plt.gca().set_aspect('equal', adjustable='box')
+        plt.xlim([0, self._gridwidth])
+        plt.ylim([0, self._gridlen])
 
-        #adding observed free cells to the base
-        inv_free = 1 - self._free
-        freelayer = np.stack([0*inv_free, 225*inv_free, 255*inv_free], -1)
-        image += freelayer
+        #setting gridlines to be every 1
+        plt.gca().set_xticks(np.arange(0, self._gridwidth, 1))
+        plt.gca().set_yticks(np.arange(0, self._gridlen, 1))
+        plt.grid()
 
-        robot_pos_map = self.get_pos_image()[0]
-        #adding robot positions to the base
-        freelayer = np.stack([255*robot_pos_map,
-                              0*robot_pos_map,
-                              0*robot_pos_map], -1)
-        image += freelayer
+        #preprocessing grid to graph
+        # obs = np.clip(self._grid, -1, 0)
+        grid = 2*self._free - self._observed_obstacles
 
-        scaling = max(min(1075//self._gridwidth, 1075//self._gridlen), 1)
-        image = cv2.resize(image, (0,0), fx=scaling, fy=scaling, interpolation=cv2.INTER_NEAREST)
-        image = cv2.copyMakeBorder(image, 0, 1075 - image.shape[1], 0, 1075 - image.shape[0], cv2.BORDER_CONSTANT, value=[0,0,0])
+        plt.imshow(np.transpose(grid), extent=[0, self._gridwidth, self._gridlen, 0])
 
-        surf = pygame.surfarray.make_surface(image)
-        self._display.blit(surf, (0, 0))
-        pygame.display.update()
+        #drawing everything
+        plt.draw()
+        plt.pause(0.02)
 
-        #returning the image that was used
-        return image
+        # #base image
+        # image = np.zeros((self._gridwidth, self._gridlen, 3))
+        #
+        # #adding observed obstacles to the base
+        # obslayer = np.stack([200*self._observed_obstacles,
+        #                      0*self._observed_obstacles,
+        #                      255*self._observed_obstacles], -1)
+        # image += obslayer
+        #
+        # #adding observed free cells to the base
+        # inv_free = 1 - self._free
+        # freelayer = np.stack([0*inv_free, 225*inv_free, 255*inv_free], -1)
+        # image += freelayer
+        #
+        # robot_pos_map = self.get_pos_image()[0]
+        # #adding robot positions to the base
+        # freelayer = np.stack([255*robot_pos_map,
+        #                       0*robot_pos_map,
+        #                       0*robot_pos_map], -1)
+        # image += freelayer
+        #
+        # scaling = max(min(1075//self._gridwidth, 1075//self._gridlen), 1)
+        # image = cv2.resize(image, (0,0), fx=scaling, fy=scaling, interpolation=cv2.INTER_NEAREST)
+        # image = cv2.copyMakeBorder(image, 0, 1075 - image.shape[1], 0, 1075 - image.shape[0], cv2.BORDER_CONSTANT, value=[0,0,0])
+        #
+        # surf = pygame.surfarray.make_surface(image)
+        # self._display.blit(surf, (0, 0))
+        # pygame.display.update()
+        #
+        # #returning the image that was used
+        # return image
