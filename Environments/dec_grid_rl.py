@@ -5,6 +5,7 @@ from . graph_data import Graph_Data
 from queue import PriorityQueue
 import pygame
 import cv2
+import time
 
 class DecGridRL(object):
     """
@@ -27,12 +28,13 @@ class DecGridRL(object):
         self._done_thresh = env_config['done_thresh']
         self._done_incr = env_config['done_incr']
         self._terminal_reward = env_config['terminal_reward']
+        self._mini_map_rad = env_config['mini_map_rad']
 
         #pick random map and generate robot positions
         self.reset()
 
         # init graph data object
-        self.graph = Graph_Data(env_config['numfeatures'], self._xinds, self._yinds, env_config['commradius'])
+        # self.graph = Graph_Data(env_config['numfeatures'], self._xinds, self._yinds, env_config['commradius'])
 
         #observation and action dimensions
         #TODO fix this stuff for multiagent
@@ -108,7 +110,7 @@ class DecGridRL(object):
                     reward -= self._collision_penalty
 
         # update graph
-        self._graph.set_data(self._xinds, self._yinds)
+        # self._graph.set_data(self._xinds, self._yinds)
 
         #performing observation
         reward += self.observe()
@@ -178,28 +180,54 @@ class DecGridRL(object):
             x = self._xinds[i]
             y = self._yinds[i]
 
-            z = np.zeros((3, 2*self._egoradius + 1, 2*self._egoradius + 1))
+            if self._mini_map_rad > 0:
+                numlayers = 5
+            else:
+                numlayers = 3
 
-            #looping over all grid cells to sense
-            for j in range(x - self._egoradius, x + self._egoradius + 1):
-                for k in range(y - self._egoradius, y + self._egoradius + 1):
-                    #ego centric coordinates
-                    a = j - (x - self._egoradius)
-                    b = k - (y - self._egoradius)
+            z = np.zeros((numlayers, 2*self._egoradius + 1, 2*self._egoradius + 1))
 
-                    #checking if in bounds
-                    if(self.isInBounds(j,k)):
-                       z[0][a][b] = self._robot_pos_map[j][k]
-                       z[1][a][b] = self._free[j][k]
-                       z[2][a][b] = self._observed_obstacles[j][k]
+            #egocentric observation layers
+            z[0] = self.arraySubset(self._robot_pos_map, x, y, self._egoradius)
+            z[1] = self.arraySubset(self._free, x, y, self._egoradius, pad=1)
+            z[2] = self.arraySubset(self._observed_obstacles, x, y,
+                                    self._egoradius)
 
-                    #cannot give any information about where grid ends (that would be cheating)
-                    else:
-                        z[1][a][b] = 1
+            #larger map view
+            if self._mini_map_rad > 0:
+                mini_free = self.arraySubset(self._free, x, y, self._mini_map_rad, pad=1)
+                mini_obs = self.arraySubset(self._observed_obstacles, x, y,
+                                            self._mini_map_rad)
+                z[3] = cv2.resize(mini_free, dsize=(2*self._egoradius + 1, 2*self._egoradius + 1), interpolation=cv2.INTER_NEAREST)
+                z[4] = cv2.resize(mini_obs, dsize=(2*self._egoradius + 1, 2*self._egoradius + 1), interpolation=cv2.INTER_NEAREST)
 
             #adding observation
             zlis.append(z)
         return zlis
+
+    def arraySubset(self, array, x, y, radius, pad=0):
+        width = array.shape[0]
+        length = array.shape[1]
+
+        #right and left boundaries
+        lb = max(0, x - radius)
+        rb = min(width, x + radius + 1)
+
+        #up and down boundaries
+        ub = min(length, y + radius + 1)
+        db = max(0, y - radius)
+
+        #raw observation
+        obs = array[lb:rb, db:ub]
+
+        #adding padding in each direction to observation
+        lpad = max(0, radius-x)
+        rpad = max(0, x + radius + 1 - width)
+        dpad = max(0, radius-y)
+        upad = max(0, y + radius + 1 - length)
+        obs = np.pad(obs, ((lpad, rpad), (dpad, upad)), 'constant', constant_values=(pad,))
+
+        return obs
 
     def reset(self):
         #picking a map at random
