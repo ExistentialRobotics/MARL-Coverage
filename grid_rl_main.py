@@ -6,15 +6,11 @@ from Environments.super_grid_rl import SuperGridRL
 from Environments.dec_grid_rl import DecGridRL
 from Action_Spaces.discrete import Discrete
 from Policies.basic_random import Basic_Random
-from Policies.vpg import VPG
 from Policies.dqn import DQN
-from Policies.ac import AC
-from Policies.ddpg import DDPG
-from Policies.vdn import VDN
 from Policies.drqn import DRQN
 from Policies.replaybuffer import ReplayBuffer
 from Logger.logger import Logger
-from Utils.utils import train_RLalg, train_RLalg_ddpg, test_RLalg
+from Utils.utils import train_RLalg, test_RLalg
 from Policies.Networks.grid_rl_conv import Grid_RL_Conv, Critic
 from Policies.Networks.grid_rl_recur import Grid_RL_Recur
 from Utils.gridmaker import gridgen, gridload
@@ -153,7 +149,6 @@ obs_dim = env._obs_dim
 action_space = Discrete(num_actions)
 
 ignore_done = False
-dd = False
 drqn = False
 
 '''Init policy'''
@@ -179,61 +174,7 @@ else:
         policy = DRQN(net, num_actions, obs_dim, policy_config, model_config,
                       model_path=model_path)
         drqn = True
-    # elif exp_parameters["policy_type"] == "vdn":
-    #     #determines batch size for q-network
-    #     batch_size = None
-    #     if exp_parameters["batch_size"] > 0:
-    #         batch_size = exp_parameters["batch_size"]
 
-    #     #dqn specific parameters
-    #     tau            = exp_parameters["tau"]
-    #     buffer_maxsize = exp_parameters["buffer_size"]
-    #     ignore_done    = exp_parameters['ignore_done']
-
-    #     #creating buffer
-    #     buff = ReplayBuffer(obs_dim, numrobot, buffer_maxsize)
-
-    #     # init policy
-    #     policy = VDN(net, buff, numrobot, 4, lr, batch_size=batch_size,
-    #                  model_path=model_path, weight_decay=weight_decay,
-    #                  gamma=gamma, tau=tau)
-    # else:
-    #     if exp_parameters["policy_type"] == "ac":
-    #         # init critic using same structure as actor
-    #         critic = Grid_RL_Conv(1, obs_dim, conv_channels, conv_filters,
-    #                               conv_activation, hidden_sizes,
-    #                               hidden_activation)
-    #         #ac specific params
-    #         gae = False
-    #         if exp_parameters["GAE"] > 0:
-    #             gae = True
-    #         # init policy
-    #         policy = AC(net, critic, numrobot, action_space, lr,
-    #                     weight_decay=weight_decay, model_path=model_path,
-    #                     gae=gae)
-    #     elif exp_parameters["policy_type"] == "ddpg":
-    #         dd = True
-
-    #         #determines batch size for q-network
-    #         batch_size = None
-    #         if exp_parameters["batch_size"] > 0:
-    #             batch_size = exp_parameters["batch_size"]
-
-    #         #dqn specific parameters
-    #         tau            = exp_parameters["tau"]
-    #         buffer_maxsize = exp_parameters["buffer_size"]
-    #         ignore_done    = exp_parameters['ignore_done']
-
-    #         #creating buffer
-    #         buff = ReplayBuffer(obs_dim, num_actions, buffer_maxsize)
-
-    #         critic = Critic(num_actions, obs_dim, conv_channels, conv_filters,
-    #                         conv_activation, hidden_sizes,
-    #                         hidden_activation)
-    #         # init policy
-    #         policy = DDPG(net, critic, buff, numrobot, num_actions, lr,
-    #                       batch_size=batch_size, model_path=model_path,
-    #                       weight_decay=weight_decay, gamma=gamma, tau=tau)
 
 # train a policy if not testing a saved model
 if not saved_model:
@@ -259,7 +200,7 @@ if not saved_model:
 print("-----------------------------Testing Policy----------------------------")
 #testing the policy and collecting data
 test_rewardlis, average_percent_covered = test_RLalg(env, policy, logger, episodes=test_episodes, render_test=render_test,
-                                                     makevid=makevid, ddpg=dd)
+                                                     makevid=makevid)
 
 '''Display results'''
 print(DASH)
