@@ -53,7 +53,7 @@ class DRQN(Base_Policy):
                         lr=policy_config['lr'],
                         weight_decay=policy_config['weight_decay'])
 
-    def pi(self, state, start=False):
+    def pi(self, state):
         '''
         This method takes the state as input and returns a list of actions, one
         for each robot.
@@ -194,5 +194,13 @@ class DRQN(Base_Policy):
         return self.q_net
 
     def printNumParams(self):
-        pytorch_total_params = sum(p.numel() for p in self.q_net.parameters() if p.requires_grad)
+        pytorch_total_params = sum(p.numel() for p in self.q_net.parameters()
+                                   if p.requires_grad)
         print(str(pytorch_total_params) + " in the Q Network")
+
+    def reset(self):
+        self.curr_hidden = (torch.zeros((self._num_recurr_layers, 1,
+                                         self._lstm_cell_size)).to(self._device),
+                            torch.zeros((self._num_recurr_layers, 1,
+                                         self._lstm_cell_size)).to(self._device))
+

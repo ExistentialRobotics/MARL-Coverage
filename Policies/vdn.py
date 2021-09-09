@@ -11,24 +11,38 @@ from copy import deepcopy
 
 class VDN(Base_Policy):
 
-    def __init__(self, q_net, buff, numrobot, num_actions, learning_rate, epsilon=0.999, min_epsilon=0.1,
-                 batch_size=100, gamma=0.99, tau=0.9, weight_decay=0.1,
-                 model_path=None):
+    def __init__(self, net, num_actions, obs_dim, policy_config, model_config,
+                      model_path=model_path):
         super().__init__()
+
+        #policy config parameters
+        self._epsilon = 1
+        self._e_decay = policy_config['epsilon_decay']
+        self._min_epsilon = policy_config['min_epsilon']
+        self._testing = False
+        self._testing_epsilon = policy_config['testing_epsilon']
+        buffer_maxsize = policy_config['buffer_size']
+        self._buff = ReplayBuffer(obs_dim, None, buffer_maxsize)
+        self.batch_size = policy_config['batch_size']
+        self._gamma = policy_config['gamma']
+        self._tau = policy_config['tau']
+        self.N = policy_config['steps']
+        self._lstm_cell_size = model_config['lstm_cell_size']
+        self._num_recurr_layers = model_config['num_recurr_layers']
+        self.curr_hidden = None
 
         #cpu vs gpu code
         self._device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        # num actions per robot, artifact of old code
-        self.num_actions = num_actions
-        self.numrobot = numrobot
+
         # init q net
         self.q_net = q_net
+        self.num_actions = num_actions
 
         # init with saved weights if testing saved model
         if model_path is not None:
             self.q_net.load_state_dict(torch.load(model_path))
 
-        # init q net
+        # init q target net
         self.target_net = deepcopy(self.q_net)
 
         #moving nets to gpu
@@ -41,24 +55,8 @@ class VDN(Base_Policy):
 
         #optimizer
         self.optimizer = torch.optim.Adam(self.q_net.parameters(),
-                                          lr=learning_rate, weight_decay=weight_decay)
-
-        #epsilon-greedy parameters
-        self._epsilon = 1
-        self._e_decay = epsilon
-        self._min_epsilon = min_epsilon
-
-        #testing parameters
-        self._testing_epsilon = 0.05
-        self._testing = False
-
-        #replay buffer creation
-        self.batch_size = batch_size
-        self._buff = buff
-
-        #discount rate and q-net weighted average
-        self._gamma = gamma
-        self._tau = tau
+                        lr=policy_config['lr'],
+                        weight_decay=policy_config['weight_decay'])
 
     def pi(self, state):
         '''

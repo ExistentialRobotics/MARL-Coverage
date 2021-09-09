@@ -152,10 +152,6 @@ obs_dim = env._obs_dim
 '''Init action space'''
 action_space = Discrete(num_actions)
 
-ignore_done = False
-dd = False
-drqn = False
-
 '''Init policy'''
 random_policy = False
 if policy_name == "random":
@@ -178,62 +174,10 @@ else:
         # init policy
         policy = DRQN(net, num_actions, obs_dim, policy_config, model_config,
                       model_path=model_path)
-        drqn = True
-    # elif exp_parameters["policy_type"] == "vdn":
-    #     #determines batch size for q-network
-    #     batch_size = None
-    #     if exp_parameters["batch_size"] > 0:
-    #         batch_size = exp_parameters["batch_size"]
-
-    #     #dqn specific parameters
-    #     tau            = exp_parameters["tau"]
-    #     buffer_maxsize = exp_parameters["buffer_size"]
-    #     ignore_done    = exp_parameters['ignore_done']
-
-    #     #creating buffer
-    #     buff = ReplayBuffer(obs_dim, numrobot, buffer_maxsize)
-
-    #     # init policy
-    #     policy = VDN(net, buff, numrobot, 4, lr, batch_size=batch_size,
-    #                  model_path=model_path, weight_decay=weight_decay,
-    #                  gamma=gamma, tau=tau)
-    # else:
-    #     if exp_parameters["policy_type"] == "ac":
-    #         # init critic using same structure as actor
-    #         critic = Grid_RL_Conv(1, obs_dim, conv_channels, conv_filters,
-    #                               conv_activation, hidden_sizes,
-    #                               hidden_activation)
-    #         #ac specific params
-    #         gae = False
-    #         if exp_parameters["GAE"] > 0:
-    #             gae = True
-    #         # init policy
-    #         policy = AC(net, critic, numrobot, action_space, lr,
-    #                     weight_decay=weight_decay, model_path=model_path,
-    #                     gae=gae)
-    #     elif exp_parameters["policy_type"] == "ddpg":
-    #         dd = True
-
-    #         #determines batch size for q-network
-    #         batch_size = None
-    #         if exp_parameters["batch_size"] > 0:
-    #             batch_size = exp_parameters["batch_size"]
-
-    #         #dqn specific parameters
-    #         tau            = exp_parameters["tau"]
-    #         buffer_maxsize = exp_parameters["buffer_size"]
-    #         ignore_done    = exp_parameters['ignore_done']
-
-    #         #creating buffer
-    #         buff = ReplayBuffer(obs_dim, num_actions, buffer_maxsize)
-
-    #         critic = Critic(num_actions, obs_dim, conv_channels, conv_filters,
-    #                         conv_activation, hidden_sizes,
-    #                         hidden_activation)
-    #         # init policy
-    #         policy = DDPG(net, critic, buff, numrobot, num_actions, lr,
-    #                       batch_size=batch_size, model_path=model_path,
-    #                       weight_decay=weight_decay, gamma=gamma, tau=tau)
+    elif exp_parameters["policy_type"] == "vdn":
+        # init policy
+        policy = VDN(net, num_actions, obs_dim, policy_config, model_config,
+                      model_path=model_path)
 
 # train a policy if not testing a saved model
 if not saved_model:
@@ -242,24 +186,15 @@ if not saved_model:
         print("----------Running {} for ".format(policy_name) + str(train_episodes) + " episodes-----------")
         policy.printNumParams()
 
-        if policy_name == "ddpg":
-            train_rewardlis, losslist, test_percent_covered =train_RLalg_ddpg(env,
-                             policy,
-                             logger,
-                             episodes=train_episodes,
-                             render=render_train,
-                             ignore_done=ignore_done)
-        else:
-            train_rewardlis, losslist, test_percent_covered = train_RLalg(env, policy, logger, episodes=train_episodes,
-                                                                          render=render_train, ignore_done=ignore_done, drqn=drqn)
+        train_rewardlis, losslist, test_percent_covered = train_RLalg(env, policy, logger, episodes=train_episodes,
+                                                                        render=render_train, ignore_done=ignore_done)
     else:
         print("-----------------------Running Random Policy-----------------------")
 
 '''Test policy'''
 print("-----------------------------Testing Policy----------------------------")
 #testing the policy and collecting data
-test_rewardlis, average_percent_covered = test_RLalg(env, policy, logger, episodes=test_episodes, render_test=render_test,
-                                                     makevid=makevid, ddpg=dd)
+test_rewardlis, average_percent_covered = test_RLalg(env, policy, logger, episodes=test_episodes, render_test=render_test, makevid=makevid)
 
 '''Display results'''
 print(DASH)

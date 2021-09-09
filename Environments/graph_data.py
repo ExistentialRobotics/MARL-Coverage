@@ -13,8 +13,6 @@ class Graph_Data(object):
         self.features = None
         self.edge_index = None
 
-
-
     def set_data(self, xinds, yinds):
         self._xinds = xinds
         self._yinds = yinds

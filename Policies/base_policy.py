@@ -23,3 +23,9 @@ class Base_Policy(object):
         Updates the policy Parameters.
         """
         raise notImplementedError()
+
+    def reset(self):
+        """
+        Resets the policy (at the end of an episode)
+        """
+        pass
