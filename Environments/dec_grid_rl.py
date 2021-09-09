@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from . environment import Environment
-from . graph_data import Graph_Data
 from queue import PriorityQueue
 import pygame
 import cv2
@@ -23,18 +22,18 @@ class DecGridRL(object):
         self._maxsteps = env_config['maxsteps']
         self._collision_penalty = env_config['collision_penalty']
         self._senseradius = env_config['senseradius']
-        self._egoradius = env_config['egoradius']
         self._free_penalty = env_config['free_penalty']
         self._done_thresh = env_config['done_thresh']
         self._done_incr = env_config['done_incr']
         self._terminal_reward = env_config['terminal_reward']
+
+        #if ego_radius is 0, non-egocentric observation will be used
+        self._egoradius = env_config['egoradius']
         self._mini_map_rad = env_config['mini_map_rad']
+        self._comm_radius = env_config['comm_radius']
 
         #pick random map and generate robot positions
         self.reset()
-
-        # init graph data object
-        # self.graph = Graph_Data(env_config['numfeatures'], self._xinds, self._yinds, env_config['commradius'])
 
         #observation and action dimensions
         #TODO fix this stuff for multiagent
@@ -109,14 +108,17 @@ class DecGridRL(object):
                 else:
                     reward -= self._collision_penalty
 
-        # update graph
-        # self._graph.set_data(self._xinds, self._yinds)
+        # update communication graph
+        self.updateCommmunicationGraph()
 
         #performing observation
         reward += self.observe()
 
         #getting observations
-        observations = self.get_egocentric_observations()
+        if self._egoradius > 0:
+            observations = self.get_egocentric_observations()
+        else:
+            observations = self.get_full_observations()
 
         #incrementing step count
         self._currstep += 1
@@ -124,7 +126,7 @@ class DecGridRL(object):
         if min(self._done_thresh, 1) <= self.percent_covered():
             reward += self._terminal_reward
 
-        return observations[0], reward
+        return observations, self._adjacency_matrix, reward
 
     def observe(self):
         '''
@@ -198,12 +200,40 @@ class DecGridRL(object):
                 mini_free = self.arraySubset(self._free, x, y, self._mini_map_rad, pad=1)
                 mini_obs = self.arraySubset(self._observed_obstacles, x, y,
                                             self._mini_map_rad)
-                z[3] = cv2.resize(mini_free, dsize=(2*self._egoradius + 1, 2*self._egoradius + 1), interpolation=cv2.INTER_NEAREST)
-                z[4] = cv2.resize(mini_obs, dsize=(2*self._egoradius + 1, 2*self._egoradius + 1), interpolation=cv2.INTER_NEAREST)
+                z[3] = cv2.resize(mini_free, dsize=(2*self._egoradius + 1, 2*self._egoradius + 1), interpolation=cv2.INTER_LINEAR)
+                z[4] = cv2.resize(mini_obs, dsize=(2*self._egoradius + 1, 2*self._egoradius + 1), interpolation=cv2.INTER_LINEAR)
 
             #adding observation
             zlis.append(z)
         return zlis
+
+    def get_full_observations(self):
+        """
+        Return each agent's observations of the full map, showing
+        the free cells and observed cells they have visited, and the
+        robots currently visible to them in their communication radius.
+        """
+        #TODO
+        pass
+
+
+    def updateCommmunicationGraph(self):
+        """
+        Updates the communication graph based on the current
+        robot positions and the communication radius.
+        """
+        #creating communication graph adjacency matrix
+        self._adjacency_matrix = np.zeros((self._numrobot, self._numrobot))
+
+        for i in range(xinds.shape[0]):
+            for j in range(i+1, xinds.shape[0]):
+                #euclidean distance
+                # dist = np.sqrt((xinds[i] - xinds[j])**2 + (yinds[i] - yinds[j])**2)
+                #chebyshev distance
+                dist = max(abs(xinds[i] - xinds[j]), abs(yinds[i] - yinds[j]))
+                if dist <= self._commradius:
+                    self._adjacency_matrix[i][j] = 1
+                    self._adjacency_matrix[j][i] = 1
 
     def arraySubset(self, array, x, y, radius, pad=0):
         width = array.shape[0]

@@ -9,8 +9,10 @@ def generate_episode(env, policy, logger, render=False, makevid=False, ignore_do
     total_reward = 0
     done = False
 
+    #reset policy at beginning of episode
+    policy.reset()
+
     # iterate till episode completion
-    start = True
     while not done:
         # determine action
         if drqn:
@@ -21,9 +23,6 @@ def generate_episode(env, policy, logger, render=False, makevid=False, ignore_do
 
         # step environment and save episode results
         next_state, reward = env.step(action)
-
-        # if testing:
-        #     print(reward)
 
         # determine if episode is completed
         done = env.done()
@@ -47,7 +46,7 @@ def generate_episode(env, policy, logger, render=False, makevid=False, ignore_do
     return episode, total_reward
 
 def train_RLalg(env, policy, logger, episodes=1000, render=False,
-                checkpoint_interval=500, drqn=False, ignore_done=True):
+                checkpoint_interval=500, ignore_done=True):
     # set policy network to train mode
     policy.set_train()
 

@@ -183,16 +183,8 @@ if not saved_model:
         print("----------Running {} for ".format(policy_name) + str(train_episodes) + " episodes-----------")
         policy.printNumParams()
 
-        if policy_name == "ddpg":
-            train_rewardlis, losslist, test_percent_covered =train_RLalg_ddpg(env,
-                             policy,
-                             logger,
-                             episodes=train_episodes,
-                             render=render_train,
-                             ignore_done=ignore_done)
-        else:
-            train_rewardlis, losslist, test_percent_covered = train_RLalg(env, policy, logger, episodes=train_episodes,
-                                                                          render=render_train, ignore_done=ignore_done, drqn=drqn)
+        train_rewardlis, losslist, test_percent_covered = train_RLalg(env, policy, logger, episodes=train_episodes,
+                                                                        render=render_train, ignore_done=ignore_done)
     else:
         print("-----------------------Running Random Policy-----------------------")
 
