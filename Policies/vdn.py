@@ -77,7 +77,7 @@ class VDN(Base_Policy):
         #generating the action for each robot
         if(s > self._epsilon or (self._testing and s>self._testing_epsilon)):
             #greedy
-            actions = torch.argmax(qvals, dim=1).numpy()
+            actions = torch.argmax(qvals, dim=1).cpu().numpy()
         else:
             #random
             actions = np.random.randint(self.num_actions)
