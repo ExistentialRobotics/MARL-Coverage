@@ -149,7 +149,6 @@ obs_dim = env._obs_dim
 '''Init action space'''
 action_space = Discrete(num_actions)
 
-ignore_done = False
 drqn = False
 
 '''Init policy'''
