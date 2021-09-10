@@ -8,7 +8,7 @@ from Action_Spaces.discrete import Discrete
 from Policies.basic_random import Basic_Random
 from Policies.dqn import DQN
 from Policies.drqn import DRQN
-from Policies.replaybuffer import ReplayBuffer
+from Policies.vdn import VDN
 from Logger.logger import Logger
 from Utils.utils import train_RLalg, test_RLalg
 from Policies.Networks.grid_rl_conv import Grid_RL_Conv

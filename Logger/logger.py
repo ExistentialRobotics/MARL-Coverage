@@ -85,7 +85,7 @@ class Logger(object):
             #saving video
             self._writer.release()
 
-        sys.stdout.log.close()
+        # sys.stdout.log.close()
         #check if there is any timeseries data and save to text file
         #TODO
 

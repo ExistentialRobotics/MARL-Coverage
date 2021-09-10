@@ -31,6 +31,10 @@ class DecGridRL(object):
         self._egoradius = env_config['egoradius']
         self._mini_map_rad = env_config['mini_map_rad']
         self._comm_radius = env_config['comm_radius']
+        self._allow_comm = env_config['allow_comm']
+
+        #padding for map arrays
+        self._pad = max(self._egoradius, self._mini_map_rad)
 
         #pick random map and generate robot positions
         self.reset()
@@ -61,51 +65,18 @@ class DecGridRL(object):
         # apply controls to each robot
         for i in range(self._numrobot):
             u = ulis[i]
-
-            #left
-            if(u == 0):
-                x = self._xinds[i] - 1
-                y = self._yinds[i]
-
-                if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
-                    self._robot_pos_map[self._xinds[i]][self._yinds[i]] = 0
-                    self._xinds[i] = x
-                    self._robot_pos_map[x][y] = 1
-                else:
-                    reward -= self._collision_penalty
             #right
-            elif(u == 1):
-                x = self._xinds[i] + 1
-                y = self._yinds[i]
-
-                if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
-                    self._robot_pos_map[self._xinds[i]][self._yinds[i]] = 0
-                    self._xinds[i] = x
-                    self._robot_pos_map[x][y] = 1
-                else:
-                    reward -= self._collision_penalty
+            if(u == 0):
+                reward += self.updateRobotPos(self._xinds[i] + 1, self._yinds[i], i)
             #up
+            elif(u == 1):
+                reward += self.updateRobotPos(self._xinds[i], self._yinds[i] + 1, i)
+            #left
             elif(u == 2):
-                x = self._xinds[i]
-                y = self._yinds[i] + 1
-
-                if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
-                    self._robot_pos_map[self._xinds[i]][self._yinds[i]] = 0
-                    self._yinds[i] = y
-                    self._robot_pos_map[x][y] = 1
-                else:
-                    reward -= self._collision_penalty
+                reward += self.updateRobotPos(self._xinds[i] - 1, self._yinds[i], i)
             #down
             elif(u == 3):
-                x = self._xinds[i]
-                y = self._yinds[i] - 1
-
-                if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
-                    self._robot_pos_map[self._xinds[i]][self._yinds[i]] = 0
-                    self._yinds[i]= y
-                    self._robot_pos_map[x][y] = 1
-                else:
-                    reward -= self._collision_penalty
+                reward += self.updateRobotPos(self._xinds[i], self._yinds[i] - 1, i)
 
         # update communication graph
         self.updateCommmunicationGraph()
@@ -125,11 +96,39 @@ class DecGridRL(object):
         if min(self._done_thresh, 1) <= self.percent_covered():
             reward += self._terminal_reward
 
-
-        if self._comm_radius > 0:
+        if self._allow_comm:
             return [observations, self._adjacency_matrix], reward
         else:
             return observations, reward
+
+    def updateRobotPos(self, x, y, i):
+        """Updates the position of robot with robotindex to new coordinates
+        if it doesn't result in a collision.
+
+        Args:
+           x : the new x position
+           y : the new y position
+           i : the index of the robot to update
+
+        Returns: negative reward if collision would have occurred, zero
+        otherwise
+        """
+        if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
+            #removing old robot positions from map
+            self._robot_pos_map[self._xinds[i]][self._yinds[i]] = 0
+            self._robot_pad[self._xinds[i]+self._pad][self._yinds[i]+self._pad]=0
+
+            #updating tracked robot position
+            self._xinds[i] = x
+            self._yinds[i] = y
+
+            #updating map with new position
+            self._robot_pos_map[x][y] = 1
+            self._robot_pad[x+self._pad][y+self._pad] = 1
+
+            return 0
+        else:
+            return -self._collision_penalty
 
     def observe(self):
         '''
@@ -149,6 +148,7 @@ class DecGridRL(object):
                     if(self.isInBounds(j,k) and self._grid[j][k]>=0):
                         # mark as not free
                         self._free[i][j][k] = 1
+                        self._free_pad[i][j+self._pad][k+self._pad] = 1
 
                         #checking if visited
                         if not self._visited[j][k]:
@@ -165,6 +165,7 @@ class DecGridRL(object):
                             self._observed_obstacles[i][j][k] == 0):
                             # track observed obstacles
                             self._observed_obstacles[i][j][k] = 1
+                            self._obst_pad[i][j+self._pad][k+self._pad]=1
         return obs_reward
 
     def isInBounds(self, x, y):
@@ -180,7 +181,6 @@ class DecGridRL(object):
         perspective (centered at the agents' current positions). Draws data from the
         shared map.
         '''
-
         #creating the observation array
         if self._mini_map_rad > 0:
             numlayers = 5
@@ -195,15 +195,21 @@ class DecGridRL(object):
             y = self._yinds[i]
 
             #egocentric observation layers
-            z[i][0] = self.arraySubset(self._robot_pos_map, x, y, self._egoradius)
-            z[i][1] = self.arraySubset(self._free[i], x, y, self._egoradius)
-            z[i][2] = self.arraySubset(self._observed_obstacles[i], x, y,
+            z[i][0] = self.arraySubset(self._robot_pad, x, y, self._egoradius)
+            z[i][1] = self.arraySubset(self._free_pad[i], x, y, self._egoradius)
+            z[i][2] = self.arraySubset(self._obst_pad[i], x, y,
                                     self._egoradius)
+            #TODO I think this has been resolved, we don't need the copy
+            # z[i][0][0][0] = 100
+            # assert self._robot_pad[0][0] != 100
+
+            # self._robot_pad[0][0] = 10
+            # assert z[i][0][0][0] != 10
 
             #larger map view
             if self._mini_map_rad > 0:
-                mini_free = self.arraySubset(self._free[i], x, y, self._mini_map_rad, pad=1)
-                mini_obs = self.arraySubset(self._observed_obstacles[i], x, y,
+                mini_free = self.arraySubset(self._free_pad[i], x, y, self._mini_map_rad)
+                mini_obs = self.arraySubset(self._obst_pad[i], x, y,
                                             self._mini_map_rad)
                 z[i][3] = cv2.resize(mini_free, dsize=(2*self._egoradius + 1, 2*self._egoradius + 1), interpolation=cv2.INTER_LINEAR)
                 z[i][4] = cv2.resize(mini_obs, dsize=(2*self._egoradius + 1, 2*self._egoradius + 1), interpolation=cv2.INTER_LINEAR)
@@ -233,36 +239,32 @@ class DecGridRL(object):
 
         for i in range(xinds.shape[0]):
             for j in range(i+1, xinds.shape[0]):
-                #euclidean distance
-                # dist = np.sqrt((xinds[i] - xinds[j])**2 + (yinds[i] - yinds[j])**2)
                 #chebyshev distance
                 dist = max(abs(xinds[i] - xinds[j]), abs(yinds[i] - yinds[j]))
                 if dist <= self._comm_radius:
                     self._adjacency_matrix[i][j] = 1
                     self._adjacency_matrix[j][i] = 1
 
-    def arraySubset(self, array, x, y, radius, pad=0):
+    def arraySubset(self, array, x, y, radius):
+        '''
+        Returns a subset of the given array centered at (x,y) with the given
+        radius (chebyshev metric). The array is assumed to be prepadded with
+        '''
         width = array.shape[0]
         length = array.shape[1]
 
-        #right and left boundaries
-        lb = max(0, x - radius)
-        rb = min(width, x + radius + 1)
+        lb = x - radius + self._pad
+        rb = x + radius + 1 + self._pad
 
         #up and down boundaries
-        ub = min(length, y + radius + 1)
-        db = max(0, y - radius)
+        ub = y + radius + 1 + self._pad
+        db = y - radius + self._pad
 
         #raw observation
         obs = array[lb:rb, db:ub]
 
-        #adding padding in each direction to observation
-        lpad = max(0, radius-x)
-        rpad = max(0, x + radius + 1 - width)
-        dpad = max(0, radius-y)
-        upad = max(0, y + radius + 1 - length)
-        obs = np.pad(obs, ((lpad, rpad), (dpad, upad)), 'constant', constant_values=(pad,))
-
+        #TODO do we need to copy the array, it adds a fair amount of overhead
+        # return np.copy(obs)
         return obs
 
     def reset(self):
@@ -285,6 +287,7 @@ class DecGridRL(object):
 
         #map of robot positions
         self._robot_pos_map = np.zeros((self._gridwidth, self._gridlen))
+        self._robot_pad = np.zeros((self._gridwidth + 2*self._pad, self._gridlen + 2*self._pad))
 
         #repeatedly trying to insert robots
         count = 0
@@ -302,9 +305,11 @@ class DecGridRL(object):
 
         # history of observed obstacles
         self._observed_obstacles = np.zeros((self._numrobot, self._gridwidth, self._gridlen))
+        self._obst_pad = np.zeros((self._numrobot, self._gridwidth + 2*self._pad, self._gridlen + 2*self._pad))
 
         # history of free cells, one layer per robot
         self._free = np.zeros((self._numrobot, self._gridwidth, self._gridlen))
+        self._free_pad = np.zeros((self._numrobot, self._gridwidth + 2*self._pad, self._gridlen + 2*self._pad))
 
         #visited array to track all visitations
         self._visited = np.zeros((self._gridwidth, self._gridlen))
@@ -320,7 +325,7 @@ class DecGridRL(object):
         observations = self.get_egocentric_observations()
 
         #return observations
-        if self._comm_radius > 0:
+        if self._allow_comm:
             return [observations, self._adjacency_matrix]
         else:
             return observations
@@ -363,7 +368,11 @@ class DecGridRL(object):
 
         image = cv2.copyMakeBorder(image, 0, 1075 - image.shape[1], 0, 1075 - image.shape[0], cv2.BORDER_CONSTANT, value=[0,0,0])
 
+        #graphing occupancy grid
         surf = pygame.surfarray.make_surface(image)
+
+        #graphing adjacency matrix connections
+
         self._display.blit(surf, (0, 0))
         pygame.display.update()
 
