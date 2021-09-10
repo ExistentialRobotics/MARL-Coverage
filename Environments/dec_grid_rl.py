@@ -287,7 +287,8 @@ class DecGridRL(object):
 
         #map of robot positions
         self._robot_pos_map = np.zeros((self._gridwidth, self._gridlen))
-        self._robot_pad = np.zeros((self._gridwidth + 2*self._pad, self._gridlen + 2*self._pad))
+        self._robot_pad = np.zeros((self._gridwidth + 2*self._pad,
+                                    self._gridlen + 2*self._pad))
 
         #repeatedly trying to insert robots
         count = 0
@@ -304,12 +305,15 @@ class DecGridRL(object):
                 count += 1
 
         # history of observed obstacles
-        self._observed_obstacles = np.zeros((self._numrobot, self._gridwidth, self._gridlen))
-        self._obst_pad = np.zeros((self._numrobot, self._gridwidth + 2*self._pad, self._gridlen + 2*self._pad))
+        self._observed_obstacles = np.zeros((self._numrobot, self._gridwidth,
+                                             self._gridlen))
+        self._obst_pad = np.zeros((self._numrobot, self._gridwidth +
+                                   2*self._pad, self._gridlen + 2*self._pad))
 
         # history of free cells, one layer per robot
         self._free = np.zeros((self._numrobot, self._gridwidth, self._gridlen))
-        self._free_pad = np.zeros((self._numrobot, self._gridwidth + 2*self._pad, self._gridlen + 2*self._pad))
+        self._free_pad = np.zeros((self._numrobot, self._gridwidth +
+                                   2*self._pad, self._gridlen + 2*self._pad))
 
         #visited array to track all visitations
         self._visited = np.zeros((self._gridwidth, self._gridlen))
@@ -354,7 +358,8 @@ class DecGridRL(object):
         image += obslayer
 
         #adding observed free cells to the base
-        freelayer = np.stack([0*self._visited, 225*self._visited, 255*self._visited], -1)
+        freelayer = np.stack([0*self._visited, 225*self._visited,
+                              255*self._visited], -1)
         image += freelayer
 
         #adding robot positions to the base
@@ -364,14 +369,25 @@ class DecGridRL(object):
         image += freelayer
 
         scaling = max(min(1024//self._gridwidth, 1024//self._gridlen), 1)
-        image = cv2.resize(image, (0,0), fx=scaling, fy=scaling, interpolation=cv2.INTER_NEAREST)
+        image = cv2.resize(image, (0,0), fx=scaling, fy=scaling,
+                           interpolation=cv2.INTER_NEAREST)
 
-        image = cv2.copyMakeBorder(image, 0, 1075 - image.shape[1], 0, 1075 - image.shape[0], cv2.BORDER_CONSTANT, value=[0,0,0])
+        image = cv2.copyMakeBorder(image, 0, 1075 - image.shape[1], 0, 1075 -
+                                   image.shape[0], cv2.BORDER_CONSTANT, value=[0,0,0])
 
         #graphing occupancy grid
         surf = pygame.surfarray.make_surface(image)
 
         #graphing adjacency matrix connections
+        #TODO make this more efficient
+        xinds = self._xinds
+        yinds = self._yinds
+        for i in range(xinds.shape[0]):
+            for j in range(i+1, xinds.shape[0]):
+                if self._adjacency_matrix[i][j]:
+                    start = (int(scaling*(xinds[i] + 0.5)), int(scaling*(yinds[i] + 0.5)))
+                    end = (int(scaling*(xinds[j] + 0.5)), int(scaling*(yinds[j] + 0.5)))
+                    pygame.draw.line(surf, (255, 0, 0), start, end, 5)
 
         self._display.blit(surf, (0, 0))
         pygame.display.update()
