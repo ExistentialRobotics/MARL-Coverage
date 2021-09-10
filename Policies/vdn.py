@@ -27,11 +27,15 @@ class VDN(Base_Policy):
         self._min_epsilon = policy_config['min_epsilon']
         self._testing = False
         self._testing_epsilon = policy_config['testing_epsilon']
-        buffer_maxsize = policy_config['buffer_size']
-        self._buff = ReplayBuffer((numrobot,) + obs_dim, numrobot, buffer_maxsize)
         self.batch_size = policy_config['batch_size']
         self._gamma = policy_config['gamma']
         self._tau = policy_config['tau']
+        buffer_maxsize = policy_config['buffer_size']
+        self._use_graph = policy_config['use_graph']
+        if self._use_graph:
+            self._buff = ReplayBuffer((numrobot,) + obs_dim, numrobot, buffer_maxsize, (numrobot, numrobot))
+        else:
+            self._buff = ReplayBuffer((numrobot,) + obs_dim, numrobot, buffer_maxsize)
 
         #cpu vs gpu code
         self._device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -68,8 +72,13 @@ class VDN(Base_Policy):
         '''
         # calc qvals for each agent, using no grad to avoid computing gradients
         with torch.no_grad():
-            obs_tensor = (torch.from_numpy(observations).float()).to(self._device)
-            qvals = self.q_net(obs_tensor)
+            if self._use_graph:
+                obs = (torch.from_numpy(observations[0]).float()).to(self._device)
+                graph = (torch.from_numpy(observations[1]).float()).to(self._device)
+                qvals = self.q_net(obs, graph)
+            else:
+                obs_tensor = (torch.from_numpy(observations).float()).to(self._device)
+                qvals = self.q_net(obs_tensor)
 
         #epsilon greedy check
         s = np.random.uniform()
@@ -96,7 +105,11 @@ class VDN(Base_Policy):
         self.optimizer.zero_grad()
 
         #sampling episodes
-        obs, actions, rewards, next_obs, done = self._buff.samplebatch(self.batch_size)
+        if self._use_graph:
+            obs, actions, rewards, next_obs, done, graph, next_graph = self._buff.samplebatch(self.batch_size)
+        else:
+            obs, actions, rewards, next_obs, done = self._buff.samplebatch(self.batch_size)
+
 
         # convert to tensors
         obs = torch.from_numpy(obs).float()
@@ -112,8 +125,17 @@ class VDN(Base_Policy):
         next_obs = next_obs.to(self._device)
         done = done.to(self._device)
 
+        if self._use_graph:
+            graph = torch.from_numpy(graph).float()
+            next_graph = torch.from_numpy(next_graph).float()
+            graph = graph.to(self._device)
+            next_graph = next_graph.to(self._device)
+
         # gradient calculation
-        loss = self.calc_gradient(obs, actions, rewards, next_obs, done, self.batch_size)
+        if self._use_graph:
+            loss = self.calc_gradient(obs, actions, rewards, next_obs, done, self.batch_size, graph, next_graph)
+        else:
+            loss = self.calc_gradient(obs, actions, rewards, next_obs, done, self.batch_size)
 
         #tracking loss
         self._lastloss = loss.item()
@@ -129,12 +151,17 @@ class VDN(Base_Policy):
                 q_targ.data.add_((1 - self._tau) * q.data)
 
         #paranoid about memory leak
-        del obs, next_obs, rewards, actions
+        del obs, next_obs, rewards, actions, done
 
-    def calc_gradient(self, obs, actions, rewards, next_obs, done, batch_size):
+    def calc_gradient(self, obs, actions, rewards, next_obs, done, batch_size,
+                      graph=None, next_graph=None):
         # calc q and next q
-        qvals = self.q_net(obs)
-        next_qvals = self.target_net(next_obs)
+        if self._use_graph:
+            qvals = self.q_net(obs, graph)
+            next_qvals = self.target_net(next_obs, next_graph)
+        else:
+            qvals = self.q_net(obs)
+            next_qvals = self.target_net(next_obs)
 
         # calculate gradient for q function
         y = torch.zeros(batch_size).to(self._device)

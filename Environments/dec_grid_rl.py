@@ -32,6 +32,7 @@ class DecGridRL(object):
         self._mini_map_rad = env_config['mini_map_rad']
         self._comm_radius = env_config['comm_radius']
         self._allow_comm = env_config['allow_comm']
+        # self._map_sharing = env_config['map_sharing']
 
         #padding for map arrays
         self._pad = max(self._egoradius, self._mini_map_rad)

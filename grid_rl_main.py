@@ -149,8 +149,6 @@ obs_dim = env._obs_dim
 '''Init action space'''
 action_space = Discrete(num_actions)
 
-drqn = False
-
 '''Init policy'''
 random_policy = False
 if policy_name == "random":
