@@ -6,11 +6,7 @@ from Environments.super_grid_rl import SuperGridRL
 from Environments.dec_grid_rl import DecGridRL
 from Action_Spaces.discrete import Discrete
 from Policies.basic_random import Basic_Random
-from Policies.vpg import VPG
 from Policies.dqn import DQN
-from Policies.ac import AC
-from Policies.ddpg import DDPG
-from Policies.vdn import VDN
 from Policies.drqn import DRQN
 from Policies.replaybuffer import ReplayBuffer
 from Logger.logger import Logger
@@ -153,6 +149,9 @@ obs_dim = env._obs_dim
 '''Init action space'''
 action_space = Discrete(num_actions)
 
+ignore_done = False
+drqn = False
+
 '''Init policy'''
 random_policy = False
 if policy_name == "random":
@@ -195,7 +194,8 @@ if not saved_model:
 '''Test policy'''
 print("-----------------------------Testing Policy----------------------------")
 #testing the policy and collecting data
-test_rewardlis, average_percent_covered = test_RLalg(env, policy, logger, episodes=test_episodes, render_test=render_test, makevid=makevid)
+test_rewardlis, average_percent_covered = test_RLalg(env, policy, logger, episodes=test_episodes, render_test=render_test,
+                                                     makevid=makevid)
 
 '''Display results'''
 print(DASH)

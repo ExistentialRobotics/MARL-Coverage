@@ -121,5 +121,3 @@ def test_RLalg(env, policy, logger, episodes=100, render_test=False, makevid=Fal
     #returning the statistics
     average_percent_covered = percent_covered/episodes*100
     return test_rewardlis, average_percent_covered
-
-
