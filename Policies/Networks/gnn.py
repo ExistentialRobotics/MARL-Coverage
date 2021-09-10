@@ -81,6 +81,9 @@ class GNN(torch.nn.Module):
                 hidden_MLP_layers += [nn.Linear(hidden_sizes[i - 1], hidden_sizes[i]),
                            hidden_activation()]
 
+        # save the output of the hidden mlp, will be needed later
+        self.num_compressed_features = hidden_sizes[-1]
+
         # insert hidden mlp layers into nn.sequential, now they're ready for forward()
         self.hidden_MLP_layers = nn.Sequential(*hidden_MLP_layers)
         self.hidden_MLP_layers.apply(init_weights)
@@ -94,7 +97,7 @@ class GNN(torch.nn.Module):
         node_feature_size = [model_config["node_feature_size"]]
 
         self.L = len(nGraphFilterTaps)  # Number of graph filtering layers
-        self.F = [hidden_sizes[-1]] + node_feature_size  # Features
+        self.F = [self.num_compressed_features] + node_feature_size  # Features
         self.K = nGraphFilterTaps  # nFilterTaps # Filter taps
         self.E = 1  # Number of edge features
         self.bias = True

@@ -32,6 +32,7 @@ class DecGridRL(object):
         self._mini_map_rad = env_config['mini_map_rad']
         self._comm_radius = env_config['comm_radius']
         self._allow_comm = env_config['allow_comm']
+        self._map_sharing = env_config['map_sharing']
 
         #padding for map arrays
         self._pad = max(self._egoradius, self._mini_map_rad)
@@ -61,6 +62,11 @@ class DecGridRL(object):
 
         #initialize reward for this step
         reward = 0
+
+        #sharing maps before anything gets observed (there has to be a
+        #one timestep delay before shared data can be used for policy)
+        if self._map_sharing:
+            self.shareMaps()
 
         # apply controls to each robot
         for i in range(self._numrobot):
@@ -141,13 +147,19 @@ class DecGridRL(object):
             x = self._xinds[i]
             y = self._yinds[i]
 
+            #left and right boundaries
+            lb = max(x-self._senseradius, 0)
+            rb = min(x+self._senseradius+1, self._gridwidth)
+
+            #up and down boundaries
+            db = max(y-self._senseradius, 0)
+            ub = min(y+self._senseradius+1, self._gridlen)
+
             #looping over all grid cells to sense
-            for j in range(x - self._senseradius, x + self._senseradius + 1):
-                for k in range(y - self._senseradius, y + self._senseradius + 1):
-                    #checking if cell is in bounds, not an obstacle
-                    if(self.isInBounds(j,k) and self._grid[j][k]>=0):
+            for j in range(lb, rb):
+                for k in range(db, ub):
+                    if self._grid[j][k] >= 0:
                         # mark as not free
-                        self._free[i][j][k] = 1
                         self._free_pad[i][j+self._pad][k+self._pad] = 1
 
                         #checking if visited
@@ -160,12 +172,10 @@ class DecGridRL(object):
                             self._visited[j][k] = 1
                         else:
                             obs_reward -= self._free_penalty
-
-                    elif(self.isInBounds(j,k) and self._grid[j][k]<0 and
-                            self._observed_obstacles[i][j][k] == 0):
-                            # track observed obstacles
-                            self._observed_obstacles[i][j][k] = 1
-                            self._obst_pad[i][j+self._pad][k+self._pad]=1
+                    else:
+                        # track observed obstacles
+                        self._obst_pad[i][j+self._pad][k+self._pad]=1
+                        self._observed_obstacles[j][k] = 1
         return obs_reward
 
     def isInBounds(self, x, y):
@@ -199,13 +209,6 @@ class DecGridRL(object):
             z[i][1] = self.arraySubset(self._free_pad[i], x, y, self._egoradius)
             z[i][2] = self.arraySubset(self._obst_pad[i], x, y,
                                     self._egoradius)
-            #TODO I think this has been resolved, we don't need the copy
-            # z[i][0][0][0] = 100
-            # assert self._robot_pad[0][0] != 100
-
-            # self._robot_pad[0][0] = 10
-            # assert z[i][0][0][0] != 10
-
             #larger map view
             if self._mini_map_rad > 0:
                 mini_free = self.arraySubset(self._free_pad[i], x, y, self._mini_map_rad)
@@ -253,6 +256,7 @@ class DecGridRL(object):
         width = array.shape[0]
         length = array.shape[1]
 
+        #right and left boundaries
         lb = x - radius + self._pad
         rb = x + radius + 1 + self._pad
 
@@ -263,9 +267,34 @@ class DecGridRL(object):
         #raw observation
         obs = array[lb:rb, db:ub]
 
-        #TODO do we need to copy the array, it adds a fair amount of overhead
-        # return np.copy(obs)
         return obs
+
+    def shareMaps(self):
+        """Each agent shares observation and free maps with agents in its
+        communication radius.
+
+        Returns: nothing
+        """
+
+        #making temporary arrays for intermediate results
+        obst_temp = np.zeros((self._numrobot, self._gridwidth +
+                                   2*self._pad, self._gridlen + 2*self._pad))
+        free_temp = np.zeros((self._numrobot, self._gridwidth +
+                                   2*self._pad, self._gridlen + 2*self._pad))
+        #looping over items in adjacency matrix and summing neighbors
+        for i in range(self._numrobot):
+            for j in range(self._numrobot):
+                if self._adjacency_matrix[i][j] or i == j:
+                    obst_temp[i] += self._obst_pad[j]
+                    free_temp[i] += self._free_pad[j]
+        #clipping to be within 0 and 1
+        obst_temp = np.clip(obst_temp, 0, 1)
+        free_temp = np.clip(free_temp, 0, 1)
+
+        #updating arrays
+        self._obst_pad = obst_temp
+        self._free_pad = free_temp
+
 
     def reset(self):
         #picking a map at random
@@ -305,13 +334,11 @@ class DecGridRL(object):
                 count += 1
 
         # history of observed obstacles
-        self._observed_obstacles = np.zeros((self._numrobot, self._gridwidth,
-                                             self._gridlen))
+        self._observed_obstacles = np.zeros((self._gridwidth, self._gridlen))
         self._obst_pad = np.zeros((self._numrobot, self._gridwidth +
                                    2*self._pad, self._gridlen + 2*self._pad))
 
         # history of free cells, one layer per robot
-        self._free = np.zeros((self._numrobot, self._gridwidth, self._gridlen))
         self._free_pad = np.zeros((self._numrobot, self._gridwidth +
                                    2*self._pad, self._gridlen + 2*self._pad))
 
@@ -351,7 +378,7 @@ class DecGridRL(object):
         image = np.zeros((self._gridwidth, self._gridlen, 3))
 
         #adding observed obstacles to the base
-        unionobst = np.clip(np.sum(self._observed_obstacles, axis=0), 0, 1)
+        unionobst = self._observed_obstacles
         obslayer = np.stack([200*unionobst,
                              0*unionobst,
                              255*unionobst], -1)
