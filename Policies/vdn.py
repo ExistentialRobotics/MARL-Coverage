@@ -3,6 +3,7 @@ import torch
 import itertools
 from . base_policy import Base_Policy
 from . Networks.grid_rl_conv import Grid_RL_Conv
+from . Networks.gnn import GNN
 from . replaybuffer import ReplayBuffer
 from torch.distributions.categorical import Categorical
 from copy import deepcopy
@@ -66,9 +67,11 @@ class VDN(Base_Policy):
         one for each agent. The observations should be stacked in a numpy array,
         along the first axis.
         '''
+        obs, adj_m = observations
+
         # calc qvals for each agent, using no grad to avoid computing gradients
         with torch.no_grad():
-            obs_tensor = (torch.from_numpy(observations).float()).to(self._device)
+            obs_tensor = (torch.from_numpy(obs).float()).to(self._device)
             qvals = self.q_net(obs_tensor)
 
         #epsilon greedy check
