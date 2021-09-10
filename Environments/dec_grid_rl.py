@@ -35,8 +35,7 @@ class DecGridRL(object):
         #pick random map and generate robot positions
         self.reset()
 
-        #observation and action dimensions
-        #TODO fix this stuff for multiagent
+        #observation and action dimensions for each agent
         self._obs_dim = self.get_egocentric_observations()[0].shape
         self._num_actions = 4
 
@@ -47,7 +46,7 @@ class DecGridRL(object):
 
     def step(self, action):
         #handling case where action is an integer that identifies the action
-        if type(action) != list:
+        if type(action) != np.ndarray:
             ulis = np.zeros((self._numrobot,))
             #conveting integer to base 4 and putting it in ulis
             for i in range(self._numrobot):
@@ -126,7 +125,11 @@ class DecGridRL(object):
         if min(self._done_thresh, 1) <= self.percent_covered():
             reward += self._terminal_reward
 
-        return observations, self._adjacency_matrix, reward
+
+        if self._comm_radius > 0:
+            return [observations, self._adjacency_matrix], reward
+        else:
+            return observations, reward
 
     def observe(self):
         '''
@@ -142,25 +145,26 @@ class DecGridRL(object):
             #looping over all grid cells to sense
             for j in range(x - self._senseradius, x + self._senseradius + 1):
                 for k in range(y - self._senseradius, y + self._senseradius + 1):
-                    #checking if cell is not visited, in bounds, not an obstacle
-                    if(self.isInBounds(j,k) and self._grid[j][k]>=0 and
-                        self._free[j][k] == 1):
-                        # add reward
-                        obs_reward += 1
-
-                        self._numobserved += 1
-
+                    #checking if cell is in bounds, not an obstacle
+                    if(self.isInBounds(j,k) and self._grid[j][k]>=0):
                         # mark as not free
-                        self._free[j][k] = 0
+                        self._free[i][j][k] = 1
 
-                    elif(self.isInBounds(j,k) and self._grid[j][k]>=0 and
-                        self._free[j][k] == 0):
-                        obs_reward -= self._free_penalty
+                        #checking if visited
+                        if not self._visited[j][k]:
+                            # add reward
+                            obs_reward += 1
+                            self._numobserved += 1
+
+                            #marking as visited
+                            self._visited[j][k] = 1
+                        else:
+                            obs_reward -= self._free_penalty
 
                     elif(self.isInBounds(j,k) and self._grid[j][k]<0 and
-                            self._observed_obstacles[j][k] == 0):
+                            self._observed_obstacles[i][j][k] == 0):
                             # track observed obstacles
-                            self._observed_obstacles[j][k] = 1
+                            self._observed_obstacles[i][j][k] = 1
         return obs_reward
 
     def isInBounds(self, x, y):
@@ -176,36 +180,35 @@ class DecGridRL(object):
         perspective (centered at the agents' current positions). Draws data from the
         shared map.
         '''
-        zlis = []
+
+        #creating the observation array
+        if self._mini_map_rad > 0:
+            numlayers = 5
+        else:
+            numlayers = 3
+
+        z = np.zeros((self._numrobot, numlayers, 2*self._egoradius + 1, 2*self._egoradius + 1))
+
         #construct state for each robot
         for i in range(self._numrobot):
             x = self._xinds[i]
             y = self._yinds[i]
 
-            if self._mini_map_rad > 0:
-                numlayers = 5
-            else:
-                numlayers = 3
-
-            z = np.zeros((numlayers, 2*self._egoradius + 1, 2*self._egoradius + 1))
-
             #egocentric observation layers
-            z[0] = self.arraySubset(self._robot_pos_map, x, y, self._egoradius)
-            z[1] = self.arraySubset(self._free, x, y, self._egoradius, pad=1)
-            z[2] = self.arraySubset(self._observed_obstacles, x, y,
+            z[i][0] = self.arraySubset(self._robot_pos_map, x, y, self._egoradius)
+            z[i][1] = self.arraySubset(self._free[i], x, y, self._egoradius)
+            z[i][2] = self.arraySubset(self._observed_obstacles[i], x, y,
                                     self._egoradius)
 
             #larger map view
             if self._mini_map_rad > 0:
-                mini_free = self.arraySubset(self._free, x, y, self._mini_map_rad, pad=1)
-                mini_obs = self.arraySubset(self._observed_obstacles, x, y,
+                mini_free = self.arraySubset(self._free[i], x, y, self._mini_map_rad, pad=1)
+                mini_obs = self.arraySubset(self._observed_obstacles[i], x, y,
                                             self._mini_map_rad)
-                z[3] = cv2.resize(mini_free, dsize=(2*self._egoradius + 1, 2*self._egoradius + 1), interpolation=cv2.INTER_LINEAR)
-                z[4] = cv2.resize(mini_obs, dsize=(2*self._egoradius + 1, 2*self._egoradius + 1), interpolation=cv2.INTER_LINEAR)
+                z[i][3] = cv2.resize(mini_free, dsize=(2*self._egoradius + 1, 2*self._egoradius + 1), interpolation=cv2.INTER_LINEAR)
+                z[i][4] = cv2.resize(mini_obs, dsize=(2*self._egoradius + 1, 2*self._egoradius + 1), interpolation=cv2.INTER_LINEAR)
 
-            #adding observation
-            zlis.append(z)
-        return zlis
+        return z
 
     def get_full_observations(self):
         """
@@ -225,13 +228,16 @@ class DecGridRL(object):
         #creating communication graph adjacency matrix
         self._adjacency_matrix = np.zeros((self._numrobot, self._numrobot))
 
+        xinds = self._xinds
+        yinds = self._yinds
+
         for i in range(xinds.shape[0]):
             for j in range(i+1, xinds.shape[0]):
                 #euclidean distance
                 # dist = np.sqrt((xinds[i] - xinds[j])**2 + (yinds[i] - yinds[j])**2)
                 #chebyshev distance
                 dist = max(abs(xinds[i] - xinds[j]), abs(yinds[i] - yinds[j]))
-                if dist <= self._commradius:
+                if dist <= self._comm_radius:
                     self._adjacency_matrix[i][j] = 1
                     self._adjacency_matrix[j][i] = 1
 
@@ -295,20 +301,29 @@ class DecGridRL(object):
                 count += 1
 
         # history of observed obstacles
-        self._observed_obstacles = np.zeros((self._gridwidth, self._gridlen))
+        self._observed_obstacles = np.zeros((self._numrobot, self._gridwidth, self._gridlen))
 
-        # history of free cells
-        self._free = np.ones((self._gridwidth, self._gridlen))
+        # history of free cells, one layer per robot
+        self._free = np.zeros((self._numrobot, self._gridwidth, self._gridlen))
+
+        #visited array to track all visitations
+        self._visited = np.zeros((self._gridwidth, self._gridlen))
 
         #finding number of free cells
         self._numfree = np.count_nonzero(self._grid > 0)
         self._numobserved = 0
 
-        # #performing observation
-        # self.observe()
+        #update communication graph
+        self.updateCommmunicationGraph()
+
+        #return first observation
+        observations = self.get_egocentric_observations()
 
         #return observations
-        return self.get_egocentric_observations()[0]
+        if self._comm_radius > 0:
+            return [observations, self._adjacency_matrix]
+        else:
+            return observations
 
     def done(self):
         if min(self._done_thresh, 1) <= self.percent_covered():
@@ -327,14 +342,14 @@ class DecGridRL(object):
         image = np.zeros((self._gridwidth, self._gridlen, 3))
 
         #adding observed obstacles to the base
-        obslayer = np.stack([200*self._observed_obstacles,
-                             0*self._observed_obstacles,
-                             255*self._observed_obstacles], -1)
+        unionobst = np.clip(np.sum(self._observed_obstacles, axis=0), 0, 1)
+        obslayer = np.stack([200*unionobst,
+                             0*unionobst,
+                             255*unionobst], -1)
         image += obslayer
 
         #adding observed free cells to the base
-        inv_free = 1 - self._free
-        freelayer = np.stack([0*inv_free, 225*inv_free, 255*inv_free], -1)
+        freelayer = np.stack([0*self._visited, 225*self._visited, 255*self._visited], -1)
         image += freelayer
 
         #adding robot positions to the base

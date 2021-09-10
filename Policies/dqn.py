@@ -129,15 +129,13 @@ class DQN(Base_Policy):
         qvals = self.q_net(states)
         next_qvals = self.target_net(next_states)
 
-        # calculate gradient for q function
+        #calculating the q values at next step (next_state)
         with torch.no_grad():
             next_q = torch.max(next_qvals, 1).values
             y = rewards + self._gamma*(1-done)*next_q
 
-        #TODO vectorize this for loop
-        currq = torch.zeros(batch_size).to(self._device)
-        for j in range(qvals.shape[0]):
-            currq[j] = qvals[j, actions[j]]
+        #calculating the q values for current step and current action
+        currq = torch.squeeze(qvals.gather(1, actions.unsqueeze(1)))
 
         #calculating mean squared error
         loss = ((y-currq)**2).mean()

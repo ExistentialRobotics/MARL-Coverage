@@ -14,8 +14,8 @@ from Policies.vdn import VDN
 from Policies.drqn import DRQN
 from Policies.replaybuffer import ReplayBuffer
 from Logger.logger import Logger
-from Utils.utils import train_RLalg, train_RLalg_ddpg, test_RLalg
-from Policies.Networks.grid_rl_conv import Grid_RL_Conv, Critic
+from Utils.utils import train_RLalg, test_RLalg
+from Policies.Networks.grid_rl_conv import Grid_RL_Conv
 from Policies.Networks.grid_rl_recur import Grid_RL_Recur
 from Utils.gridmaker import gridgen, gridload
 
@@ -107,6 +107,7 @@ except:
 '''Environment Parameters'''
 env_name       = exp_parameters["env_name"]
 env_config     = exp_parameters['env_config']
+numrobot       = env_config['numrobot']
 
 '''Experiment Parameters'''
 exp_name       = exp_parameters["exp_name"]
@@ -160,7 +161,7 @@ if policy_name == "random":
 else:
     #creating neural net, same constructor params for both vpg and dqn
     if policy_name == 'vdn':
-        net = Grid_RL_Conv(4*numrobot, obs_dim, model_config)
+        net = Grid_RL_Conv(num_actions, obs_dim, model_config)
     elif policy_name == "drqn":
         net = Grid_RL_Recur(num_actions, obs_dim, model_config)
     else:
@@ -174,10 +175,10 @@ else:
         # init policy
         policy = DRQN(net, num_actions, obs_dim, policy_config, model_config,
                       model_path=model_path)
-    elif exp_parameters["policy_type"] == "vdn":
+    elif policy_name == "vdn":
         # init policy
-        policy = VDN(net, num_actions, obs_dim, policy_config, model_config,
-                      model_path=model_path)
+        policy = VDN(net, num_actions, obs_dim, numrobot, policy_config,
+                     model_path=model_path)
 
 # train a policy if not testing a saved model
 if not saved_model:

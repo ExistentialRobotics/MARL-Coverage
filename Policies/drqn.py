@@ -63,11 +63,10 @@ class DRQN(Base_Policy):
         s = np.random.uniform()
 
         # init hidden state if necessary
-        if start:
-            self.curr_hidden = (torch.zeros((self._num_recurr_layers, 1,
-                                             self._lstm_cell_size)).to(self._device),
-                                torch.zeros((self._num_recurr_layers, 1,
-                                             self._lstm_cell_size)).to(self._device))
+        self.curr_hidden = (torch.zeros((self._num_recurr_layers, 1,
+                                            self._lstm_cell_size)).to(self._device),
+                            torch.zeros((self._num_recurr_layers, 1,
+                                            self._lstm_cell_size)).to(self._device))
 
         #epsilon greedy policy
         #if we are testing then we use a smaller testing epsilon
@@ -155,10 +154,8 @@ class DRQN(Base_Policy):
                 next_q = torch.max(next_qvals, 1).values
                 y = rewards[i] + self._gamma*(1-done[i])*next_q
 
-            #TODO vectorize this for loop
-            currq = torch.zeros(batch_size).to(self._device)
-            for j in range(batch_size):
-                currq[j] = qvals[j, actions[i][j]]
+            #calculating the q values for current step and current action
+            currq = torch.squeeze(qvals.gather(1, actions[i].unsqueeze(1)))
 
             #calculating mean squared error
             loss += ((y-currq)**2).mean()

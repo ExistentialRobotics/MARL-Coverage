@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from . environment import Environment
-from . graph_data import Graph_Data
 from queue import PriorityQueue
 import cv2
 import pygame
@@ -33,8 +32,8 @@ class SuperGridRL(object):
         #pick random map and generate robot positions
         self.reset()
 
-        # init graph data object
-        self._graph = Graph_Data(env_config['numfeatures'], self._xinds, self._yinds, env_config['commradius'])
+        # # init graph data object
+        # self._graph = Graph_Data(env_config['numfeatures'], self._xinds, self._yinds, env_config['commradius'])
 
         #observation and action dimensions
         self._obs_dim = self.get_state().shape
@@ -156,7 +155,7 @@ class SuperGridRL(object):
                             self._observed_obstacles[j][k] = 1
 
         # update graph
-        self._graph.set_data(self._xinds, self._yinds)
+        # self._graph.set_data(self._xinds, self._yinds)
 
         #calculate current state
         state = self.get_state()
@@ -270,7 +269,7 @@ class SuperGridRL(object):
         plt.clf()
 
         # display robot connections for debugging purposes
-        self._graph.display_connections()
+        # self._graph.display_connections()
 
         #render all robots
         for i in range(self._numrobot):

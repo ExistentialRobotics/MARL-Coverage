@@ -58,7 +58,7 @@ def train_RLalg(env, policy, logger, episodes=1000, render=False,
             print("Training Episode: " + str(_) + " out of " + str(episodes))
 
         # obtain the next episode
-        episode, total_reward = generate_episode(env, policy, logger, render=False, makevid=False, drqn=drqn, ignore_done=ignore_done)
+        episode, total_reward = generate_episode(env, policy, logger, render=False, makevid=False, ignore_done=ignore_done)
 
         # track reward per episode
         reward_per_episode.append(total_reward)
@@ -74,7 +74,7 @@ def train_RLalg(env, policy, logger, episodes=1000, render=False,
             logger.saveModelWeights(policy.getnet())
 
             #testing policy
-            testrewards, average_percent_covered = test_RLalg(env, policy, logger, episodes=100, render_test=render, ddpg=False)
+            testrewards, average_percent_covered = test_RLalg(env, policy, logger, episodes=100, render_test=render)
             test_percent_covered.append(average_percent_covered)
             policy.set_train()
 
@@ -94,7 +94,7 @@ def train_RLalg(env, policy, logger, episodes=1000, render=False,
     return reward_per_episode, losslist, test_percent_covered
 
 
-def test_RLalg(env, policy, logger, episodes=100, render_test=False, makevid=False, ddpg=False):
+def test_RLalg(env, policy, logger, episodes=100, render_test=False, makevid=False):
     # set model to eval mode
     policy.set_eval()
 
@@ -109,7 +109,7 @@ def test_RLalg(env, policy, logger, episodes=100, render_test=False, makevid=Fal
             print("Testing Episode: " + str(_) + " out of " + str(episodes))
 
         # obtain episode
-        episode, total_reward = generate_episode(env, policy, logger, render=render, makevid=makevid, ddpg=ddpg, testing=True)
+        episode, total_reward = generate_episode(env, policy, logger, render=render, makevid=makevid, testing=True)
 
         # track test related statistics
         percent_covered += env.percent_covered()

@@ -2,8 +2,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from Policies.Networks.Qnet import init_weights
-
 '''
 Switched Padding back to what it was earlier to test if that is
 breaking the performance, ideally it shouldn't be but who knows.
@@ -133,3 +131,8 @@ class Grid_RL_Recur(nn.Module):
             x, hidden = self.lstm(x, hidden)
             x = self.lin_layers(torch.squeeze(x, axis=1))
             return torch.squeeze(x, axis=0), hidden
+
+def init_weights(m):
+    if type(m) == nn.Linear:
+        nn.init.kaiming_uniform_(m.weight)
+        m.bias.data.fill_(0)
