@@ -3,6 +3,7 @@ import torch
 import itertools
 from . base_policy import Base_Policy
 from . Networks.grid_rl_conv import Grid_RL_Conv
+from . Networks.gnn import GNN
 from . replaybuffer import ReplayBuffer
 from torch.distributions.categorical import Categorical
 from copy import deepcopy
@@ -70,15 +71,21 @@ class VDN(Base_Policy):
         one for each agent. The observations should be stacked in a numpy array,
         along the first axis.
         '''
+
         # calc qvals for each agent, using no grad to avoid computing gradients
         with torch.no_grad():
             if self._use_graph:
                 obs = (torch.from_numpy(observations[0]).float()).to(self._device)
-                graph = (torch.from_numpy(observations[1]).float()).to(self._device)
-                qvals = self.q_net(obs, graph)
+
+                # reformat and add GSO
+                adj_m = (torch.from_numpy(observations[1]).float()).to(self._device)
+                adj_m = torch.unsqueeze(adj_m, axis=0)
+                self.q_net.addGSO(adj_m)
+
+                qvals = torch.squeeze(self.q_net(obs), axis=0)
             else:
-                obs_tensor = (torch.from_numpy(observations).float()).to(self._device)
-                qvals = self.q_net(obs_tensor)
+                obs = (torch.from_numpy(observations).float()).to(self._device)
+                qvals = self.q_net(obs)
 
         #epsilon greedy check
         s = np.random.uniform()
@@ -109,7 +116,6 @@ class VDN(Base_Policy):
             obs, actions, rewards, next_obs, done, graph, next_graph = self._buff.samplebatch(self.batch_size)
         else:
             obs, actions, rewards, next_obs, done = self._buff.samplebatch(self.batch_size)
-
 
         # convert to tensors
         obs = torch.from_numpy(obs).float()
@@ -157,8 +163,11 @@ class VDN(Base_Policy):
                       graph=None, next_graph=None):
         # calc q and next q
         if self._use_graph:
-            qvals = self.q_net(obs, graph)
-            next_qvals = self.target_net(next_obs, next_graph)
+            self.q_net.addGSO(graph)
+            qvals = self.q_net(obs)
+            self.target_net.addGSO(next_graph)
+            next_qvals = self.target_net(next_obs)
+
         else:
             qvals = self.q_net(obs)
             next_qvals = self.target_net(next_obs)

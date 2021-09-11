@@ -207,8 +207,8 @@ class DecGridRL(object):
             #egocentric observation layers
             z[i][0] = self.arraySubset(self._robot_pad, x, y, self._egoradius)
             z[i][1] = self.arraySubset(self._free_pad[i], x, y, self._egoradius)
-            z[i][2] = self.arraySubset(self._obst_pad[i], x, y,
-                                    self._egoradius)
+            z[i][2] = self.arraySubset(self._obst_pad[i], x, y, self._egoradius)
+            
             #larger map view
             if self._mini_map_rad > 0:
                 mini_free = self.arraySubset(self._free_pad[i], x, y, self._mini_map_rad)

@@ -13,6 +13,7 @@ from Logger.logger import Logger
 from Utils.utils import train_RLalg, test_RLalg
 from Policies.Networks.grid_rl_conv import Grid_RL_Conv
 from Policies.Networks.grid_rl_recur import Grid_RL_Recur
+from Policies.Networks.gnn import GNN
 from Utils.gridmaker import gridgen, gridload
 
 
@@ -157,7 +158,8 @@ if policy_name == "random":
 else:
     #creating neural net, same constructor params for both vpg and dqn
     if policy_name == 'vdn':
-        net = Grid_RL_Conv(num_actions, obs_dim, model_config)
+        # net = Grid_RL_Conv(num_actions, obs_dim, model_config)
+        net = GNN(num_actions, obs_dim, model_config)
     elif policy_name == "drqn":
         net = Grid_RL_Recur(num_actions, obs_dim, model_config)
     else:
