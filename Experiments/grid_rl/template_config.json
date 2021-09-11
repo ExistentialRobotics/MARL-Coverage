@@ -1,53 +1,66 @@
 {
-  "experiment_name"   : "",
-  "makevid"           : 0,
-  "policy_type"       : "dqn",
-  "batch_size"        : 50,
-  "numrobot"          : 3,
-  "gridwidth"         : 25,
-  "gridlen"           : 25,
-  "seed"              : 420,
-  "num_actions"       : 4,
-  "render_test"       : 0,
-  "render_train"      : 0,
-  "render_plots"      : 0,
-  "lr"                : 0.0001,
-  "train_episodes"    : 2000,
-  "test_episodes"     : 10,
-  "train_iters"       : 100,
-  "test_iters"        : 100,
-  "collision_p"       : 100,
-  "conv_channels"     : [
-    {
-      "_" : 64
-    },
-    {
-      "_" : 32
-    }
-  ],
-  "conv_filters"      : [
-    {
-      "_" : 9
-    },
-    {
-      "_" : 7
-    }
-  ],
-  "conv_activation"   : "relu",
-  "hidden_sizes"      : [
-    {
-      "_" : 500
-    },
-    {
-      "_" : 100
-    }
-  ],
-  "hidden_activation" : "relu",
-  "output_activation" : "none",
-  "gamma"             : 0.99,
-  "tau"               : 0.9,
-  "weight_decay"      : 0,
-  "buffer"            : 0,
-  "buffer_size"       : 10000,
-  "GAE"               : 0
+  "env_name": "DecGridRL",
+  "env_config": {
+    "numrobot": 3,
+    "maxsteps": 18,
+    "collision_penalty": 5,
+    "senseradius": 1,
+    "egoradius": 5,
+    "mini_map_rad": 10,
+    "free_penalty": 0,
+    "done_thresh": 1,
+    "done_incr": 0,
+    "terminal_reward": 30,
+    "comm_radius": 0
+  },
+  "exp_name": "vdn-test",
+  "exp_config": {
+    "makevid": 1,
+    "render_test": 1,
+    "render_train": 0,
+    "render_plots": 0,
+    "ignore_done": 1,
+    "train_episodes": 25000,
+    "test_episodes": 100
+  },
+  "policy_name": "vdn",
+  "policy_config": {
+    "lr": 0.001,
+    "epsilon_decay": 0.9995,
+    "min_epsilon": 0.02,
+    "testing_epsilon": 0.02,
+    "batch_size": 250,
+    "gamma": 0.85,
+    "tau": 0.9,
+    "weight_decay": 0,
+    "steps": 10,
+    "buffer_size": 40000
+  },
+  "model_config": {
+    "conv_channels": [
+      64,
+      32
+    ],
+    "conv_filters": [
+      5,
+      3
+    ],
+    "conv_activation": "relu",
+    "hidden_sizes": [
+      500,
+      100
+    ],
+    "hidden_activation": "relu",
+    "lstm_cell_size": 64,
+    "num_recurr_layers": 2,
+    "recurr_end": 0
+  },
+  "gridload": 0,
+  "grid_config": {
+    "grid_dir": "./Grids/bg2_100x100",
+    "gridwidth": 25,
+    "gridlen": 25,
+    "numgrids": 30,
+    "prob_obst": 0
+  }
 }
