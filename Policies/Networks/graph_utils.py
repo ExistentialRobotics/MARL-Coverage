@@ -94,6 +94,99 @@ def LSIGF(h, S, x, b=None):
     return y
 
 
+def BatchLSIGF(h, S, x, b=None):
+    """
+    LSIGF(filter_taps, GSO, input, bias=None) Computes the output of a linear
+        shift-invariant graph filter on input and then adds bias.
+    Denote as G the number of input features, F the number of output features,
+    E the number of edge features, K the number of filter taps, N the number of
+    nodes, S_{e} in R^{N x N} the GSO for edge feature e, x in R^{G x N} the
+    input data where x_{g} in R^{N} is the graph signal representing feature
+    g, and b in R^{F x N} the bias vector, with b_{f} in R^{N} representing the
+    bias for feature f.
+    Then, the LSI-GF is computed as
+        y_{f} = \sum_{e=1}^{E}
+                    \sum_{k=0}^{K-1}
+                    \sum_{g=1}^{G}
+                        [h_{f,g,e}]_{k} S_{e}^{k} x_{g}
+                + b_{f}
+    for f = 1, ..., F.
+    Inputs:
+        filter_taps (torch.tensor): array of filter taps; shape:
+            output_features x edge_features x filter_taps x input_features
+        GSO (torch.tensor): graph shift operator; shape:
+            edge_features x number_nodes x number_nodes
+        input (torch.tensor): input signal; shape:
+            batch_size x input_features x number_nodes
+        bias (torch.tensor): shape: output_features x number_nodes
+            if the same bias is to be applied to all nodes, set number_nodes = 1
+            so that b_{f} vector becomes b_{f} \mathbf{1}_{N}
+    Outputs:
+        output: filtered signals; shape:
+            batch_size x output_features x number_nodes
+    """
+    # The basic idea of what follows is to start reshaping the input and the
+    # GSO so the filter coefficients go just as a very plain and simple
+    # linear operation, so that all the derivatives and stuff on them can be
+    # easily computed.
+
+    # h is output_features x edge_weights x filter_taps x input_features
+    # S is edge_weighs x number_nodes x number_nodes
+    # x is batch_size x input_features x number_nodes
+    # b is output_features x number_nodes
+    # Output:
+    # y is batch_size x output_features x number_nodes
+
+    # Get the parameter numbers:
+    F = h.shape[0]
+    E = h.shape[1]
+    K = h.shape[2]
+    G = h.shape[3]
+    assert S.shape[1] == E
+    N = S.shape[2]
+    assert S.shape[3] == N
+    B = x.shape[0]
+    assert x.shape[1] == G
+    assert x.shape[2] == N
+    # Or, in the notation we've been using:
+    # h in F x E x K x G
+    # S in B x E x N x N
+    # x in B x G x N
+    # b in F x N
+    # y in B x F x N
+
+    # Now, we have x in B x G x N and S in B x E x N x N, and we want to come up
+    # with matrix multiplication that yields z = x * S with shape
+    # B x E x K x G x N.
+    # For this, we first add the corresponding dimensions
+    x = x.reshape([B, 1, G, N])
+    # print(S.shape)
+    S = S.reshape([B, E, N, N])
+    z = x.reshape([B, 1, 1, G, N]).repeat(1, E, 1, 1, 1) # This is for k = 0
+    # We need to repeat along the E dimension, because for k=0, S_{e} = I for
+    # all e, and therefore, the same signal values have to be used along all
+    # edge feature dimensions.
+    for k in range(1,K):
+        x = torch.matmul(x, S.float()) # B x E x G x N
+        xS = x.reshape([B, E, 1, G, N]) # B x E x 1 x G x N
+        z = torch.cat((z, xS), dim = 2) # B x E x k x G x N
+    # This output z is of size B x E x K x G x N
+    # Now we have the x*S_{e}^{k} product, and we need to multiply with the
+    # filter taps.
+    # We multiply z on the left, and h on the right, the output is to be
+    # B x N x F (the multiplication is not along the N dimension), so we reshape
+    # z to be B x N x E x K x G and reshape it to B x N x EKG (remember we
+    # always reshape the last dimensions), and then make h be E x K x G x F and
+    # reshape it to EKG x F, and then multiply
+    y = torch.matmul(z.permute(0, 4, 1, 2, 3).reshape([B, N, E*K*G]),
+                     h.reshape([F, E*K*G]).permute(1, 0)).permute(0, 2, 1)
+    # And permute againt to bring it from B x N x F to B x F x N.
+    # Finally, add the bias
+    if b is not None:
+        y = y + b
+    return y
+
+
 class GraphFilterBatch(nn.Module):
     """
     GraphFilter Creates a (linear) layer that applies a graph filter

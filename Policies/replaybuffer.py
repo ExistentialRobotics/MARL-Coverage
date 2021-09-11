@@ -65,7 +65,8 @@ class ReplayBuffer(object):
     def samplebatch(self, N):
         indices = np.random.randint(0, self._size, size=N)
         if self._store_graph:
-            return self._state[indices], self._action[indices], self._reward[indices], self._nextstate[indices], self._done[indices], self._graph, self._next_graph
+            return self._state[indices], self._action[indices], self._reward[indices], self._nextstate[indices], \
+                   self._done[indices], self._graph[indices], self._next_graph[indices]
         else:
             return self._state[indices], self._action[indices], self._reward[indices], self._nextstate[indices], self._done[indices]
 
@@ -86,7 +87,8 @@ class ReplayBuffer(object):
 
         #returning the correct samples
         if self._store_graph:
-            return self._state[indices], self._action[indices], self._reward[indices], self._nextstate[indices], self._done[indices], self._graph, self._next_graph
+            return self._state[indices], self._action[indices], self._reward[indices], self._nextstate[indices], \
+                   self._done[indices], self._graph[indices], self._next_graph[indices]
         else:
             return self._state[indices], self._action[indices], self._reward[indices], self._nextstate[indices], self._done[indices]
 
