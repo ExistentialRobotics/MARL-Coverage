@@ -158,8 +158,10 @@ if policy_name == "random":
 else:
     #creating neural net, same constructor params for both vpg and dqn
     if policy_name == 'vdn':
-        # net = Grid_RL_Conv(num_actions, obs_dim, model_config)
-        net = GNN(num_actions, obs_dim, model_config)
+        if policy_config['use_graph']:
+            net = GNN(num_actions, obs_dim, model_config)
+        else:
+            net = Grid_RL_Conv(num_actions, obs_dim, model_config)
     elif policy_name == "drqn":
         net = Grid_RL_Recur(num_actions, obs_dim, model_config)
     else:
