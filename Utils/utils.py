@@ -41,7 +41,7 @@ def generate_episode(env, policy, logger, render=False, makevid=False, ignore_do
 
     return episode, total_reward
 
-def train_RLalg(env, policy, logger, episodes=1000, render=False,
+def train_RLalg(env, policy, logger, train_episodes=1000, test_episodes=10, render=False,
                 checkpoint_interval=500, ignore_done=True):
     # set policy network to train mode
     policy.set_train()
@@ -53,9 +53,9 @@ def train_RLalg(env, policy, logger, episodes=1000, render=False,
 
     best_reward = -sys.maxsize - 1
     checkpoint_num = 0
-    for _ in range(episodes):
+    for _ in range(train_episodes):
         if _ % 10 == 0:
-            print("Training Episode: " + str(_) + " out of " + str(episodes))
+            print("Training Episode: " + str(_) + " out of " + str(train_episodes))
 
         # obtain the next episode
         episode, total_reward = generate_episode(env, policy, logger, render=False, makevid=False, ignore_done=ignore_done)
@@ -74,7 +74,7 @@ def train_RLalg(env, policy, logger, episodes=1000, render=False,
             logger.saveModelWeights(policy.getnet())
 
             #testing policy
-            testrewards, average_percent_covered = test_RLalg(env, policy, logger, episodes=100, render_test=render)
+            testrewards, average_percent_covered = test_RLalg(env, policy, logger, episodes=test_episodes, render_test=render)
             test_percent_covered.append(average_percent_covered)
             policy.set_train()
 

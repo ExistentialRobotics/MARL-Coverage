@@ -185,7 +185,7 @@ if not saved_model:
         print("----------Running {} for ".format(policy_name) + str(train_episodes) + " episodes-----------")
         policy.printNumParams()
 
-        train_rewardlis, losslist, test_percent_covered = train_RLalg(env, policy, logger, episodes=train_episodes,
+        train_rewardlis, losslist, test_percent_covered = train_RLalg(env, policy, logger, train_episodes=train_episodes, test_episodes=test_episodes,
                                                                         render=render_train, ignore_done=ignore_done)
     else:
         print("-----------------------Running Random Policy-----------------------")
