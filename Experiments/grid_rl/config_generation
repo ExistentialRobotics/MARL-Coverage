@@ -1,5 +1,0 @@
-for i in {1..20}
-do
-   mkdir dqn_arash_mass_exp_$i
-   jq --arg name "dqn_arash_mass_exp_$i" '.experiment_name=$name' template_config.json > dqn_arash_mass_exp_$i/config.json
-done

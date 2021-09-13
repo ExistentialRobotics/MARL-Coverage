@@ -417,7 +417,11 @@ class DecGridRL(object):
                     pygame.draw.line(surf, (255, 0, 0), start, end, 5)
 
         self._display.blit(surf, (0, 0))
+
+        #updating the image
+        frame = pygame.surfarray.array3d(surf)
+
         pygame.display.update()
 
-        #returning the image that was used
-        return image
+        #returning the pygame frame
+        return frame
