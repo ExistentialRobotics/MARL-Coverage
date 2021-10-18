@@ -12,7 +12,7 @@ class DecGridRL(object):
     space. The objective of the environment is to cover as much of the region
     as possible.
     """
-    def __init__(self, gridlis, env_config):
+    def __init__(self, gridlis, env_config, use_graph=False):
         super().__init__()
         #list of grids to use in training
         self._gridlis = gridlis
@@ -33,6 +33,7 @@ class DecGridRL(object):
         self._comm_radius = env_config['comm_radius']
         self._allow_comm = env_config['allow_comm']
         self._map_sharing = env_config['map_sharing']
+        self._use_graph = use_graph
 
         #padding for map arrays
         self._pad = max(self._egoradius, self._mini_map_rad)
@@ -102,7 +103,7 @@ class DecGridRL(object):
         if min(self._done_thresh, 1) <= self.percent_covered():
             reward += self._terminal_reward
 
-        if self._allow_comm:
+        if self._allow_comm and self._use_graph:
             return [observations, self._adjacency_matrix], reward
         else:
             return observations, reward
@@ -165,17 +166,25 @@ class DecGridRL(object):
                         #checking if visited
                         if not self._visited[j][k]:
                             # add reward
-                            obs_reward += 1
+                            # obs_reward += 1
                             self._numobserved += 1
 
                             #marking as visited
                             self._visited[j][k] = 1
                         else:
-                            obs_reward -= self._free_penalty
+                            pass
+                            # obs_reward -= self._free_penalty
                     else:
                         # track observed obstacles
                         self._obst_pad[i][j+self._pad][k+self._pad]=1
                         self._observed_obstacles[j][k] = 1
+
+            inv = np.bitwise_not(self._free_pad.astype('?')).astype(np.uint8).reshape(self._free_pad.shape[1], self._free_pad.shape[2])
+            distance_map = cv2.distanceTransform(inv, cv2.DIST_L1,
+                                                 cv2.DIST_MASK_PRECISE)
+
+            obs_reward += (1 - distance_map[x, y])
+
         return obs_reward
 
     def isInBounds(self, x, y):
@@ -208,7 +217,7 @@ class DecGridRL(object):
             z[i][0] = self.arraySubset(self._robot_pad, x, y, self._egoradius)
             z[i][1] = self.arraySubset(self._free_pad[i], x, y, self._egoradius)
             z[i][2] = self.arraySubset(self._obst_pad[i], x, y, self._egoradius)
-            
+
             #larger map view
             if self._mini_map_rad > 0:
                 mini_free = self.arraySubset(self._free_pad[i], x, y, self._mini_map_rad)
@@ -228,7 +237,6 @@ class DecGridRL(object):
         #TODO
         pass
 
-
     def updateCommmunicationGraph(self):
         """
         Updates the communication graph based on the current
@@ -241,7 +249,7 @@ class DecGridRL(object):
         yinds = self._yinds
 
         for i in range(xinds.shape[0]):
-            for j in range(i+1, xinds.shape[0]):
+            for j in range(i, xinds.shape[0]):
                 #chebyshev distance
                 dist = max(abs(xinds[i] - xinds[j]), abs(yinds[i] - yinds[j]))
                 if dist <= self._comm_radius:
@@ -356,7 +364,7 @@ class DecGridRL(object):
         observations = self.get_egocentric_observations()
 
         #return observations
-        if self._allow_comm:
+        if self._allow_comm and self._use_graph:
             return [observations, self._adjacency_matrix]
         else:
             return observations

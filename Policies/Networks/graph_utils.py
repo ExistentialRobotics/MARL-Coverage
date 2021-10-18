@@ -138,6 +138,8 @@ def BatchLSIGF(h, S, x, b=None):
     # y is batch_size x output_features x number_nodes
 
     # Get the parameter numbers:
+    print(h.shape)
+    print(S.shape)
     F = h.shape[0]
     E = h.shape[1]
     K = h.shape[2]
@@ -160,16 +162,21 @@ def BatchLSIGF(h, S, x, b=None):
     # B x E x K x G x N.
     # For this, we first add the corresponding dimensions
     x = x.reshape([B, 1, G, N])
+    print(x.shape)
     # print(S.shape)
     S = S.reshape([B, E, N, N])
     z = x.reshape([B, 1, 1, G, N]).repeat(1, E, 1, 1, 1) # This is for k = 0
+    print(z.shape)
     # We need to repeat along the E dimension, because for k=0, S_{e} = I for
     # all e, and therefore, the same signal values have to be used along all
     # edge feature dimensions.
     for k in range(1,K):
+        print("adj matrix: " + str(S))
         x = torch.matmul(x, S.float()) # B x E x G x N
+        print(x.shape)
         xS = x.reshape([B, E, 1, G, N]) # B x E x 1 x G x N
         z = torch.cat((z, xS), dim = 2) # B x E x k x G x N
+    print("output of multiplying S, k - 1 times: " + str(z.shape))
     # This output z is of size B x E x K x G x N
     # Now we have the x*S_{e}^{k} product, and we need to multiply with the
     # filter taps.
@@ -178,8 +185,11 @@ def BatchLSIGF(h, S, x, b=None):
     # z to be B x N x E x K x G and reshape it to B x N x EKG (remember we
     # always reshape the last dimensions), and then make h be E x K x G x F and
     # reshape it to EKG x F, and then multiply
-    y = torch.matmul(z.permute(0, 4, 1, 2, 3).reshape([B, N, E*K*G]),
-                     h.reshape([F, E*K*G]).permute(1, 0)).permute(0, 2, 1)
+    z = z.permute(0, 4, 1, 2, 3)
+    print("z after permuting: " + str(z.shape))
+    z = z.reshape([B, N, E*K*G])
+    print("z after reshaping: " + str(z.shape))
+    y = torch.matmul(z, h.reshape([F, E*K*G]).permute(1, 0)).permute(0, 2, 1)
     # And permute againt to bring it from B x N x F to B x F x N.
     # Finally, add the bias
     if b is not None:

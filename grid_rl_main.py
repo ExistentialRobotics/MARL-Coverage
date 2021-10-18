@@ -142,7 +142,7 @@ else:
 if env_name == 'SuperGridRL':
     env = SuperGridRL(gridlis, env_config)
 elif env_name == 'DecGridRL':
-    env = DecGridRL(gridlis, env_config)
+    env = DecGridRL(gridlis, env_config, use_graph=policy_config["use_graph"])
 
 num_actions = env._num_actions
 obs_dim = env._obs_dim
@@ -158,8 +158,11 @@ if policy_name == "random":
 else:
     #creating neural net, same constructor params for both vpg and dqn
     if policy_name == 'vdn':
-        # net = Grid_RL_Conv(num_actions, obs_dim, model_config)
-        net = GNN(num_actions, obs_dim, model_config)
+        if policy_config["use_graph"]:
+            net = GNN(num_actions, obs_dim, model_config)
+        else:
+            net = Grid_RL_Conv(num_actions, obs_dim, model_config)
+        print(net)
     elif policy_name == "drqn":
         net = Grid_RL_Recur(num_actions, obs_dim, model_config)
     else:
@@ -195,14 +198,19 @@ print("-----------------------------Testing Policy----------------------------")
 #testing the policy and collecting data
 test_rewardlis, average_percent_covered = test_RLalg(env, policy, logger, episodes=test_episodes, render_test=render_test,
                                                      makevid=makevid)
+test_percent_covered.append(average_percent_covered)
 
-'''Display results'''
+# get max and average coverage across all tests
+max_coverage = max(test_percent_covered)
+avg_coverage = sum(test_percent_covered) / len(test_percent_covered)
+
+'''Display testing results'''
 print(DASH)
-print("Trained policy covered " + str(average_percent_covered) + " percent of the environment on average!")
+print("Trained policy covered " + str(max_coverage) + " percent of the environment on its best test!")
+print("Trained policy covered " + str(avg_coverage) + " percent of the environment on average across all tests!")
 print(DASH)
 
 if not saved_model:
-    test_percent_covered.append(average_percent_covered)
     # plot training rewards
     logger.plot(train_rewardlis, 2, "Training Reward per Episode", 'Episodes',
                 'Reward', "Training Reward", "Training Reward",

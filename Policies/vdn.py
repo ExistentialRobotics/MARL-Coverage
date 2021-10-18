@@ -34,7 +34,7 @@ class VDN(Base_Policy):
         buffer_maxsize = policy_config['buffer_size']
         self._use_graph = policy_config['use_graph']
         if self._use_graph:
-            self._buff = ReplayBuffer((numrobot,) + obs_dim, numrobot, buffer_maxsize, (numrobot, numrobot))
+            self._buff = ReplayBuffer((numrobot,) + obs_dim, numrobot, buffer_maxsize, graph_dim=(numrobot, numrobot))
         else:
             self._buff = ReplayBuffer((numrobot,) + obs_dim, numrobot, buffer_maxsize)
 
@@ -71,7 +71,6 @@ class VDN(Base_Policy):
         one for each agent. The observations should be stacked in a numpy array,
         along the first axis.
         '''
-
         # calc qvals for each agent, using no grad to avoid computing gradients
         with torch.no_grad():
             if self._use_graph:

@@ -29,6 +29,7 @@ class GNN(torch.nn.Module):
         conv_layers = []
 
         conv_output_size = np.array(obs_dim)
+        print(conv_output_size)
 
         # add conv layers to network
         for i in range(len(conv_channels)):
@@ -58,6 +59,9 @@ class GNN(torch.nn.Module):
             conv_output_size[1:] = np.floor((conv_output_size[1:] + 2 * padding
                                              - np.array(conv_filters[i])) / stride + 1)
             conv_output_size[0] = conv_channels[i]
+            print("i: " + str(i) + " " + str(conv_output_size))
+        print(conv_output_size)
+
 
         # add flatten layer to make conv output 1D for the gnn layers
         conv_layers += [nn.Flatten()]
@@ -105,6 +109,11 @@ class GNN(torch.nn.Module):
         self.E = 1  # Number of edge features
         self.bias = True
 
+        print("num graph filtering layers (L): " + str(self.L))
+        print("features (F): " + str(self.F))
+        print("num filter taps (K): " + str(self.K))
+        print("num edge features (E): " + str(self.E))
+
         for l in range(self.L):
             # \\ Graph filtering stage:
             gfl.append(GraphFilterBatch(self.F[l], self.F[l + 1], self.K[l], self.E, self.bias))
@@ -148,7 +157,7 @@ class GNN(torch.nn.Module):
     def forward(self, inputTensor):
         if len(inputTensor.shape) != 5:
             inputTensor = torch.unsqueeze(inputTensor, axis=0)
-        # print("input tensor shape: " + str(inputTensor.shape))
+        print("input tensor shape: " + str(inputTensor.shape))
 
         batch_size = inputTensor.shape[0]
         num_robot  = inputTensor.shape[1]
@@ -159,9 +168,11 @@ class GNN(torch.nn.Module):
         # pass thru conv then mlp
         for id_agent in range(num_robot):
             input_currentAgent = inputTensor[:, id_agent]
+            print("agent no: " + str(id_agent) + " conv input shape: " + str(input_currentAgent.shape))
             featureMapFlatten = self.conv_layers(input_currentAgent)
             compressfeature = self.hidden_MLP_layers(featureMapFlatten)
-            extractFeatureMap[:, :, id_agent] = compressfeature # B x F x N
+            print("agent no: " + str(id_agent) + " compressed feature shape: " + str(compressfeature.shape))
+            extractFeatureMap[:, :, id_agent] = compressfeature # B x G x N
 
         # adding GSOs
         for l in range(self.L):
@@ -171,6 +182,7 @@ class GNN(torch.nn.Module):
             self.GFL[2 * l].addGSO(self.S) # add GSO for GraphFilter
 
         # pass thru graph conv layers: B x F x N - > B x G x N,
+        print("shape of gnn input: " + str(extractFeatureMap.shape))
         sharedFeature = self.GFL(extractFeatureMap)
 
         # pass thru final mlp to get qvals

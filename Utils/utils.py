@@ -58,6 +58,7 @@ def train_RLalg(env, policy, logger, train_episodes=1000, test_episodes=10, rend
             print("Training Episode: " + str(_) + " out of " + str(train_episodes))
 
         # obtain the next episode
+        # print("----------------------Generating episode!----------------------")
         episode, total_reward = generate_episode(env, policy, logger, render=False, makevid=False, ignore_done=ignore_done)
 
         # track reward per episode
@@ -83,6 +84,7 @@ def train_RLalg(env, policy, logger, train_episodes=1000, test_episodes=10, rend
             print("Checkpoint Policy {} covered ".format(checkpoint_num) + str(average_percent_covered) + " percent of the environment on average!")
 
         # update policy using the episode
+        # print("-----------------------Updating policy!------------------------")
         policy.update_policy(episode)
 
         #tracking training loss for the episode
