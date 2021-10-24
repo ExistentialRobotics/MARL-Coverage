@@ -6,11 +6,12 @@ gridDim = 20
 
 #Generate grid - 0 means unexplored and 1 means obstacle or explored
 w, h = gridDim, gridDim
-grid = [[0 for x in range(w)] for y in range(h)]
+grid = np.zeros((w,h))
+print(grid)
 
 #generate random robot location then set for debugging
-robotPos = [random.randint(0,gridDim-1), random.randint(0,gridDim - 1)]
-robotPos = [0,2]
+# robotPos = [random.randint(0,gridDim-1), random.randint(0,gridDim - 1)]
+robotPos = np.array([0,2])
 #store to check if tree is completed
 startPos = robotPos
 #Will store all connections for the tree
@@ -21,7 +22,7 @@ def STC(w,x,t,gri):
     #Set current location of robot as explored
     gri[x[0]][x[1]]=1
     #rotate parent point ccw about x and store result in y
-    y = rotate(w, x, 19)
+    y = rotate(w, x)
 
     #Loop while available neighbors
     while (availableNeighbors(x,gri)):
@@ -36,7 +37,6 @@ def STC(w,x,t,gri):
 
         #if unexplored node is identified
         if gri[y[0]][y[1]] == 0 and y[0] >=0:
-            
             print("transition")
             #Store the segment
             segments.append(Segment(x[0],x[1],y[0],y[1]))
@@ -48,7 +48,7 @@ def STC(w,x,t,gri):
         else:
             ###### Fix #######
             #rotate y ccw about x and store in y
-            y = rotate(y, x, 19)
+            y = rotate(y, x)
 
 #Check if node has available neighbor nodes
 def availableNeighbors(robo, gri):
@@ -57,18 +57,21 @@ def availableNeighbors(robo, gri):
     return True
 
 #rotates orig about cent ccw 90 degrees
-def rotate(orig, cent, gridDi):
-    if (orig[0] < cent[0] and orig[1] == cent[1] and cent[1] <= (gridDi - 1)):
-        return [cent[0], cent[1] + 1]
-    elif (orig[0] == cent[0] and orig[1] > cent[1] and cent[0] <= (gridDi - 1)):
-        return [cent[0] + 1, cent[1]]
-    elif (orig[0] > cent[0] and orig[1] == cent[1] and cent[1] >= 0):
-            return [cent[0], cent[1] - 1]
-    elif (orig[0] == cent[0] and orig[1] < cent[1] and cent[0] >= 0):
-            return [cent[0] - 1, cent[1]]
-    else:
-        print("Error")
-        return [-1, -1]
+def rotate(x, y):
+    # if (orig[0] < cent[0] and orig[1] == cent[1] and cent[1] <= (gridDi - 1)):
+    #     return [cent[0], cent[1] + 1]
+    # elif (orig[0] == cent[0] and orig[1] > cent[1] and cent[0] <= (gridDi - 1)):
+    #     return [cent[0] + 1, cent[1]]
+    # elif (orig[0] > cent[0] and orig[1] == cent[1] and cent[1] >= 0):
+    #         return [cent[0], cent[1] - 1]
+    # elif (orig[0] == cent[0] and orig[1] < cent[1] and cent[0] >= 0):
+    #         return [cent[0] - 1, cent[1]]
+    # else:
+    #     print("Error")
+    #     return [-1, -1]
+    print(x)
+    print(y)
+    pass
 
 
 #used to store segments

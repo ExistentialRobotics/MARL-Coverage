@@ -27,7 +27,6 @@ class DecGridRL(object):
         self._done_incr = env_config['done_incr']
         self._terminal_reward = env_config['terminal_reward']
 
-        #if ego_radius is 0, non-egocentric observation will be used
         self._egoradius = env_config['egoradius']
         self._mini_map_rad = env_config['mini_map_rad']
         self._comm_radius = env_config['comm_radius']
@@ -92,10 +91,7 @@ class DecGridRL(object):
         reward += self.observe()
 
         #getting observations
-        if self._egoradius > 0:
-            observations = self.get_egocentric_observations()
-        else:
-            observations = self.get_full_observations()
+        observations = self.get_egocentric_observations()
 
         #incrementing step count
         self._currstep += 1
@@ -227,15 +223,6 @@ class DecGridRL(object):
                 z[i][4] = cv2.resize(mini_obs, dsize=(2*self._egoradius + 1, 2*self._egoradius + 1), interpolation=cv2.INTER_LINEAR)
 
         return z
-
-    def get_full_observations(self):
-        """
-        Return each agent's observations of the full map, showing
-        the free cells and observed cells they have visited, and the
-        robots currently visible to them in their communication radius.
-        """
-        #TODO
-        pass
 
     def updateCommmunicationGraph(self):
         """
