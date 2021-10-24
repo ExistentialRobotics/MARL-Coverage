@@ -131,7 +131,6 @@ print(DASH)
 '''Init logger'''
 logger = Logger(exp_name, makevid)
 
-
 '''Making the list of grids'''
 if exp_parameters['gridload']:
     gridlis = gridload(exp_parameters['grid_config'])

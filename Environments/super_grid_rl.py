@@ -68,9 +68,7 @@ class SuperGridRL(object):
 
         # calc distance from observed to free cells
         if self._dist_r:
-            inv = np.bitwise_not(self._free.astype('?')).astype(np.uint8)
-            distance_map = cv2.distanceTransform(inv, cv2.DIST_L1,
-                                                 cv2.DIST_MASK_PRECISE)
+            distance_map = self.get_distance_map()
 
         # apply controls to each robot
         for i in range(len(ulis)):
@@ -91,7 +89,7 @@ class SuperGridRL(object):
                 if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
                     self._xinds[z] = x
                     if self._dist_r:
-                        reward[i] += (1 - distance_map[x, y])
+                        reward[i] += distance_map[x, y]
                 else:
                     reward[i] -= self._collision_penalty
             #right
@@ -102,7 +100,7 @@ class SuperGridRL(object):
                 if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
                     self._xinds[z] = x
                     if self._dist_r:
-                        reward[i] += (1 - distance_map[x, y])
+                        reward[i] += distance_map[x, y]
                 else:
                     reward[i] -= self._collision_penalty
             #up
@@ -113,7 +111,7 @@ class SuperGridRL(object):
                 if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
                     self._yinds[z] = y
                     if self._dist_r:
-                        reward[i] += (1 - distance_map[x, y])
+                        reward[i] += distance_map[x, y]
                 else:
                     reward[i] -= self._collision_penalty
             #down
@@ -124,7 +122,7 @@ class SuperGridRL(object):
                 if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
                     self._yinds[z]= y
                     if self._dist_r:
-                        reward[i] += (1 - distance_map[x, y])
+                        reward[i] += distance_map[x, y]
                 else:
                     reward[i] -= self._collision_penalty
 
@@ -185,8 +183,25 @@ class SuperGridRL(object):
 
         return False
 
+    def get_distance_map(self):
+        inv = np.bitwise_not(self._free.astype('?')).astype(np.uint8)
+        distance_map = cv2.distanceTransform(inv, cv2.DIST_L1,
+                                             cv2.DIST_MASK_PRECISE)
+
+        # scale map values to be between 0 and 1
+        if np.max(distance_map) > 0:
+            distance_map = distance_map / np.max(distance_map)
+
+        # invert the values
+        return 1 - distance_map
+
     def get_state(self):
-        arrays = np.array(self.get_pos_image() + [self._observed_obstacles, self._free])
+        distance_map = self.get_distance_map()
+
+        arrays = np.array(self.get_pos_image() + [self._observed_obstacles, self._free, distance_map])
+
+        # arrays = np.array(self.get_pos_image() + [self._observed_obstacles, self._free])
+
         state = np.stack(arrays, axis=0)
         return state
 
