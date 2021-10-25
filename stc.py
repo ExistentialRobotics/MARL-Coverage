@@ -3,6 +3,7 @@ import math
 from Utils.gridmaker import gridgen, gridload
 from Environments.dec_grid_rl import DecGridRL
 import time
+from Logger.logger import Logger
 
 class SpanningTreeCoveragePolicy(object):
     '''
@@ -32,10 +33,6 @@ class SpanningTreeCoveragePolicy(object):
 
         # controls cheatsheet
         # 0 - right, 1 - up, 2 - left, 3 - down
-        # print(self._curr_pos)
-        # print(self._visited)
-        # obs = np.rot90(obs)
-        # print(obs)
 
         u = -1
         #checking whether the cell is fully explored
@@ -125,7 +122,7 @@ class SpanningTreeCoveragePolicy(object):
         #visiting the current cell
         self._visited[self._curr_x][self._curr_y] = 1
 
-        print(u)
+        # print(u)
         return u
 
     def isCellVisited(self,x,y):
@@ -182,7 +179,7 @@ if __name__ == "__main__":
     #testing spanning tree coverage on dec_grid_rl environment
     env_config = {
         "numrobot": 1,
-        "maxsteps": 600,
+        "maxsteps": 60000,
         "collision_penalty": 5,
         "senseradius": 2,
         "egoradius": 2,
@@ -199,32 +196,36 @@ if __name__ == "__main__":
     }
 
     grid_config = {
-        "gridwidth": 15,
-        "gridlen": 15,
+        "grid_dir": "./Grids/bg2_100x100",
+        "gridwidth": 30,
+        "gridlen": 30,
         "numgrids": 30,
         "prob_obst": 0
     }
 
     '''Making the list of grids'''
     gridlis = gridgen(grid_config)
+    # gridlis = gridload(grid_config)
 
     env = DecGridRL(gridlis, env_config)
 
+    #logger stuff
+    makevid = True
+    exp_name = "stcEmptyGrid1"
+    logger = Logger(exp_name, makevid)
+
     #testing stc
-    stc_controller = SpanningTreeCoveragePolicy(18)
+    stc_controller = SpanningTreeCoveragePolicy(105)
 
     state = np.squeeze(env.reset())[2] #getting only the obstacle layer
     done = False
     render = True
 
-    # env.render()
-    # time.sleep(1)
+
     #simulating
-    # for i in range(2):
     while not done:
         # determine action
         action = stc_controller.pi(state)
-        # print(action)
 
         # step environment and save episode results
         state, reward = env.step(action)
@@ -236,6 +237,7 @@ if __name__ == "__main__":
         # render if necessary
         if render:
             frame = env.render()
-            time.sleep(0.1)
+            if(makevid):
+                logger.addFrame(frame)
 
 
