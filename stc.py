@@ -194,7 +194,8 @@ if __name__ == "__main__":
         "comm_radius" : 0,
         "allow_comm" : 0,
         "map_sharing" : 0,
-        "single_square_tool" : 1
+        "single_square_tool" : 1,
+        "dist_reward" : 0
     }
 
     grid_config = {
