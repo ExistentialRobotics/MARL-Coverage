@@ -157,7 +157,7 @@ class DecGridRL(object):
             for j in range(lb, rb):
                 for k in range(db, ub):
                     if self._grid[j][k] >= 0:
-                        if not self._single_square_tool or x == j and y == k:
+                        if not self._single_square_tool or (x == j and y == k):
                             # mark as not free
                             self._free_pad[i][j+self._pad][k+self._pad] = 1
 
@@ -284,6 +284,7 @@ class DecGridRL(object):
                 if self._adjacency_matrix[i][j] or i == j:
                     obst_temp[i] += self._obst_pad[j]
                     free_temp[i] += self._free_pad[j]
+
         #clipping to be within 0 and 1
         obst_temp = np.clip(obst_temp, 0, 1)
         free_temp = np.clip(free_temp, 0, 1)
@@ -350,6 +351,7 @@ class DecGridRL(object):
         self.updateCommmunicationGraph()
 
         #return first observation
+        self.observe()
         observations = self.get_egocentric_observations()
 
         #return observations
@@ -399,19 +401,20 @@ class DecGridRL(object):
         image = cv2.copyMakeBorder(image, 0, 1075 - image.shape[1], 0, 1075 -
                                    image.shape[0], cv2.BORDER_CONSTANT, value=[0,0,0])
 
+        image = cv2.flip(image, 1) #flipping image so up is up and down is down
         #graphing occupancy grid
         surf = pygame.surfarray.make_surface(image)
 
         #graphing adjacency matrix connections
-        #TODO make this more efficient
-        xinds = self._xinds
-        yinds = self._yinds
-        for i in range(xinds.shape[0]):
-            for j in range(i+1, xinds.shape[0]):
-                if self._adjacency_matrix[i][j]:
-                    start = (int(scaling*(xinds[i] + 0.5)), int(scaling*(yinds[i] + 0.5)))
-                    end = (int(scaling*(xinds[j] + 0.5)), int(scaling*(yinds[j] + 0.5)))
-                    pygame.draw.line(surf, (255, 0, 0), start, end, 5)
+        #TODO fix this, I broke it after inverting image
+        # xinds = self._xinds
+        # yinds = self._yinds
+        # for i in range(xinds.shape[0]):
+        #     for j in range(i+1, xinds.shape[0]):
+        #         if self._adjacency_matrix[i][j]:
+        #             start = (int(scaling*(xinds[i] + 0.5)), int(scaling*(yinds[i] + 0.5)))
+        #             end = (int(scaling*(xinds[j] + 0.5)), int(scaling*(yinds[j] + 0.5)))
+        #             pygame.draw.line(surf, (255, 0, 0), start, end, 5)
 
         self._display.blit(surf, (0, 0))
 

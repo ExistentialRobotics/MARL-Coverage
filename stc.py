@@ -29,23 +29,35 @@ class SpanningTreeCoveragePolicy(object):
             Returns the controls based on the given observation.
         """
         assert obs.shape == (5,5), "wrong observation dummy"
-        print(self._curr_pos)
 
         # controls cheatsheet
         # 0 - right, 1 - up, 2 - left, 3 - down
-        print(self._visited)
+        # print(self._curr_pos)
+        # print(self._visited)
+        # obs = np.rot90(obs)
+        # print(obs)
 
+        u = -1
         #checking whether the cell is fully explored
         if self.isCellVisited(self._curr_x, self._curr_y):
+            print('cell fully visited, leaving')
+
             #means we got to leave the cell
             if self._curr_pos == "bl":
                 u = 3
+                self._curr_pos = "ul"
+
             elif self._curr_pos == "br":
                 u = 0
+                self._curr_pos = "bl"
+
             elif self._curr_pos == "ur":
                 u = 1
+                self._curr_pos = "br"
+
             elif self._curr_pos == "ul":
                 u = 2
+                self._curr_pos = "ur"
 
         #exploring further if we can
         else:
@@ -59,6 +71,7 @@ class SpanningTreeCoveragePolicy(object):
                     u = 3
                     self._curr_pos = "ul"
                 else:
+                    print("obstacle below")
                     u = 0
                     self._curr_pos = "br"
             elif self._curr_pos == "br":
@@ -70,6 +83,7 @@ class SpanningTreeCoveragePolicy(object):
                     u = 0
                     self._curr_pos = "bl"
                 else:
+                    print("obstacle right")
                     u = 1
                     self._curr_pos = "ur"
 
@@ -82,6 +96,7 @@ class SpanningTreeCoveragePolicy(object):
                     u = 1
                     self._curr_pos = "br"
                 else:
+                    print("obstacle above")
                     u = 2
                     self._curr_pos = "ul"
             elif self._curr_pos == "ul":
@@ -93,6 +108,7 @@ class SpanningTreeCoveragePolicy(object):
                     u = 2
                     self._curr_pos = "ur"
                 else:
+                    print("obstacle left")
                     u = 3
                     self._curr_pos = "bl"
 
@@ -109,6 +125,7 @@ class SpanningTreeCoveragePolicy(object):
         #visiting the current cell
         self._visited[self._curr_x][self._curr_y] = 1
 
+        print(u)
         return u
 
     def isCellVisited(self,x,y):
@@ -165,7 +182,7 @@ if __name__ == "__main__":
     #testing spanning tree coverage on dec_grid_rl environment
     env_config = {
         "numrobot": 1,
-        "maxsteps": 60,
+        "maxsteps": 600,
         "collision_penalty": 5,
         "senseradius": 2,
         "egoradius": 2,
@@ -181,8 +198,8 @@ if __name__ == "__main__":
     }
 
     grid_config = {
-        "gridwidth": 20,
-        "gridlen": 20,
+        "gridwidth": 15,
+        "gridlen": 15,
         "numgrids": 30,
         "prob_obst": 0
     }
@@ -193,13 +210,16 @@ if __name__ == "__main__":
     env = DecGridRL(gridlis, env_config)
 
     #testing stc
-    stc_controller = SpanningTreeCoveragePolicy(10)
+    stc_controller = SpanningTreeCoveragePolicy(18)
 
     state = np.squeeze(env.reset())[2] #getting only the obstacle layer
     done = False
     render = True
 
+    # env.render()
+    # time.sleep(1)
     #simulating
+    # for i in range(2):
     while not done:
         # determine action
         action = stc_controller.pi(state)
@@ -215,6 +235,6 @@ if __name__ == "__main__":
         # render if necessary
         if render:
             frame = env.render()
-            time.sleep(2)
+            time.sleep(0.1)
 
 
