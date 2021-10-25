@@ -33,6 +33,7 @@ class DecGridRL(object):
         self._allow_comm = env_config['allow_comm']
         self._map_sharing = env_config['map_sharing']
         self._use_graph = use_graph
+        self._single_square_tool = env_config['single_square_tool'] #for stc
 
         #padding for map arrays
         self._pad = max(self._egoradius, self._mini_map_rad)
@@ -156,20 +157,21 @@ class DecGridRL(object):
             for j in range(lb, rb):
                 for k in range(db, ub):
                     if self._grid[j][k] >= 0:
-                        # mark as not free
-                        self._free_pad[i][j+self._pad][k+self._pad] = 1
+                        if not self._single_square_tool or x == j and y == k:
+                            # mark as not free
+                            self._free_pad[i][j+self._pad][k+self._pad] = 1
 
-                        #checking if visited
-                        if not self._visited[j][k]:
-                            # add reward
-                            # obs_reward += 1
-                            self._numobserved += 1
+                            #checking if visited
+                            if not self._visited[j][k]:
+                                # add reward
+                                # obs_reward += 1
+                                self._numobserved += 1
 
-                            #marking as visited
-                            self._visited[j][k] = 1
-                        else:
-                            pass
-                            # obs_reward -= self._free_penalty
+                                #marking as visited
+                                self._visited[j][k] = 1
+                            else:
+                                pass
+                                # obs_reward -= self._free_penalty
                     else:
                         # track observed obstacles
                         self._obst_pad[i][j+self._pad][k+self._pad]=1
