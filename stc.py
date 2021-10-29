@@ -42,19 +42,12 @@ class SpanningTreeCoveragePolicy(object):
             #means we got to leave the cell
             if self._curr_pos == "bl":
                 u = 3
-                self._curr_pos = "ul"
-
             elif self._curr_pos == "br":
                 u = 0
-                self._curr_pos = "bl"
-
             elif self._curr_pos == "ur":
                 u = 1
-                self._curr_pos = "br"
-
             elif self._curr_pos == "ul":
                 u = 2
-                self._curr_pos = "ur"
 
         #exploring further if we can
         else:
@@ -66,11 +59,9 @@ class SpanningTreeCoveragePolicy(object):
 
                 if free and not self.isAnySubcellVisited(self._curr_x, self._curr_y - 1):
                     u = 3
-                    self._curr_pos = "ul"
                 else:
                     print("obstacle below")
                     u = 0
-                    self._curr_pos = "br"
             elif self._curr_pos == "br":
                 #check if cell right has any obstacles
                 obs = obs[3:5,2:4]
@@ -78,11 +69,9 @@ class SpanningTreeCoveragePolicy(object):
 
                 if free and not self.isAnySubcellVisited(self._curr_x + 1, self._curr_y):
                     u = 0
-                    self._curr_pos = "bl"
                 else:
                     print("obstacle right")
                     u = 1
-                    self._curr_pos = "ur"
 
             elif self._curr_pos == "ur":
                 #check if cell above has any obstacles
@@ -91,11 +80,10 @@ class SpanningTreeCoveragePolicy(object):
 
                 if free and not self.isAnySubcellVisited(self._curr_x, self._curr_y + 1):
                     u = 1
-                    self._curr_pos = "br"
                 else:
                     print("obstacle above")
                     u = 2
-                    self._curr_pos = "ul"
+
             elif self._curr_pos == "ul":
                 #check if cell above has any obstacles
                 obs = obs[0:2,1:3]
@@ -103,11 +91,9 @@ class SpanningTreeCoveragePolicy(object):
 
                 if free and not self.isAnySubcellVisited(self._curr_x - 1, self._curr_y):
                     u = 2
-                    self._curr_pos = "ur"
                 else:
                     print("obstacle left")
                     u = 3
-                    self._curr_pos = "bl"
 
         #updating robot x, y based on controls
         if u == 0:
@@ -118,6 +104,9 @@ class SpanningTreeCoveragePolicy(object):
             self._curr_x -= 1
         elif u == 3:
             self._curr_y -= 1
+
+        #updating the subcell pos
+        self._curr_pos = self.subcellpos(self._curr_x, self._curr_y)
 
         #visiting the current cell
         self._visited[self._curr_x][self._curr_y] = 1
@@ -146,6 +135,21 @@ class SpanningTreeCoveragePolicy(object):
 
         cell = self._visited[x:x+2,y:y+2]
         return np.any(cell == 1)
+
+    def subcellpos(self, x, y):
+        '''
+        Tells us what subcell we are in based on the coordinates
+        '''
+        if x % 2 == 0:
+            if y % 2 == 0:
+                return "bl"
+            else:
+                return "ul"
+        else:
+            if y % 2 == 0:
+                return "br"
+            else:
+                return "ur"
 
     def reset(self):
         '''
@@ -204,8 +208,8 @@ if __name__ == "__main__":
     }
 
     '''Making the list of grids'''
-    gridlis = gridgen(grid_config)
-    # gridlis = gridload(grid_config)
+    # gridlis = gridgen(grid_config)
+    gridlis = gridload(grid_config)
 
     env = DecGridRL(gridlis, env_config)
 
