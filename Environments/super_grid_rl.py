@@ -21,7 +21,6 @@ class SuperGridRL(object):
         self._maxsteps = env_config['maxsteps']
         self._collision_penalty = env_config['collision_penalty']
         self._senseradius = env_config['senseradius']
-        self._egoradius = env_config['egoradius']
         self._free_penalty = env_config['free_penalty']
         self._done_thresh = env_config['done_thresh']
         self._done_incr = env_config['done_incr']
