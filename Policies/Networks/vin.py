@@ -4,22 +4,20 @@ import torch.nn as nn
 from torch.autograd import Variable
 
 
-def attention(tensor, x_pos, y_pos, ):
+def attention(tensor, x_pos, y_pos):
     """Attention model for grid world
     """
-    S1, S2, args = params
-
     num_data = tensor.size()[0]
 
-    # Slicing S1 positions
-    slice_s1 = S1.expand(args.imsize, 1, args.ch_q, num_data)
-    slice_s1 = slice_s1.permute(3, 2, 1, 0)
-    q_out = tensor.gather(2, slice_s1).squeeze(2)
+    # Slicing x_pos positions
+    slice_x_pos = x_pos.expand(self.imsize, 1, self.qout_c, num_data)
+    slice_x_pos = slice_x_pos.permute(3, 2, 1, 0)
+    q_out = tensor.gather(2, slice_x_pos).squeeze(2)
 
-    # Slicing S2 positions
-    slice_s2 = S2.expand(1, args.ch_q, num_data)
-    slice_s2 = slice_s2.permute(2, 1, 0)
-    q_out = q_out.gather(2, slice_s2).squeeze(2)
+    # Slicing y_pos positions
+    slice_y_pos = y_pos.expand(1, self.qout_c, num_data)
+    slice_y_pos = slice_y_pos.permute(2, 1, 0)
+    q_out = q_out.gather(2, slice_y_pos).squeeze(2)
 
     return q_out
 
@@ -33,6 +31,8 @@ class VIN(nn.Module):
 
         # number of vi iterations
         self.k = vi_config["k"]
+        self.qout_c = vi_config["qout_channels"]
+        self.imsize = obs_dim[1]
 
         # conv layer to convert input to first reward image
         self.h_net = nn.Conv2d(in_channels=obs_dim[0],
@@ -51,28 +51,35 @@ class VIN(nn.Module):
 
         # conv layer used to generate q vals inside of vi module
         self.q_net = nn.Conv2d(in_channels=2,
-                               out_channels=vi_config["qout_channels"],
+                               out_channels=self.qout_c,
                                kernel_size=vi_config["qconv_filter"],
                                padding=(vi_config["qconv_filter"] - 1) // 2,
                                stride=1)
 
         # fc to map output of vi module to number of actions
-        self.fc = nn.Linear(in_features=vi_config["qout_channels"],
+        self.fc = nn.Linear(in_features=self.qout_c,
                             out_features=action_dim,
                             bias=False)
 
     def forward(self, x, record_images=False):
-        print(x.shape)
-        inds = np.argwhere(x[0].cpu().numpy()>0)
-        pos_x = inds[0, 0]
-        pos_y = inds[0, 1]
-
-        print(str(pos_x) + " " + str(pos_y))
-
         # reshape input if not the right dims
         # print(x.shape)
         if len(x.shape) != 4:
             x = torch.unsqueeze(x, axis=0)
+
+        # TODO: vectorize this
+        p_x = []
+        p_y = []
+        for i in range(x.shape[0]):
+            pos_maps = torch.squeeze(x[i, 0, :, :], axis=0)
+            # print(pos_maps)
+            inds = np.argwhere(pos_maps.cpu().numpy()>0)
+            # print(inds)
+            p_x.append(inds[0, 0])
+            p_y.append(inds[0, 1])
+            # print(str(pos_x) + " " + str(pos_y))
+
+
 
         # Get reward image from observation image
         h = self.h_net(x)
@@ -109,6 +116,7 @@ class VIN(nn.Module):
         q = self.q_net(rv)
 
         # Attention model
+        # q_out = attention(q, pos_x, pos_y)
         q_out = q[:, :, pos_x, pos_y]
 
         # get final q values
