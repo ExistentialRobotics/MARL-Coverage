@@ -26,14 +26,15 @@ class DecGridRL(object):
         self._done_thresh = env_config['done_thresh']
         self._done_incr = env_config['done_incr']
         self._terminal_reward = env_config['terminal_reward']
+        self._dist_r = env_config['dist_reward']
 
-        #if ego_radius is 0, non-egocentric observation will be used
         self._egoradius = env_config['egoradius']
         self._mini_map_rad = env_config['mini_map_rad']
         self._comm_radius = env_config['comm_radius']
         self._allow_comm = env_config['allow_comm']
         self._map_sharing = env_config['map_sharing']
         self._use_graph = use_graph
+        self._single_square_tool = env_config['single_square_tool'] #for stc
 
         #padding for map arrays
         self._pad = max(self._egoradius, self._mini_map_rad)
@@ -92,10 +93,7 @@ class DecGridRL(object):
         reward += self.observe()
 
         #getting observations
-        if self._egoradius > 0:
-            observations = self.get_egocentric_observations()
-        else:
-            observations = self.get_full_observations()
+        observations = self.get_egocentric_observations()
 
         #incrementing step count
         self._currstep += 1
@@ -143,10 +141,17 @@ class DecGridRL(object):
         which includes the observed cell and free cell layers
         '''
         obs_reward = 0
+
+        # distance_map = self.get_distance_map(self._visited)
+
         #sense from all the current robot positions
         for i in range(self._numrobot):
             x = self._xinds[i]
             y = self._yinds[i]
+
+            # get distance map to free cells based on current robot's free cell memory
+            if self._dist_r:
+                distance_map = self.get_distance_map(self._free_pad[i])
 
             #left and right boundaries
             lb = max(x-self._senseradius, 0)
@@ -160,32 +165,41 @@ class DecGridRL(object):
             for j in range(lb, rb):
                 for k in range(db, ub):
                     if self._grid[j][k] >= 0:
-                        # mark as not free
-                        self._free_pad[i][j+self._pad][k+self._pad] = 1
+                        if not self._single_square_tool or (x == j and y == k):
+                            # mark as not free
+                            self._free_pad[i][j+self._pad][k+self._pad] = 1
 
-                        #checking if visited
-                        if not self._visited[j][k]:
-                            # add reward
-                            # obs_reward += 1
-                            self._numobserved += 1
+                            #checking if visited
+                            if not self._visited[j][k]:
+                                # add reward
+                                obs_reward += 1
+                                self._numobserved += 1
 
-                            #marking as visited
-                            self._visited[j][k] = 1
-                        else:
-                            pass
-                            # obs_reward -= self._free_penalty
+                                #marking as visited
+                                self._visited[j][k] = 1
+                            else:
+                                obs_reward -= self._free_penalty
                     else:
                         # track observed obstacles
                         self._obst_pad[i][j+self._pad][k+self._pad]=1
                         self._observed_obstacles[j][k] = 1
 
-            inv = np.bitwise_not(self._free_pad.astype('?')).astype(np.uint8).reshape(self._free_pad.shape[1], self._free_pad.shape[2])
-            distance_map = cv2.distanceTransform(inv, cv2.DIST_L1,
-                                                 cv2.DIST_MASK_PRECISE)
-
-            obs_reward += (1 - distance_map[x, y])
+            if self._dist_r:
+                obs_reward += distance_map[x, y]
 
         return obs_reward
+
+    def get_distance_map(self, free):
+        inv = np.bitwise_not(free.astype('?')).astype(np.uint8)
+        distance_map = cv2.distanceTransform(inv, cv2.DIST_L1,
+                                             cv2.DIST_MASK_PRECISE)
+
+        # scale map values to be between 0 and 1
+        if np.max(distance_map) > 0:
+            distance_map = distance_map / np.max(distance_map)
+
+        # invert the values
+        return 1 - distance_map
 
     def isInBounds(self, x, y):
         return x >= 0 and x < self._gridwidth and y >= 0 and y < self._gridlen
@@ -206,6 +220,10 @@ class DecGridRL(object):
         else:
             numlayers = 3
 
+        # add a observation layer if using the distance map
+        if self._dist_r:
+            numlayers += 1
+
         z = np.zeros((self._numrobot, numlayers, 2*self._egoradius + 1, 2*self._egoradius + 1))
 
         #construct state for each robot
@@ -218,24 +236,20 @@ class DecGridRL(object):
             z[i][1] = self.arraySubset(self._free_pad[i], x, y, self._egoradius)
             z[i][2] = self.arraySubset(self._obst_pad[i], x, y, self._egoradius)
 
+            # get current robot's distance map
+            if self._dist_r:
+                distance_map = self.get_distance_map(self._free_pad[i])
+                z[i][3] = self.arraySubset(distance_map, x, y, self._egoradius)
+
             #larger map view
             if self._mini_map_rad > 0:
                 mini_free = self.arraySubset(self._free_pad[i], x, y, self._mini_map_rad)
                 mini_obs = self.arraySubset(self._obst_pad[i], x, y,
                                             self._mini_map_rad)
-                z[i][3] = cv2.resize(mini_free, dsize=(2*self._egoradius + 1, 2*self._egoradius + 1), interpolation=cv2.INTER_LINEAR)
-                z[i][4] = cv2.resize(mini_obs, dsize=(2*self._egoradius + 1, 2*self._egoradius + 1), interpolation=cv2.INTER_LINEAR)
+                z[i][4] = cv2.resize(mini_free, dsize=(2*self._egoradius + 1, 2*self._egoradius + 1), interpolation=cv2.INTER_LINEAR)
+                z[i][5] = cv2.resize(mini_obs, dsize=(2*self._egoradius + 1, 2*self._egoradius + 1), interpolation=cv2.INTER_LINEAR)
 
         return z
-
-    def get_full_observations(self):
-        """
-        Return each agent's observations of the full map, showing
-        the free cells and observed cells they have visited, and the
-        robots currently visible to them in their communication radius.
-        """
-        #TODO
-        pass
 
     def updateCommmunicationGraph(self):
         """
@@ -295,6 +309,7 @@ class DecGridRL(object):
                 if self._adjacency_matrix[i][j] or i == j:
                     obst_temp[i] += self._obst_pad[j]
                     free_temp[i] += self._free_pad[j]
+
         #clipping to be within 0 and 1
         obst_temp = np.clip(obst_temp, 0, 1)
         free_temp = np.clip(free_temp, 0, 1)
@@ -361,6 +376,7 @@ class DecGridRL(object):
         self.updateCommmunicationGraph()
 
         #return first observation
+        self.observe()
         observations = self.get_egocentric_observations()
 
         #return observations
@@ -410,19 +426,20 @@ class DecGridRL(object):
         image = cv2.copyMakeBorder(image, 0, 1075 - image.shape[1], 0, 1075 -
                                    image.shape[0], cv2.BORDER_CONSTANT, value=[0,0,0])
 
+        image = cv2.flip(image, 1) #flipping image so up is up and down is down
         #graphing occupancy grid
         surf = pygame.surfarray.make_surface(image)
 
         #graphing adjacency matrix connections
-        #TODO make this more efficient
-        xinds = self._xinds
-        yinds = self._yinds
-        for i in range(xinds.shape[0]):
-            for j in range(i+1, xinds.shape[0]):
-                if self._adjacency_matrix[i][j]:
-                    start = (int(scaling*(xinds[i] + 0.5)), int(scaling*(yinds[i] + 0.5)))
-                    end = (int(scaling*(xinds[j] + 0.5)), int(scaling*(yinds[j] + 0.5)))
-                    pygame.draw.line(surf, (255, 0, 0), start, end, 5)
+        #TODO fix this, I broke it after inverting image
+        # xinds = self._xinds
+        # yinds = self._yinds
+        # for i in range(xinds.shape[0]):
+        #     for j in range(i+1, xinds.shape[0]):
+        #         if self._adjacency_matrix[i][j]:
+        #             start = (int(scaling*(xinds[i] + 0.5)), int(scaling*(yinds[i] + 0.5)))
+        #             end = (int(scaling*(xinds[j] + 0.5)), int(scaling*(yinds[j] + 0.5)))
+        #             pygame.draw.line(surf, (255, 0, 0), start, end, 5)
 
         self._display.blit(surf, (0, 0))
 

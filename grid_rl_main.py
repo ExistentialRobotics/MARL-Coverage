@@ -14,6 +14,7 @@ from Utils.utils import train_RLalg, test_RLalg
 from Policies.Networks.grid_rl_conv import Grid_RL_Conv
 from Policies.Networks.grid_rl_recur import Grid_RL_Recur
 from Policies.Networks.gnn import GNN
+from Policies.Networks.vin import VIN
 from Utils.gridmaker import gridgen, gridload
 
 
@@ -119,10 +120,12 @@ ignore_done    = exp_config['ignore_done']
 
 '''Model Parameters'''
 model_config   = exp_parameters['model_config']
+model_name     = model_config['model_name']
 
 '''Policy Parameters'''
-policy_name    = exp_parameters['policy_name']
 policy_config  = exp_parameters['policy_config']
+policy_name    = policy_config['policy_name']
+
 
 print(DASH)
 print("Running experiment using: " + str(config_path))
@@ -130,7 +133,6 @@ print(DASH)
 
 '''Init logger'''
 logger = Logger(exp_name, makevid)
-
 
 '''Making the list of grids'''
 if exp_parameters['gridload']:
@@ -156,30 +158,37 @@ if policy_name == "random":
     policy = Basic_Random(action_space)
     random_policy = True
 else:
-    #creating neural net, same constructor params for both vpg and dqn
-    if policy_name == 'vdn':
-        if policy_config["use_graph"]:
-            net = GNN(num_actions, obs_dim, model_config)
-        else:
-            net = Grid_RL_Conv(num_actions, obs_dim, model_config)
-        print(net)
-    elif policy_name == "drqn":
-        net = Grid_RL_Recur(num_actions, obs_dim, model_config)
-    else:
+    '''Init model net'''
+    if model_name == "vin":
+        net = VIN(num_actions, obs_dim, model_config)
+    elif model_name == "cnn":
         net = Grid_RL_Conv(num_actions, obs_dim, model_config)
+    elif model_name == "crnn":
+        net = Grid_RL_Recur(num_actions, obs_dim, model_config)
+    elif model_name == "gnn":
+        net = GNN(num_actions, obs_dim, model_config)
+    else:
+        print(DASH)
+        print(str(model_name) + " is an invalid model.")
+        print(DASH)
+        sys.exit(1)
+    print(net)
 
-    if policy_name == "dqn":
-        # init policy
-        policy = DQN(net, num_actions, obs_dim, policy_config,
-                     model_path=model_path)
-    elif policy_name == "drqn":
-        # init policy
-        policy = DRQN(net, num_actions, obs_dim, policy_config, model_config,
-                      model_path=model_path)
-    elif policy_name == "vdn":
-        # init policy
+    '''Init policy'''
+    if policy_name == "vdn":
         policy = VDN(net, num_actions, obs_dim, numrobot, policy_config,
                      model_path=model_path)
+    elif policy_name == "drqn":
+        policy = DRQN(net, num_actions, obs_dim, policy_config, model_config,
+                      model_path=model_path)
+    elif policy_name == "dqn":
+        policy = DQN(net, num_actions, obs_dim, policy_config,
+                     model_path=model_path)
+    else:
+        print(DASH)
+        print(str(policy_name) + " is an invalid policy.")
+        print(DASH)
+        sys.exit(1)
 
 # train a policy if not testing a saved model
 if not saved_model:
