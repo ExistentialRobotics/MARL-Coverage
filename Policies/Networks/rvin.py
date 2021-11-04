@@ -4,17 +4,17 @@ import torch.nn as nn
 from torch.autograd import Variable
 
 
-class VIN(nn.Module):
+class RVIN(nn.Module):
 
     def __init__(self, action_dim, obs_dim, model_config):
-        super(VIN, self).__init__()
+        super(RVIN, self).__init__()
         # get vi module params
         vi_config = model_config["vin_module"]
 
         # number of vi iterations
         self.k = vi_config["k"]
-        self.qout_c = vi_config["qout_channels"]
-        self.imsize = obs_dim[1]
+
+        conv_output_size = np.array(obs_dim)
 
         # conv layer to convert input to first reward image
         self.h_net = nn.Conv2d(in_channels=obs_dim[0],
@@ -23,6 +23,10 @@ class VIN(nn.Module):
                                 stride=1,
                                 padding=(vi_config["hconv_filter"] - 1) // 2,
                                 bias=True)
+
+        conv_output_size[1:] = np.floor((conv_output_size[1:] + 2 * ((vi_config["hconv_filter"] - 1) // 2)
+                                         - np.array(vi_config["hconv_filter"])) + 1)
+        conv_output_size[0] = vi_config["hout_channels"]
 
         # conv layer to generate reward image
         self.r_net = nn.Conv2d(in_channels=vi_config["hout_channels"],
@@ -33,17 +37,29 @@ class VIN(nn.Module):
 
         # conv layer used to generate q vals inside of vi module
         self.q_net = nn.Conv2d(in_channels=2,
-                               out_channels=self.qout_c,
+                               out_channels=vi_config["qout_channels"],
                                kernel_size=vi_config["qconv_filter"],
                                padding=(vi_config["qconv_filter"] - 1) // 2,
                                stride=1)
 
-        # fc to map output of vi module to number of actions
-        self.fc = nn.Linear(in_features=self.qout_c,
-                            out_features=action_dim,
-                            bias=False)
+        conv_output_size[1:] = np.floor((conv_output_size[1:] + 2 * ((vi_config["qconv_filter"] - 1) // 2)
+                                         - np.array(vi_config["qconv_filter"])) + 1)
+        conv_output_size[0] = vi_config["qout_channels"]
 
-    def forward(self, x, record_images=False):
+        # convert qnet output to a lower dimension
+        # q_to_recurr = [nn.Flatten(), nn.Linear(int(np.prod(conv_output_size)), model_config["lstm_output"], bias=False), nn.ReLU()]
+        # self.q_to_recurr = nn.Sequential(*q_to_recurr)
+
+        # lstm to use history of past qvals to influence current ones
+        self.lstm = nn.LSTM(vi_config["qout_channels"], model_config['lstm_cell_size'],
+                            model_config['num_recurr_layers'], batch_first=True)
+
+        # fc to map output of vi module to number of actions
+        fc = [nn.ReLU(), nn.Linear(model_config['lstm_cell_size'], action_dim, bias=False)]
+        self.fc = nn.Sequential(*fc)
+
+
+    def forward(self, x, hidden, record_images=False):
         # reshape input if not the right dims
         # print(x.shape)
         if len(x.shape) != 4:
@@ -105,7 +121,11 @@ class VIN(nn.Module):
             # print(q[i, :, p_x[i], p_y[i]].shape)
             q_out[i] = q[i, :, p_x[i], p_y[i]]
 
-        # get final q values
-        q_out = self.fc(q_out)
+        # lstm pass
+        q_out = torch.unsqueeze(q_out, axis=1)
+        q_out, hidden = self.lstm(q_out, hidden)
 
-        return q_out
+        # get final q values
+        q_out = self.fc(torch.squeeze(q_out, axis=1))
+
+        return q_out, hidden
