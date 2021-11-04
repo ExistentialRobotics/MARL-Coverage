@@ -15,6 +15,7 @@ from Policies.Networks.grid_rl_conv import Grid_RL_Conv
 from Policies.Networks.grid_rl_recur import Grid_RL_Recur
 from Policies.Networks.gnn import GNN
 from Policies.Networks.vin import VIN
+from Policies.Networks.rvin import RVIN
 from Utils.gridmaker import gridgen, gridload
 
 
@@ -161,6 +162,8 @@ else:
     '''Init model net'''
     if model_name == "vin":
         net = VIN(num_actions, obs_dim, model_config)
+    elif model_name == "rvin":
+        net = RVIN(num_actions, obs_dim, model_config)
     elif model_name == "cnn":
         net = Grid_RL_Conv(num_actions, obs_dim, model_config)
     elif model_name == "crnn":
