@@ -117,6 +117,9 @@ class VIN(nn.Module):
 
         # Attention model
         # q_out = attention(q, pos_x, pos_y)
+        # TODO: vectorize this
+        out = torch.zeros()
+        for i in range()
         q_out = q[:, :, pos_x, pos_y]
 
         # get final q values
