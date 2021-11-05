@@ -191,7 +191,7 @@ class MultiAgentSpanningTreeCoveragePolicy(object):
 if __name__ == "__main__":
     #testing spanning tree coverage on dec_grid_rl environment
     env_config = {
-        "numrobot": 3,
+        "numrobot": 10,
         "maxsteps": 60000,
         "collision_penalty": 5,
         "senseradius": 2,
@@ -210,8 +210,8 @@ if __name__ == "__main__":
 
     grid_config = {
         "grid_dir": "./Grids/bg2_100x100",
-        "gridwidth": 30,
-        "gridlen": 30,
+        "gridwidth": 200,
+        "gridlen": 200,
         "numgrids": 30,
         "prob_obst": 0
     }
@@ -228,7 +228,7 @@ if __name__ == "__main__":
     logger = Logger(exp_name, makevid)
 
     #testing stc
-    stc_controller = MultiAgentSpanningTreeCoveragePolicy(3,105)
+    stc_controller = MultiAgentSpanningTreeCoveragePolicy(10,210)
 
     state = (env.reset())[:,2,:,:]#getting only the obstacle layers
     stc_controller.reset(env._xinds, env._yinds)
