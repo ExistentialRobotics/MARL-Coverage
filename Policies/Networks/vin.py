@@ -57,7 +57,7 @@ class VIN(nn.Module):
                                stride=1)
 
         # fc to map output of vi module to number of actions
-        self.fc = nn.Linear(in_features=self.qout_c + (obs_dim[1] ** 2),
+        self.fc = nn.Linear(in_features=self.qout_c + obs_dim[0] ** 2,
                             out_features=action_dim,
                             bias=False)
 
