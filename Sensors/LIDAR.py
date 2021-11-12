@@ -24,6 +24,9 @@ class LidarSensor(Sensor):
             2d numpy array representing scan, with size 2*range + 1 in each axis,
         egocentric observation from state
         """
+        # For grid world robot is always facing forward
+        x[2] = 0
+
         laserscan = np.zeros((2*self._range + 1, 2*self._range + 1))
 
         xround = int(x[0])
