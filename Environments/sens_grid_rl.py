@@ -1,4 +1,6 @@
-from Sensors.LIDAR import LidarSensor, Grid
+from Sensors.LIDAR import LidarSensor
+from Sensors.Grid import Grid
+
 import numpy as np
 import matplotlib.pyplot as plt
 from . environment import Environment

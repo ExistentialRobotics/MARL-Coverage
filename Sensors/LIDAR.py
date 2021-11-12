@@ -1,10 +1,10 @@
 import numpy as np
-from . SensAbstract import Sensor
+from . SensAbstract import SensAbstract
 import cv2
 
-class LidarSensor(Sensor):
+class LidarSensor(SensAbstract):
     def __init__(self, numofLasers, maxrange):
-        Sensor.__init__(self)
+        SensAbstract.__init__(self)
         assert numofLasers % 2 == 1, "odd number of lasers needed"
         self._numofLasers = numofLasers
         self._range = maxrange

@@ -1,7 +1,7 @@
 import numpy as np
-from . SensAbstract import Sensor
+from . SensAbstract import SensAbstract
 
-class Grid(Sensor):
+class Grid(SensAbstract):
     '''
     Grid will be n x n square where n = range
     '''

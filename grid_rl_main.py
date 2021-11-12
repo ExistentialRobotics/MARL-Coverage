@@ -1,3 +1,4 @@
+from Environments.sens_grid_rl import SensGridRL
 import numpy as np
 import getopt, sys
 import json
@@ -146,7 +147,7 @@ if env_name == 'SuperGridRL':
     env = SuperGridRL(gridlis, env_config)
 elif env_name == 'DecGridRL':
     env = DecGridRL(gridlis, env_config, use_graph=policy_config["use_graph"])
-
+env = SensGridRL(gridlis, env_config, use_graph=policy_config["use_graph"])
 num_actions = env._num_actions
 obs_dim = env._obs_dim
 
