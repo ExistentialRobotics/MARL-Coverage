@@ -3,6 +3,25 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 
+def attention(tensor, S1, S2, qout_channels):
+    """Attention model for grid world
+    """
+    num_data = tensor.size()[0]
+    imsize = tensor.size()[2]
+
+    # Slicing S1 positions
+    slice_s1 = S1.expand(imsize, 1, qout_channels, num_data)
+    slice_s1 = slice_s1.permute(3, 2, 1, 0)
+    q_out = tensor.gather(2, slice_s1)
+    q_out = q_out.squeeze(2)
+
+    # Slicing S2 positions
+    slice_s2 = S2.expand(1, qout_channels, num_data)
+    slice_s2 = slice_s2.permute(2, 1, 0)
+    q_out = q_out.gather(2, slice_s2).squeeze(2)
+
+    return q_out
+
 
 class RVIN(nn.Module):
 
@@ -13,6 +32,7 @@ class RVIN(nn.Module):
 
         # number of vi iterations
         self.k = vi_config["k"]
+        self.qout = vi_config["qout_channels"]
 
         conv_output_size = np.array(obs_dim)
 
@@ -46,10 +66,6 @@ class RVIN(nn.Module):
                                          - np.array(vi_config["qconv_filter"])) + 1)
         conv_output_size[0] = vi_config["qout_channels"]
 
-        # convert qnet output to a lower dimension
-        # q_to_recurr = [nn.Flatten(), nn.Linear(int(np.prod(conv_output_size)), model_config["lstm_output"], bias=False), nn.ReLU()]
-        # self.q_to_recurr = nn.Sequential(*q_to_recurr)
-
         # lstm to use history of past qvals to influence current ones
         self.lstm = nn.LSTM(vi_config["qout_channels"], model_config['lstm_cell_size'],
                             model_config['num_recurr_layers'], batch_first=True)
@@ -61,21 +77,12 @@ class RVIN(nn.Module):
 
     def forward(self, x, hidden, record_images=False):
         # reshape input if not the right dims
-        # print(x.shape)
         if len(x.shape) != 4:
             x = torch.unsqueeze(x, axis=0)
 
-        # TODO: vectorize this
-        p_x = []
-        p_y = []
-        for i in range(x.shape[0]):
-            pos_maps = torch.squeeze(x[i, 0, :, :], axis=0)
-            # print(pos_maps)
-            inds = np.argwhere(pos_maps.cpu().numpy()>0)
-            # print(inds)
-            p_x.append(inds[0, 0])
-            p_y.append(inds[0, 1])
-            # print(str(pos_x) + " " + str(pos_y))
+        # get indicies of robot positions
+        inds = torch.nonzero(x[:, 0, :, :])
+        inds = inds[:, 1:]
 
         # Get reward image from observation image
         h = self.h_net(x)
@@ -97,13 +104,9 @@ class RVIN(nn.Module):
 
         # K-iterations of Value Iteration module
         for _ in range(self.k):
-            # print("---------------K-iterations of Value Iteration module---------------")
-            # print(r.shape)
-            # print(v.shape)
             rv = torch.cat([r, v], 1) # [batch_size, 2, imsize, imsize]
             q = self.q_net(rv)
             v, _ = torch.max(q, 1) # torch.max returns (values, indices)
-            # print(v.shape)
             v = torch.unsqueeze(v, axis=1)
 
             if record_images:
@@ -115,11 +118,7 @@ class RVIN(nn.Module):
         q = self.q_net(rv)
 
         # Attention model
-        # q_out = attention(q, pos_x, pos_y)
-        q_out = torch.zeros((q.shape[0], q.shape[1]))
-        for i in range(len(p_x)):
-            # print(q[i, :, p_x[i], p_y[i]].shape)
-            q_out[i] = q[i, :, p_x[i], p_y[i]]
+        q_out = attention(q, inds[:, 0], inds[:, 1], self.qout)
 
         # lstm pass
         q_out = torch.unsqueeze(q_out, axis=1)
