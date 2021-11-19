@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from . environment import Environment
+from . dijkstra import dijkstra
 from queue import PriorityQueue
 import pygame
 import cv2
@@ -35,6 +36,7 @@ class DecGridRL(object):
         self._map_sharing = env_config['map_sharing']
         self._use_graph = use_graph
         self._single_square_tool = env_config['single_square_tool'] #for stc
+        self._dijkstra_input = env_config['dijkstra_input'] #includes dijkstra cost map in obs
 
         #padding for map arrays
         self._pad = max(self._egoradius, self._mini_map_rad)
@@ -224,6 +226,9 @@ class DecGridRL(object):
         if self._dist_r:
             numlayers += 1
 
+        if self._dijkstra_input:
+            numlayers +=1
+
         z = np.zeros((self._numrobot, numlayers, 2*self._egoradius + 1, 2*self._egoradius + 1))
 
         #construct state for each robot
@@ -241,13 +246,17 @@ class DecGridRL(object):
                 distance_map = self.get_distance_map(self._free_pad[i])
                 z[i][3] = self.arraySubset(distance_map, x, y, self._egoradius)
 
+            if self._dijkstra_input:
+                cost_map = dijkstra(self._free_pad[i] - self._obst_pad[i])
+                z[i][3] = self.arraySubset(cost_map, x, y, self._egoradius)
+
             #larger map view
             if self._mini_map_rad > 0:
                 mini_free = self.arraySubset(self._free_pad[i], x, y, self._mini_map_rad)
                 mini_obs = self.arraySubset(self._obst_pad[i], x, y,
                                             self._mini_map_rad)
-                z[i][4] = cv2.resize(mini_free, dsize=(2*self._egoradius + 1, 2*self._egoradius + 1), interpolation=cv2.INTER_LINEAR)
-                z[i][5] = cv2.resize(mini_obs, dsize=(2*self._egoradius + 1, 2*self._egoradius + 1), interpolation=cv2.INTER_LINEAR)
+                z[i][3] = cv2.resize(mini_free, dsize=(2*self._egoradius + 1, 2*self._egoradius + 1), interpolation=cv2.INTER_LINEAR)
+                z[i][4] = cv2.resize(mini_obs, dsize=(2*self._egoradius + 1, 2*self._egoradius + 1), interpolation=cv2.INTER_LINEAR)
 
         return z
 

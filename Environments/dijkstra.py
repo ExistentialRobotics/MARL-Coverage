@@ -38,8 +38,8 @@ def get_valid_neighbors(x, y, grid, visited):
 def dijkstra(grid):
     """
     Args:
-       grid : an array representing the environment, 0 is explored,
-             1 is unexplored, and -1 is obstacle
+       grid : an array representing the environment, 1 is explored,
+             0 is unexplored, and -1 is obstacle
 
     Returns:
        a cost array representing the cost from the closest unexplored node
@@ -56,7 +56,7 @@ def dijkstra(grid):
         for j in range(grid.shape[1]):
 
             #checking if cell is unexplored
-            if grid[i][j] == 1:
+            if grid[i][j] == 0:
                 #adding unexplored cell to open set
                 open_set.put((0, (i,j)))
 
@@ -82,7 +82,7 @@ def dijkstra(grid):
 
 
 if __name__ == "__main__":
-    grid = np.zeros((10,10))
-    grid = np.pad(grid,((1,1),(1,1)), constant_values = ((1,1),(1,1)))
+    grid = np.ones((10,10))
+    grid = np.pad(grid,((1,1),(1,1)), constant_values = ((0,0),(0,0)))
     print(dijkstra(grid))
 
