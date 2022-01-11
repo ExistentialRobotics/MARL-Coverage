@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from . environment import Environment
 from . dijkstra import dijkstra
+from . Sensors.lidar import LidarSensor
+from . Sensors.squaresensor import SquareSensor
 from queue import PriorityQueue
 import pygame
 import cv2
@@ -22,8 +24,6 @@ class DecGridRL(object):
         self._numrobot = env_config['numrobot']
         self._maxsteps = env_config['maxsteps']
         self._collision_penalty = env_config['collision_penalty']
-        self._senseradius = env_config['senseradius']
-        self._free_penalty = env_config['free_penalty']
         self._done_thresh = env_config['done_thresh']
         self._done_incr = env_config['done_incr']
         self._terminal_reward = env_config['terminal_reward']
@@ -37,6 +37,13 @@ class DecGridRL(object):
         self._use_graph = use_graph
         self._single_square_tool = env_config['single_square_tool'] #for stc
         self._dijkstra_input = env_config['dijkstra_input'] #includes dijkstra cost map in obs
+
+        #sensor
+        sensor_type = env_config['sensor_type']
+        if sensor_type == 'lidar':
+            self._sensor = LidarSensor(env_config['sensor_config'])
+        elif sensor_type == 'square_sensor':
+            self._sensor = SquareSensor(env_config['sensor_config'])
 
         #padding for map arrays
         self._pad = max(self._egoradius, self._mini_map_rad)
@@ -144,7 +151,6 @@ class DecGridRL(object):
         '''
         obs_reward = 0
 
-        # distance_map = self.get_distance_map(self._visited)
 
         #sense from all the current robot positions
         for i in range(self._numrobot):
@@ -155,39 +161,32 @@ class DecGridRL(object):
             if self._dist_r:
                 distance_map = self.get_distance_map(self._free_pad[i])
 
-            #left and right boundaries
-            lb = max(x-self._senseradius, 0)
-            rb = min(x+self._senseradius+1, self._gridwidth)
+            #getting sensor observation
+            new_free, new_obst = self._sensor.getMeasurement(x, y, self._grid, self._free_pad[i], self._obst_pad[i], self._pad)
 
-            #up and down boundaries
-            db = max(y-self._senseradius, 0)
-            ub = min(y+self._senseradius+1, self._gridlen)
+            #updating free/obst grids
+            self._obst_pad[i] = new_obst
+            if self._single_square_tool:
+                self._free_pad[i][x+self._pad][y+self._pad] = 1
+            else:
+                self._free_pad[i] = new_free
 
-            #looping over all grid cells to sense
-            for j in range(lb, rb):
-                for k in range(db, ub):
-                    if self._grid[j][k] >= 0:
-                        if not self._single_square_tool or (x == j and y == k):
-                            # mark as not free
-                            self._free_pad[i][j+self._pad][k+self._pad] = 1
-
-                            #checking if visited
-                            if not self._visited[j][k]:
-                                # add reward
-                                obs_reward += 1
-                                self._numobserved += 1
-
-                                #marking as visited
-                                self._visited[j][k] = 1
-                            else:
-                                obs_reward -= self._free_penalty
-                    else:
-                        # track observed obstacles
-                        self._obst_pad[i][j+self._pad][k+self._pad]=1
-                        self._observed_obstacles[j][k] = 1
-
+            #distance reward
             if self._dist_r:
                 obs_reward += distance_map[x, y]
+
+        #counting previously visited cells
+        prev_vis_count = np.sum(self._visited)
+
+        #updating visited, obstacle maps
+        new_vis = np.clip(np.sum(self._free_pad, axis=0), 0, 1)
+        new_obst = np.clip(np.sum(self._obst_pad, axis=0), 0, 1)
+
+        self._visited = new_vis[self._pad:(self._pad + self._gridwidth), self._pad:(self._pad + self._gridlen)]
+        self._observed_obstacles = new_obst[self._pad:(self._pad + self._gridwidth), self._pad:(self._pad + self._gridlen)]
+
+        #updating reward for visiting new cells
+        obs_reward += np.sum(self._visited) - prev_vis_count
 
         return obs_reward
 
