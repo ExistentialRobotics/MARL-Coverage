@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from . environment import Environment
-from . dijkstra import dijkstra
+from . dijkstra import dijkstra_path_map
 from . Sensors.lidar import LidarSensor
 from . Sensors.squaresensor import SquareSensor
 from queue import PriorityQueue
@@ -246,9 +246,8 @@ class DecGridRL(object):
                 z[i][3] = self.arraySubset(distance_map, x, y, self._egoradius)
 
             if self._dijkstra_input:
-                cost_map = dijkstra(self._free_pad[i] - self._obst_pad[i])
+                cost_map = dijkstra_path_map(self._free_pad[i] - self._obst_pad[i], x + self._pad, y + self._pad)
                 z[i][3] = self.arraySubset(cost_map, x, y, self._egoradius)
-
             #larger map view
             if self._mini_map_rad > 0:
                 mini_free = self.arraySubset(self._free_pad[i], x, y, self._mini_map_rad)
