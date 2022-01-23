@@ -185,9 +185,7 @@ if __name__ == "__main__":
         "numrobot": 1,
         "maxsteps": 60000,
         "collision_penalty": 5,
-        "senseradius": 2,
         "egoradius": 2,
-        "free_penalty": 0,
         "done_thresh": 1,
         "done_incr": 0,
         "terminal_reward": 30,
@@ -196,7 +194,13 @@ if __name__ == "__main__":
         "allow_comm" : 0,
         "map_sharing" : 0,
         "single_square_tool" : 1,
-        "dist_reward" : 0
+        "dist_reward" : 0,
+        "dijkstra_input" : 0,
+        "sensor_type" : "square_sensor",
+        "sensor_config" : {
+            "range" : 2
+            }
+
     }
 
     grid_config = {

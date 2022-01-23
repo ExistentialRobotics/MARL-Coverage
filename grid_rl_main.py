@@ -1,4 +1,3 @@
-from Environments.sens_grid_rl import SensGridRL
 import numpy as np
 import getopt, sys
 import json

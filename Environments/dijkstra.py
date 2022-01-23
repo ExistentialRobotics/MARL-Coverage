@@ -35,7 +35,7 @@ def get_valid_neighbors(x, y, grid, visited):
     return neighbors
 
 
-def dijkstra(grid):
+def dijkstra_cost_map(grid):
     """
     Args:
        grid : an array representing the environment, 1 is explored,
@@ -79,6 +79,81 @@ def dijkstra(grid):
             open_set.put((cell[0] + 1, neighbor))
 
     return cost
+
+def dijkstra_path_map(grid, start_x, start_y):
+    """
+    Args:
+       grid : an array representing the environment, 1 is explored,
+             0 is unexplored, and -1 is obstacle
+       start_x : starting x position
+       start_y : starting y position
+
+    Returns:
+       an array showing the shortest path to an unexplored cell
+
+    """
+    open_set = PriorityQueue()
+    visited = np.zeros(grid.shape)
+    cost = -1*np.ones(grid.shape)
+
+    #adding starting point to the open set
+    open_set.put((0, (start_x, start_y)))
+
+    end_point = None
+
+    #main dijkstra loop
+    while not open_set.empty():
+        cell = open_set.get()
+
+        #check if cell has already been visited
+        if visited[cell[1][0]][cell[1][1]] == 1:
+            continue
+
+        #mark as visited, finalize cost
+        visited[cell[1][0]][cell[1][1]] = 1
+        cost[cell[1][0]][cell[1][1]] = cell[0]
+
+        #checking if cell is unexplored
+        if grid[cell[1][0]][cell[1][1]] == 0:
+            end_point = cell[1]
+            break
+
+        #looping over all neighbors and updating their costs
+        neighbors = get_valid_neighbors(cell[1][0], cell[1][1], grid, visited)
+
+        for neighbor in neighbors:
+            open_set.put((cell[0] + 1, neighbor))
+
+    #using cost array to make optimal path
+    path_array = np.zeros(grid.shape)
+
+    #handling case where we can't reach any unexplored points
+    if end_point == None:
+        return path_array
+
+    curr = end_point
+    curr_cost = cost[curr[0], curr[1]]
+    path_array[curr[0], curr[1]] = 1
+
+    #reset visited to not interfere with neighbor check
+    visited = 1 - visited
+
+    while curr[0] != start_x or curr[1] != start_y:
+        neighbors = get_valid_neighbors(curr[0], curr[1], grid, visited)
+
+        #finding the neighbor with the minimum cost
+        for neighbor in neighbors:
+            if cost[neighbor[0], neighbor[1]] == curr_cost - 1:
+                curr_cost -= 1
+                curr = neighbor
+                break
+
+        #adding the current cell to the path
+        path_array[curr[0], curr[1]] = 1
+
+    assert path_array[start_x, start_y] == 1
+
+    return path_array
 
 
 if __name__ == "__main__":
