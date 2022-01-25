@@ -1,36 +1,51 @@
 import numpy as np
+import sys
 
 class Node(object):
     def __init__(self, num_action):
+        self.num_action = num_action
         self.Q = np.zeros(num_action) #q-values for each action
         self.P = np.zeros(num_action) #prior probabilities for each action
         self.N = np.zeros(num_action) #visit count for each action
+        self.ucb_table = np.zeros(num_action)
+        self.num_visits = 0 #visit count for the node in total
+        self.children = {} #dict of this nodes children
         # self.depth = depth #depth of the node in the search tree
 
+
+        # value = -(number of free cells remaining * constant + steps taken)
+
     def sampleUCB(self):
-        #TODO returns action with highest UCB score
-        pass
+        max = -sys.maxint - 1
+        for i in range(self.num_action):
+            ucb = self.Q[i] + c * self.P[i] * math.sqrt(self.num_visits / (self.N[i] + 1))
+            self.ucb_table = ucb
+            if ucb > max:
+                best_action = action
+                max = ucb
+        return action, ucb
 
     def updateQ(self, u, v):
         #TODO updates Q of action u with value v
         pass
 
 class MCTS(object):
-    def __init__(self, env, policy, value, num_action):
+    def __init__(self, env, policy, value, mcts_sims):
         super().__init__()
         self.nodes = {} #hashmap taking states to nodes
-        self.num_action = num_action #number of actions from each state
+        self.num_action = env._num_actions #number of actions from each state
         self.env = env #env class
+        self.mcts_sims = mcts_sims #number of mcts searches
         self.policy = policy #policy function
         self.value = value #value function
 
-    def pi(self, x0, num_sims):
+    def pi(self, x0):
         '''
         Returns the action probabilities from the current state x0 after
         doing num_sims iterations of MCTS
         '''
         #doing all MCTS searches
-        for i in range(num_sims):
+        for i in range(self.mcts_sims):
             self.search(x0)
 
         #getting first node visit counts to find probs
@@ -86,4 +101,3 @@ class MCTS(object):
             node.P = probs
 
             return v
-

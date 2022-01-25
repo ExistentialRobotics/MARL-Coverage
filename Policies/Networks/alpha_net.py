@@ -11,7 +11,7 @@ breaking the performance, ideally it shouldn't be but who knows.
 class Alpha_Net(nn.Module):
 
     def __init__(self, action_dim, obs_dim, model_config):
-        super(Grid_RL_Conv, self).__init__()
+        super(Alpha_Net, self).__init__()
 
         #getting all model config params
         conv_channels = model_config['conv_channels']
@@ -67,7 +67,7 @@ class Alpha_Net(nn.Module):
                            hidden_activation()]
         self.layers = nn.Sequential(*layers)
 
-        self.output_layers = [nn.Linear(hidden_sizes[-1], action_dim), nn.Linear(hidden_sizes[-1], 1)]
+        output_layers = [nn.Linear(hidden_sizes[-1], action_dim), nn.Linear(hidden_sizes[-1], 1)]
         self.output_layers = nn.Sequential(*output_layers)
 
         self.layers.apply(init_weights)

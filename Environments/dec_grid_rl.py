@@ -39,11 +39,12 @@ class DecGridRL(object):
         self._dijkstra_input = env_config['dijkstra_input'] #includes dijkstra cost map in obs
 
         #sensor
-        sensor_type = env_config['sensor_type']
-        if sensor_type == 'lidar':
-            self._sensor = LidarSensor(env_config['sensor_config'])
-        elif sensor_type == 'square_sensor':
-            self._sensor = SquareSensor(env_config['sensor_config'])
+        # print(env_config)
+        # sensor_type = env_config['sensor_type']
+        # if sensor_type == 'lidar':
+        #     self._sensor = LidarSensor(env_config['sensor_config'])
+        # elif sensor_type == 'square_sensor':
+        #     self._sensor = SquareSensor(env_config['sensor_config'])
 
         #padding for map arrays
         self._pad = max(self._egoradius, self._mini_map_rad)
