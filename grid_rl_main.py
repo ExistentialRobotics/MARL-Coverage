@@ -9,6 +9,7 @@ from Policies.basic_random import Basic_Random
 from Policies.dqn import DQN
 from Policies.drqn import DRQN
 from Policies.vdn import VDN
+from Policies.alphazero import AlphaZero
 from Logger.logger import Logger
 from Utils.utils import train_RLalg, test_RLalg
 from Policies.Networks.grid_rl_conv import Grid_RL_Conv
@@ -16,6 +17,7 @@ from Policies.Networks.grid_rl_recur import Grid_RL_Recur
 from Policies.Networks.gnn import GNN
 from Policies.Networks.vin import VIN
 from Policies.Networks.rvin import RVIN
+from Policies.Networks.alpha_net import Alpha_Net
 from Utils.gridmaker import gridgen, gridload
 
 
@@ -170,6 +172,8 @@ else:
         net = Grid_RL_Recur(num_actions, obs_dim, model_config)
     elif model_name == "gnn":
         net = GNN(num_actions, obs_dim, model_config)
+    elif model_name == "alpha_net":
+        net = Alpha_Net(num_actions, obs_dim, model_config)
     else:
         print(DASH)
         print(str(model_name) + " is an invalid model.")
@@ -187,6 +191,9 @@ else:
     elif policy_name == "dqn":
         policy = DQN(net, num_actions, obs_dim, policy_config,
                      model_path=model_path)
+    elif policy_name == "alphazero":
+        policy = AlphaZero(env, net, num_actions, obs_dim, policy_config,
+                     model_path=model_path)
     else:
         print(DASH)
         print(str(policy_name) + " is an invalid policy.")
@@ -194,7 +201,7 @@ else:
         sys.exit(1)
 
 # train a policy if not testing a saved model
-if not saved_model:
+if not saved_model and policy_name != "alphazero":
     '''Train policy'''
     if not random_policy:
         print("----------Running {} for ".format(policy_name) + str(train_episodes) + " episodes-----------")

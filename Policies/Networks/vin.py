@@ -107,6 +107,6 @@ class VIN(nn.Module):
         q_out = attention(q, inds[:, 0], inds[:, 1], self.qout_c)
 
         # get final q values
-        q_out = self.fc(q_out)
+        q_out = self.fc(torch.cat((q_out, torch.flatten(x[:, 3, :, :], start_dim=1)), dim=1))
 
         return q_out
