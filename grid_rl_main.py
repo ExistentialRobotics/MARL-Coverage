@@ -3,6 +3,7 @@ import getopt, sys
 import json
 
 from Environments.super_grid_rl import SuperGridRL
+from Environments.sim_env import SuperGrid_Sim
 from Environments.dec_grid_rl import DecGridRL
 from Action_Spaces.discrete import Discrete
 from Policies.basic_random import Basic_Random
@@ -192,7 +193,8 @@ else:
         policy = DQN(net, num_actions, obs_dim, policy_config,
                      model_path=model_path)
     elif policy_name == "alphazero":
-        policy = AlphaZero(env, net, num_actions, obs_dim, policy_config,
+        sim = SuperGrid_Sim(env._grid, env._obs_dim, env_config)
+        policy = AlphaZero(env, sim, net, num_actions, obs_dim, policy_config,
                      model_path=model_path)
     else:
         print(DASH)

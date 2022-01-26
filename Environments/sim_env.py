@@ -5,16 +5,16 @@ from queue import PriorityQueue
 import cv2
 import pygame
 
-class SuperGridRL(object):
+class SuperGrid_Sim(object):
     """
     A Centralized Multi-Agent Grid Environment with a discrete action
     space. The objective of the environment is to cover as much of the region
     as possible.
     """
-    def __init__(self, gridlis, env_config):
+    def __init__(self, grid, obs_dim, env_config):
         super().__init__()
         #list of grids to use in training
-        self._gridlis = gridlis
+        self._grid = grid
 
         #environment config parameters
         self._numrobot = env_config['numrobot']
@@ -29,7 +29,7 @@ class SuperGridRL(object):
         self._use_scanning = env_config['use_scanning']
 
         #observation and action dimensions
-        self._obs_dim = self.get_state().shape
+        self._obs_dim = obs_dim
         self._num_actions = 4**self._numrobot
 
         #experimental pygame shite
@@ -37,16 +37,20 @@ class SuperGridRL(object):
         self._display = pygame.display.set_mode((1075, 1075))
 
     def step(self, state, action):
-        # decompose state
-        grid = state[0]
-        pos = state[1]
-        observed_obstacles = state[2]
-        observed_obstacles = state[3]
-        free = state[4]
+        imgs, currstep = state
 
-        # dims of grid
-        width = grid.shape[0]
-        height = grid.shape[1]
+        # decompose state
+        pos_img = imgs[0]
+        observed_obstacles = imgs[1]
+        free = imgs[2]
+        distance_map = imgs[3]
+
+        # extract x,y position
+        pos = np.nonzero(pos_img)
+
+        # dims of self._grid
+        width = self._grid.shape[0]
+        height = self._grid.shape[1]
 
         #handling case where action is an integer that identifies the action
         if type(action) != list:
@@ -73,8 +77,8 @@ class SuperGridRL(object):
             x = pos[0] - 1
             y = pos[1]
 
-            if(self.isInBounds(x,y,width,height) and not self.isOccupied(x,y,grid)):
-                pos[0] = x
+            if(self.isInBounds(x,y,width,height) and not self.isOccupied(x,y)):
+                pos = (x, y)
                 if self._dist_r:
                     reward[i] += distance_map[x, y]
             else:
@@ -84,8 +88,8 @@ class SuperGridRL(object):
             x = pos[0] + 1
             y = pos[1]
 
-            if(self.isInBounds(x,y,width,height) and not self.isOccupied(x,y,grid)):
-                pos[0] = x
+            if(self.isInBounds(x,y,width,height) and not self.isOccupied(x,y)):
+                pos = (x, y)
                 if self._dist_r:
                     reward[i] += distance_map[x, y]
             else:
@@ -95,8 +99,8 @@ class SuperGridRL(object):
             x = pos[0]
             y = pos[1] + 1
 
-            if(self.isInBounds(x,y,width,height) and not self.isOccupied(x,y,grid)):
-                pos[1] = y
+            if(self.isInBounds(x,y,width,height) and not self.isOccupied(x,y)):
+                pos = (x, y)
                 if self._dist_r:
                     reward[i] += distance_map[x, y]
             else:
@@ -106,34 +110,34 @@ class SuperGridRL(object):
             x = pos[0]
             y = pos[1] - 1
 
-            if(self.isInBounds(x,y,width,height) and not self.isOccupied(x,y,grid)):
-                pos[1]= y
+            if(self.isInBounds(x,y,width,height) and not self.isOccupied(x,y)):
+                pos = (x, y)
                 if self._dist_r:
                     reward[i] += distance_map[x, y]
             else:
                 reward[i] -= self._collision_penalty
 
         #sense from the current robot position
-        x = pos[0]
-        y = pos[1]
+        x = np.asscalar(pos[0])
+        y = np.asscalar(pos[1])
 
-        #looping over all grid cells to sense
+        #looping over all self._grid cells to sense
         for j in range(x - self._senseradius, x + self._senseradius + 1):
             for k in range(y - self._senseradius, y + self._senseradius + 1):
                 #checking if cell is not visited, in bounds, not an obstacle
-                if(self.isInBounds(j,k,width,height) and grid[j][k]>=0 and
+                if(self.isInBounds(j,k,width,height) and self._grid[j][k]>=0 and
                     free[j][k] == 1):
                     # add reward
-                    reward += grid[j][k]
+                    reward += self._grid[j][k]
 
                     # mark as not free
                     free[j][k] = 0
 
-                elif(self.isInBounds(j,k,width,height) and grid[j][k]>=0 and
+                elif(self.isInBounds(j,k,width,height) and self._grid[j][k]>=0 and
                     free[j][k] == 0):
                     reward -= self._free_penalty
 
-                elif(self.isInBounds(j,k,width,height) and grid[j][k]<0 and
+                elif(self.isInBounds(j,k,width,height) and self._grid[j][k]<0 and
                         observed_obstacles[j][k] == 0):
                         # track observed obstacles
                         observed_obstacles[j][k] = 1
@@ -141,21 +145,26 @@ class SuperGridRL(object):
         #incrementing step count
         currstep += 1
 
-        #check env is covered
-        if min(self._done_thresh, 1) <= self.percent_covered():
-            reward += self._terminal_reward
+        # create position image
+        pos_img = np.zeros((pos_img.shape[0], pos_img.shape[1]))
+        pos_img[pos] = 1
 
-        state = np.stack(np.array([grid, pos, observed_obstacles, free]), axis=0)
+        # create state
+        imgs = np.stack(np.array([self._grid, pos_img, observed_obstacles, free]), axis=0)
+        state = (imgs, currstep)
+
+        #check env is covered
+        if min(self._done_thresh, 1) <= self.percent_covered(state):
+            reward += self._terminal_reward
 
         return state, reward
 
     def isInBounds(self, x, y, width, length):
         return x >= 0 and x < width and y >= 0 and y < length
 
-    #TODO remove the for loop so this is actually fast
-    def isOccupied(self, x, y, grid):
+    def isOccupied(self, x, y):
         #checking if no obstacle in that spot
-        if(grid[x][y] < 0):
+        if(self._grid[x, y] < 0):
             return True
 
         return False
@@ -172,14 +181,16 @@ class SuperGridRL(object):
         # invert the values
         return 1 - distance_map
 
-    def done(self):
-        if min(self._done_thresh, 1) <= self.percent_covered():
-            print("Full Environment Covered")
+    def isTerminal(self, state):
+        imgs, steps = state
+        if min(self._done_thresh, 1) <= self.percent_covered(state):
             self._done_thresh += self._done_incr
             return True
-        if self._currstep == self._maxsteps:
+        if steps == self._maxsteps:
             return True
         return False
 
-    def percent_covered(self):
-        return np.count_nonzero(self._free < 1) / np.count_nonzero(self._grid > 0)
+    def percent_covered(self, state):
+        imgs, steps = state
+        free = imgs[2]
+        return np.count_nonzero(free < 1) / np.count_nonzero(self._grid > 0)

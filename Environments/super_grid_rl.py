@@ -35,7 +35,8 @@ class SuperGridRL(object):
         # self._graph = Graph_Data(env_config['numfeatures'], self._xinds, self._yinds, env_config['commradius'])
 
         #observation and action dimensions
-        self._obs_dim = self.get_state().shape
+        state, steps = self.get_state()
+        self._obs_dim = state.shape
         self._num_actions = 4**self._numrobot
 
         #experimental pygame shite
@@ -43,6 +44,7 @@ class SuperGridRL(object):
         self._display = pygame.display.set_mode((1075, 1075))
 
     def step(self, action):
+        print(action)
         #handling case where action is an integer that identifies the action
         if type(action) != list:
             ulis = np.zeros((self._numrobot,))
@@ -202,7 +204,7 @@ class SuperGridRL(object):
         # arrays = np.array(self.get_pos_image() + [self._observed_obstacles, self._free])
 
         state = np.stack(arrays, axis=0)
-        return state
+        return state, self._currstep
 
     def get_pos_image(self):
         """

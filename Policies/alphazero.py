@@ -7,7 +7,7 @@ from copy import deepcopy
 
 class AlphaZero(Base_Policy):
 
-    def __init__(self, env, net, num_actions, obs_dim, policy_config, model_path=None):
+    def __init__(self, env, sim, net, num_actions, obs_dim, policy_config, model_path=None):
         self._env = env # environment to run on
         self._net = net # neural network for prediction
 
@@ -28,7 +28,7 @@ class AlphaZero(Base_Policy):
                         weight_decay=policy_config['weight_decay'])
 
         # instanciate MCTS
-        self.tree = MCTS(env, None, None, policy_config["mcts_sims"])
+        self.tree = MCTS(sim, self._net, policy_config["mcts_sims"])
 
         # performance metrics
         self._losses = []

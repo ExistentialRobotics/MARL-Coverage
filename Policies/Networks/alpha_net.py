@@ -65,30 +65,26 @@ class Alpha_Net(nn.Module):
             else:
                 layers += [nn.Linear(hidden_sizes[i - 1], hidden_sizes[i]),
                            hidden_activation()]
+
         self.layers = nn.Sequential(*layers)
-
-        output_layers = [nn.Linear(hidden_sizes[-1], action_dim), nn.Linear(hidden_sizes[-1], 1)]
-        self.output_layers = nn.Sequential(*output_layers)
-
         self.layers.apply(init_weights)
-        self.output_layers.apply(init_weights)
+
+        self.prob_output = nn.Linear(hidden_sizes[-1], action_dim)
+        self.value_output = nn.Linear(hidden_sizes[-1], 1)
+        self.prob_output.apply(init_weights)
+        self.value_output.apply(init_weights)
 
 
     def forward(self, x):
-        # multiagent = False
-        # # reshape input if not the right dims
-        # if len(x.shape) == 3:
-        #     x = torch.unsqueeze(x, axis=0)
-        # elif len(x.shape) == 5:
-        #     batch = x.shape[0]
-        #     numrobot = x.shape[1]
-        #     x = torch.reshape(x, (batch*numrobot,) + x.shape[2:5])
-        #     multiagent = True
+        # reshape input if not the right dims
+        if len(x.shape) == 3:
+            x = torch.unsqueeze(x, axis=0)
 
-        x = torch.squeeze(self.layers(x), axis=0)
-        if multiagent:
-            x = torch.reshape(x,(batch, numrobot, -1))
-        return x
+        x = self.layers(x)
+        probs = self.prob_output(x)
+        v = self.prob_output(x)
+
+        return probs, v
 
 def init_weights(m):
     if type(m) == nn.Linear:
