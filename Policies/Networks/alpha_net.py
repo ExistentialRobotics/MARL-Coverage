@@ -24,6 +24,7 @@ class Alpha_Net(nn.Module):
         if model_config['hidden_activation'] == 'relu':
             hidden_activation = nn.ReLU
         output_activation = None
+        self.probs = model_config["prob"]
 
         # ensure that the number of channels and filters match
         assert len(conv_channels) == len(conv_filters)
@@ -81,10 +82,13 @@ class Alpha_Net(nn.Module):
             x = torch.unsqueeze(x, axis=0)
 
         x = self.layers(x)
-        probs = self.prob_output(x)
-        v = self.prob_output(x)
 
-        return probs, v
+        ret = self.value_output(x)
+        if self.probs:
+            p = self.prob_output(x)
+            ret = (p, v)
+
+        return ret
 
 def init_weights(m):
     if type(m) == nn.Linear:

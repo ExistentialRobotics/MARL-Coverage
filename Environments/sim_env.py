@@ -4,6 +4,7 @@ from . environment import Environment
 from queue import PriorityQueue
 import cv2
 import pygame
+import copy
 
 class SuperGrid_Sim(object):
     """
@@ -37,40 +38,33 @@ class SuperGrid_Sim(object):
         self._display = pygame.display.set_mode((1075, 1075))
 
     def step(self, state, action):
-        imgs, currstep = state
+        # print("state inside step: " + str(state))
 
         # decompose state
-        pos_img = imgs[0]
-        observed_obstacles = imgs[1]
-        free = imgs[2]
-        distance_map = imgs[3]
+        pos_img = state[0]
+        observed_obstacles = state[1]
+        free = state[2]
+        # distance_map = state[3]
 
         # extract x,y position
         pos = np.nonzero(pos_img)
+        # pos = copy.deepcopy(pos)
 
         # dims of self._grid
         width = self._grid.shape[0]
         height = self._grid.shape[1]
 
-        #handling case where action is an integer that identifies the action
-        if type(action) != list:
-            ulis = np.zeros((self._numrobot,))
-            #conveting integer to base 4 and putting it in ulis
-            for i in range(self._numrobot):
-                ulis[i] = action % 4
-                action = action // 4
-        else:
-            ulis = action
-
         #initialize reward for this step
         reward = 0
 
         # calc distance from observed to free cells
-        if self._dist_r:
-            distance_map = self.get_distance_map(free)
+        # if self._dist_r:
+        #     distance_map = self.get_distance_map(free)
 
         # apply controls
         u = action
+
+        # print("pos before alteration: " + str(pos) + " action: " + str(u))
 
         #left
         if(u == 0):
@@ -79,10 +73,11 @@ class SuperGrid_Sim(object):
 
             if(self.isInBounds(x,y,width,height) and not self.isOccupied(x,y)):
                 pos = (x, y)
+                # print("new pos: " + str(pos))
                 if self._dist_r:
-                    reward[i] += distance_map[x, y]
+                    reward += distance_map[x, y]
             else:
-                reward[i] -= self._collision_penalty
+                reward -= self._collision_penalty
         #right
         elif(u == 1):
             x = pos[0] + 1
@@ -90,10 +85,11 @@ class SuperGrid_Sim(object):
 
             if(self.isInBounds(x,y,width,height) and not self.isOccupied(x,y)):
                 pos = (x, y)
+                # print("new pos: " + str(pos))
                 if self._dist_r:
-                    reward[i] += distance_map[x, y]
+                    reward += distance_map[x, y]
             else:
-                reward[i] -= self._collision_penalty
+                reward -= self._collision_penalty
         #up
         elif(u == 2):
             x = pos[0]
@@ -101,10 +97,11 @@ class SuperGrid_Sim(object):
 
             if(self.isInBounds(x,y,width,height) and not self.isOccupied(x,y)):
                 pos = (x, y)
+                # print("new pos: " + str(pos))
                 if self._dist_r:
-                    reward[i] += distance_map[x, y]
+                    reward += distance_map[x, y]
             else:
-                reward[i] -= self._collision_penalty
+                reward -= self._collision_penalty
         #down
         elif(u == 3):
             x = pos[0]
@@ -112,18 +109,19 @@ class SuperGrid_Sim(object):
 
             if(self.isInBounds(x,y,width,height) and not self.isOccupied(x,y)):
                 pos = (x, y)
+                # print("new pos: " + str(pos))
                 if self._dist_r:
-                    reward[i] += distance_map[x, y]
+                    reward += distance_map[x, y]
             else:
-                reward[i] -= self._collision_penalty
+                reward -= self._collision_penalty
 
         #sense from the current robot position
-        x = np.asscalar(pos[0])
-        y = np.asscalar(pos[1])
+        x_p = np.asscalar(pos[0])
+        y_p = np.asscalar(pos[1])
 
         #looping over all self._grid cells to sense
-        for j in range(x - self._senseradius, x + self._senseradius + 1):
-            for k in range(y - self._senseradius, y + self._senseradius + 1):
+        for j in range(x_p - self._senseradius, x_p + self._senseradius + 1):
+            for k in range(y_p - self._senseradius, y_p + self._senseradius + 1):
                 #checking if cell is not visited, in bounds, not an obstacle
                 if(self.isInBounds(j,k,width,height) and self._grid[j][k]>=0 and
                     free[j][k] == 1):
@@ -142,16 +140,15 @@ class SuperGrid_Sim(object):
                         # track observed obstacles
                         observed_obstacles[j][k] = 1
 
-        #incrementing step count
-        currstep += 1
-
         # create position image
         pos_img = np.zeros((pos_img.shape[0], pos_img.shape[1]))
         pos_img[pos] = 1
 
         # create state
-        imgs = np.stack(np.array([self._grid, pos_img, observed_obstacles, free]), axis=0)
-        state = (imgs, currstep)
+        # state = np.stack(np.array([pos_img, observed_obstacles, free, distance_map]), axis=0)
+        state = np.stack(np.array([pos_img, observed_obstacles, free]), axis=0)
+
+        # print("state after step: " + str(state))
 
         #check env is covered
         if min(self._done_thresh, 1) <= self.percent_covered(state):
@@ -160,6 +157,7 @@ class SuperGrid_Sim(object):
         return state, reward
 
     def isInBounds(self, x, y, width, length):
+        # print(str(x) + " " + str(y) + " " + str(width) + " " + str(length))
         return x >= 0 and x < width and y >= 0 and y < length
 
     def isOccupied(self, x, y):
@@ -181,8 +179,7 @@ class SuperGrid_Sim(object):
         # invert the values
         return 1 - distance_map
 
-    def isTerminal(self, state):
-        imgs, steps = state
+    def isTerminal(self, state, steps):
         if min(self._done_thresh, 1) <= self.percent_covered(state):
             self._done_thresh += self._done_incr
             return True
@@ -191,6 +188,5 @@ class SuperGrid_Sim(object):
         return False
 
     def percent_covered(self, state):
-        imgs, steps = state
-        free = imgs[2]
+        free = state[2]
         return np.count_nonzero(free < 1) / np.count_nonzero(self._grid > 0)

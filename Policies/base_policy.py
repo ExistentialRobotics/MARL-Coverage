@@ -18,7 +18,7 @@ class Base_Policy(object):
         """
         raise notImplementedError()
 
-    def update(self):
+    def update_policy(self):
         """
         Updates the policy Parameters.
         """
@@ -28,4 +28,4 @@ class Base_Policy(object):
         """
         Resets the policy (at the end of an episode)
         """
-        pass
+        raise notImplementedError()

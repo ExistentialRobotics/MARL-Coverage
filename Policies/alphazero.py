@@ -34,7 +34,7 @@ class AlphaZero(Base_Policy):
         self._losses = []
 
 
-    def policy_iteration(self):
+    def train(self):
         for i in range(self._iters):
             # get data from playing data with current neural net
             train_data = []
@@ -102,6 +102,11 @@ class AlphaZero(Base_Policy):
 
     def reset(self):
         pass
+
+    def printNumParams(self):
+        pytorch_total_params = sum(p.numel() for p in self._net.parameters()
+                                   if p.requires_grad)
+        print(str(pytorch_total_params) + " in the heuristic network")
 
     def set_train(self):
         '''

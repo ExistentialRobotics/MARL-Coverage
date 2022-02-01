@@ -11,6 +11,7 @@ from Policies.dqn import DQN
 from Policies.drqn import DRQN
 from Policies.vdn import VDN
 from Policies.alphazero import AlphaZero
+from Policies.ha_star import HA_Star
 from Logger.logger import Logger
 from Utils.utils import train_RLalg, test_RLalg
 from Policies.Networks.grid_rl_conv import Grid_RL_Conv
@@ -196,6 +197,10 @@ else:
         sim = SuperGrid_Sim(env._grid, env._obs_dim, env_config)
         policy = AlphaZero(env, sim, net, num_actions, obs_dim, policy_config,
                      model_path=model_path)
+    elif policy_name == "ha_star":
+        sim = SuperGrid_Sim(env._grid, env._obs_dim, env_config)
+        policy = HA_Star(env, sim, net, num_actions, obs_dim, logger, policy_config,
+                     model_path=model_path)
     else:
         print(DASH)
         print(str(policy_name) + " is an invalid policy.")
@@ -203,7 +208,8 @@ else:
         sys.exit(1)
 
 # train a policy if not testing a saved model
-if not saved_model and policy_name != "alphazero":
+# if not saved_model and policy_name != "alphazero" and policy_name != "ha_star":
+if not saved_model:
     '''Train policy'''
     if not random_policy:
         print("----------Running {} for ".format(policy_name) + str(train_episodes) + " episodes-----------")
@@ -213,13 +219,19 @@ if not saved_model and policy_name != "alphazero":
                                                                         render=render_train, ignore_done=ignore_done)
     else:
         print("-----------------------Running Random Policy-----------------------")
+# else:
+#     print("----------Training " + str(policy_name) + "----------")
+#     policy.train()
 
 '''Test policy'''
 print("-----------------------------Testing Policy----------------------------")
-#testing the policy and collecting data
+# if policy_name != "alphazero" and policy_name != "ha_star":
 test_rewardlis, average_percent_covered = test_RLalg(env, policy, logger, episodes=test_episodes, render_test=render_test,
                                                      makevid=makevid)
 test_percent_covered.append(average_percent_covered)
+# else:
+#     episode = policy.rollout()
+#     policy.simulate(episode)
 
 # get max and average coverage across all tests
 max_coverage = max(test_percent_covered)

@@ -35,7 +35,7 @@ class SuperGridRL(object):
         # self._graph = Graph_Data(env_config['numfeatures'], self._xinds, self._yinds, env_config['commradius'])
 
         #observation and action dimensions
-        state, steps = self.get_state()
+        state = self.get_state()
         self._obs_dim = state.shape
         self._num_actions = 4**self._numrobot
 
@@ -44,7 +44,8 @@ class SuperGridRL(object):
         self._display = pygame.display.set_mode((1075, 1075))
 
     def step(self, action):
-        print(action)
+        # print("-----Inside step-----")
+
         #handling case where action is an integer that identifies the action
         if type(action) != list:
             ulis = np.zeros((self._numrobot,))
@@ -54,6 +55,8 @@ class SuperGridRL(object):
                 action = action // 4
         else:
             ulis = action
+
+        # print("robot position: " + str((self._xinds, self._yinds)))
 
         #initialize reward for this step
         reward = np.zeros((self._numrobot,))
@@ -197,14 +200,14 @@ class SuperGridRL(object):
         return 1 - distance_map
 
     def get_state(self):
-        distance_map = self.get_distance_map()
+        # distance_map = self.get_distance_map()
+        #
+        # arrays = np.array(self.get_pos_image() + [self._observed_obstacles, self._free, distance_map])
 
-        arrays = np.array(self.get_pos_image() + [self._observed_obstacles, self._free, distance_map])
-
-        # arrays = np.array(self.get_pos_image() + [self._observed_obstacles, self._free])
+        arrays = np.array(self.get_pos_image() + [self._observed_obstacles, self._free])
 
         state = np.stack(arrays, axis=0)
-        return state, self._currstep
+        return state
 
     def get_pos_image(self):
         """

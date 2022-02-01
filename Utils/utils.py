@@ -55,7 +55,7 @@ def train_RLalg(env, policy, logger, train_episodes=1000, test_episodes=10, rend
     checkpoint_num = 0
     for _ in range(train_episodes):
         if _ % 10 == 0:
-            print("Training Episode: " + str(_) + " out of " + str(train_episodes))
+            print("Training Episode: " + str(_) + " out of " + str(train_episodes) + " num nodes in tree: " + str(len(policy._nodes)))
 
         # obtain the next episode
         # print("----------------------Generating episode!----------------------")
