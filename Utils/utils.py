@@ -88,7 +88,7 @@ def train_RLalg(env, policy, logger, train_episodes=1000, test_episodes=10, rend
         policy.update_policy(episode)
 
         #tracking training loss for the episode
-        losslist.append(policy._lastloss)
+        losslist.append(policy._avgloss)
 
     #saving final policy
     logger.saveModelWeights(policy.getnet())

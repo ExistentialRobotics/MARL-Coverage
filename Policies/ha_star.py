@@ -13,16 +13,15 @@ class Node(object):
         self.children = []
         self.previous = previous
         self.previous_a = action
-        self.cost = None
 
     def __lt__(self, other):
-        return self.cost < other.cost
+        return self.currstep < other.currstep
 
     def __eq__(self, other):
-        return np.all(self.state==other.state)
+        return np.all(self.state==other.state) and self.currstep == other.currstep
 
     def __hash__(self):
-        return hash(str(self.state))
+        return hash(str(self.state) + str(self.currstep))
 
 
 class HA_Star(Base_Policy):
@@ -56,7 +55,7 @@ class HA_Star(Base_Policy):
         self._opt = torch.optim.Adam(self._net.parameters(),
                         lr=policy_config['lr'],
                         weight_decay=policy_config['weight_decay'])
-        self._lastloss = None
+        self._avgloss = None
 
         # performance metrics
         self._losses = []
@@ -124,25 +123,22 @@ class HA_Star(Base_Policy):
     def rollout(self, state):
         # obtain node from game tree if already constructed
         # print(str(state))
-        if self._nodes[str(state)] is None:
-            # print("creating new node")
+        if self._nodes[str(state) + str(0)] is None:
+            # print("creating new start node")
             start_node = Node(state, 0)
-            self._nodes[str(state)] = start_node
+            self._nodes[str(state) + str(0)] = start_node
         else:
-            # print("node already in tree")
-            start_node = self._nodes[str(state)]
-            start_node.cost = 0
+            # print("start node already in tree")
+            start_node = self._nodes[str(state) + str(0)]
 
         # dicts tracking the explored and frontier nodes
         self._explored = defaultdict(lambda: False)
-        self._fdict = defaultdict(lambda: False)
-        self._fdict_nodes = {}
+        self._fdict_nodes = defaultdict(lambda: None)
+        self._frontier = []
 
         # initialize frontier with start state
-        self._frontier = []
-        heappush(self._frontier, start_node)
-        self._fdict_nodes[start_node] = start_node
-        self._fdict[start_node] = True
+        heappush(self._frontier, (0, start_node))
+        self._fdict_nodes[start_node] = (0, start_node)
 
         # play out an episode
         done = False
@@ -151,13 +147,17 @@ class HA_Star(Base_Policy):
         for _ in range(self._num_explore):
             # print("----rollout loop----")
             # get node with lowest (cost + heuristic) off the heap
-            node = heappop(self._frontier)
-            # print("output of heappop: " + str(node.state))
+            if (len(self._frontier) == 0):
+                print("empty frontier!")
+                break
+            curr_cost, node = heappop(self._frontier)
+            # print("output of heappop: " + str(node.cost))
+            # for jerome in self._frontier:
+            #     print(jerome.cost)
 
             # print("frontier: " + str(len(self._frontier)) + " steps: " + str(node.currstep) + " num nodes in the tree: " + str(len(self._nodes)))
 
             # reset dicts
-            self._fdict[node] = False
             self._fdict_nodes[node] = None
             self._explored[node] = True
 
@@ -170,13 +170,14 @@ class HA_Star(Base_Policy):
 
                     # obtain node from game tree if already constructed
                     # print(str(state) + " " + str(self._nodes[str(state)]))
-                    if self._nodes[str(state)] is None:
-                        print("creating new node")
+                    state_str = str(state) + str(node.currstep + 1)
+                    if self._nodes[state_str] is None:
+                        # print("creating new node")
                         n = Node(state, node.currstep + 1, i, node)
-                        self._nodes[str(state)] = n
+                        self._nodes[state_str] = n
                     else:
-                        print("node already in tree")
-                        n = self._nodes[str(state)]
+                        # print("node already in tree")
+                        n = self._nodes[state_str]
                     node.children.append(n)
 
             # iterate thru children
@@ -187,7 +188,7 @@ class HA_Star(Base_Policy):
                 #     print("explored node state: " + str(e.state))
 
                 # determine if a node is in the frontier
-                if not self._explored[child] and not self._fdict[child]:
+                if not self._explored[child] and not self._fdict_nodes[child]:
                     # print("Child node not in frontier!")
                     # use neural net to give heuristic
                     state_tensor = (torch.from_numpy(child.state).float()).to(self._device)
@@ -195,32 +196,33 @@ class HA_Star(Base_Policy):
                     heuristic = self._net(state_tensor)
 
                     # if not done, add to heap
-                    child.cost = child.currstep + heuristic.item()
+                    child_cost = child.currstep + heuristic.item()
                     if self._sim_env.isTerminal(child.state, child.currstep):
                         done = True
-                        fin_cost = child.currstep
+                        fin_steps = child.currstep
                         goal_node = child
                         break
                     else:
                         # print("Adding child to frontier: " + str(child))
-                        heappush(self._frontier, child)
-
-                        # update dicts
-                        self._fdict[child] = True
-                        self._fdict_nodes[child] = child
-                elif self._fdict[child]:
+                        heappush(self._frontier, (child_cost, child))
+                        self._fdict_nodes[child] = (child_cost, child)
+                elif self._fdict_nodes[child] is not None:
+                    # print("-----------Child node in frontier!-----------")
                     # use neural net to give heuristic
                     state_tensor = (torch.from_numpy(child.state).float()).to(self._device)
                     heuristic = self._net(state_tensor)
 
                     # replace the state in the frontier if child has a lower cost
-                    child.cost = child.currstep + heuristic
-                    f_node = self._fdict_nodes[child]
-                    print("Child node in frontier! " + str(child.cost.item()) + " " + str(f_node.cost.item()))
-                    if f_node.cost > child.cost:
-                        f_node = child
-                        print("Replacing node in the frontier!")
-                        heappush(self._frontier, child)
+                    c_cost = child.currstep + heuristic.item()
+                    f_cost, f_node = self._fdict_nodes[child]
+                    # print("node currstep: " + str(node.currstep))
+                    # print("child currstep: " + str(child.currstep) + ", child cost: " + str(c_cost))
+                    # print("frontier currstep: " + str(f_node.currstep) + ", frontier cost: " + str(f_cost))
+                    if f_cost > c_cost:
+                        # print("Replacing node in the frontier!")
+                        self._frontier.remove((f_cost, f_node))
+                        heappush(self._frontier, (c_cost, child))
+                        self._fdict_nodes[child] = (c_cost, child)
                 else:
                     pass
                     # print("Child has been explored: " + str((child in self._explored)))
@@ -262,13 +264,16 @@ class HA_Star(Base_Policy):
 
         # calc loss for each data point
         total_steps = len(train_data)
+        avg_loss = 0
         for i in range(total_steps):
             state, action, reward, next_state, done = train_data[i]
             state_tensor = (torch.from_numpy(state).float()).to(self._device)
             heuristic = self._net(state_tensor)
             loss = (total_steps - (heuristic + i))**2
             loss.backward()
-            self._lastloss = loss
+            avg_loss += loss
+        print("Avg loss: " + str(avg_loss / total_steps))
+        self._avgloss = (avg_loss / total_steps)
 
         # update parameters
         self._opt.step()
