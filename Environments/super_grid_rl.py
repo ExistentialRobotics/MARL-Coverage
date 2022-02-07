@@ -27,6 +27,7 @@ class SuperGridRL(object):
         self._terminal_reward = env_config['terminal_reward']
         self._dist_r = env_config['dist_reward']
         self._use_scanning = env_config['use_scanning']
+        self._prev_states = []
 
         #pick random map and generate robot positions
         self.reset()
@@ -161,6 +162,7 @@ class SuperGridRL(object):
 
         #calculate current state
         state = self.get_state()
+        print(state)
 
         #incrementing step count
         self._currstep += 1
@@ -276,8 +278,8 @@ class SuperGridRL(object):
             print("Full Environment Covered")
             self._done_thresh += self._done_incr
             return True
-        if self._currstep == self._maxsteps:
-            return True
+        # if self._currstep == self._maxsteps:
+        #     return True
         return False
 
     def percent_covered(self):

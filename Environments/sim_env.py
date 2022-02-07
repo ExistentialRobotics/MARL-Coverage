@@ -38,7 +38,7 @@ class SuperGrid_Sim(object):
         self._display = pygame.display.set_mode((1075, 1075))
 
     def step(self, state, action):
-        # print("state inside step: " + str(state))
+        # print("state inside sim_env step: " + str(state))
 
         # decompose state
         pos_img = state[0]
@@ -148,7 +148,7 @@ class SuperGrid_Sim(object):
         # state = np.stack(np.array([pos_img, observed_obstacles, free, distance_map]), axis=0)
         state = np.stack(np.array([pos_img, observed_obstacles, free]), axis=0)
 
-        # print("state after step: " + str(state))
+        # print("state after sim_env step: " + str(state))
 
         #check env is covered
         if min(self._done_thresh, 1) <= self.percent_covered(state):
@@ -183,8 +183,8 @@ class SuperGrid_Sim(object):
         if min(self._done_thresh, 1) <= self.percent_covered(state):
             self._done_thresh += self._done_incr
             return True
-        if steps == self._maxsteps:
-            return True
+        # if steps == self._maxsteps:
+        #     return True
         return False
 
     def percent_covered(self, state):

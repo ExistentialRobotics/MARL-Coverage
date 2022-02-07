@@ -13,12 +13,13 @@ class Node(object):
         self.children = []
         self.previous = previous
         self.previous_a = action
+        self._prev_states = []
 
     def __lt__(self, other):
         return self.currstep < other.currstep
 
     def __eq__(self, other):
-        return np.all(self.state==other.state) and self.currstep == other.currstep
+        return np.all(self.state==other.state)
 
     def __hash__(self):
         return hash(str(self.state) + str(self.currstep))
@@ -81,6 +82,14 @@ class HA_Star(Base_Policy):
                 if(makevid):
                     self._logger.addFrame(frame)
 
+    def sim_step(self, state, action):
+        # print("sim_step start state: " + str(state))
+        next_state, reward = self._sim_env.step(state, action)
+        # print("sim_step next state: " + str(next_state))
+        if str(next_state) not in self._prev_states:
+            return False
+        return True
+
     def train(self):
         for i in range(self._iters):
             print("Training Iteration: " + str(i) + " out of " + str(self._iters))
@@ -101,6 +110,9 @@ class HA_Star(Base_Policy):
 
 
     def pi(self, state):
+        # available actions
+        a = [0, 1, 2, 3]
+
         #epsilon greedy check
         s = np.random.uniform()
 
@@ -113,16 +125,31 @@ class HA_Star(Base_Policy):
                 print("0 episode length")
             else:
                 u = episode[0][1]
+                # print("episode u: " + str(u))
         else:
             #random
             u = np.random.randint(self.num_actions)
+            # print("random u: " + str(u))
+
+        reset = self.sim_step(state, u)
+        # print("repeat state: " + str(reset))
+
+        # check actions until one that isn't from a previous state is found
+        while reset or len(a) > 0:
+            if u in a:
+                a.remove(u)
+            u = np.random.randint(self.num_actions)
+            reset = self.sim_step(state, u)
+
+        # if len(a) == 0:
+        #     print("-----------------All actions exhausted!?!?-----------------")
 
         return u
 
 
     def rollout(self, state):
         # obtain node from game tree if already constructed
-        # print(str(state))
+        # print("rollout start state: " + str(state))
         if self._nodes[str(state) + str(0)] is None:
             # print("creating new start node")
             start_node = Node(state, 0)
@@ -151,9 +178,9 @@ class HA_Star(Base_Policy):
                 print("empty frontier!")
                 break
             curr_cost, node = heappop(self._frontier)
-            # print("output of heappop: " + str(node.cost))
+            # print("output of heappop: " + str(curr_cost))
             # for jerome in self._frontier:
-            #     print(jerome.cost)
+            #     print(jerome[0])
 
             # print("frontier: " + str(len(self._frontier)) + " steps: " + str(node.currstep) + " num nodes in the tree: " + str(len(self._nodes)))
 
@@ -173,7 +200,7 @@ class HA_Star(Base_Policy):
                     state_str = str(state) + str(node.currstep + 1)
                     if self._nodes[state_str] is None:
                         # print("creating new node")
-                        n = Node(state, node.currstep + 1, i, node)
+                        n = Node(state, node.currstep + 1)
                         self._nodes[state_str] = n
                     else:
                         # print("node already in tree")
@@ -182,7 +209,8 @@ class HA_Star(Base_Policy):
 
             # iterate thru children
             done = False
-            for child in node.children:
+            for i in range(len(node.children)):
+                child = node.children[i]
                 # print("child state: " + str(child.state))
                 # for e in self._explored:
                 #     print("explored node state: " + str(e.state))
@@ -194,6 +222,10 @@ class HA_Star(Base_Policy):
                     state_tensor = (torch.from_numpy(child.state).float()).to(self._device)
                     # print("input to neural net: " + str(state_tensor))
                     heuristic = self._net(state_tensor)
+
+                    # set parent
+                    child.previous = node
+                    child.previous_a = i
 
                     # if not done, add to heap
                     child_cost = child.currstep + heuristic.item()
@@ -223,6 +255,10 @@ class HA_Star(Base_Policy):
                         self._frontier.remove((f_cost, f_node))
                         heappush(self._frontier, (c_cost, child))
                         self._fdict_nodes[child] = (c_cost, child)
+
+                        # set parent
+                        child.previous = node
+                        child.previous_a = i
                 else:
                     pass
                     # print("Child has been explored: " + str((child in self._explored)))
@@ -238,17 +274,25 @@ class HA_Star(Base_Policy):
         else:
             total_steps = goal_node.currstep
 
+        cont = False
+        if start_node == goal_node:
+            cont = True
+
         c_node = goal_node
         p_node = goal_node.previous
-        # print("goal state: " + str(goal_node[1].state))
-        while p_node:
+        # print("rollout goal state: " + str(goal_node.state))
+        while cont or c_node != start_node:
+            cont = False
+            # print("previous node: " + str(p_node.state))
+            # print("next node: " + str(c_node.state))
             episode.append((p_node.state, c_node.previous_a, c_node.state, p_node.currstep, total_steps))
             temp = p_node.previous
             c_node = p_node
             p_node = temp
+
         episode.reverse()
 
-        # print("length of path: " + str(len(episode)))
+        # print("length of path: " + str(len(episode)) + " " + str(np.all(episode[0][0] == start_node.state)))
         # for i in range(len(episode)):
         #     print(str(i) + ": " + str(episode[i]))
 
@@ -258,18 +302,21 @@ class HA_Star(Base_Policy):
         # I wrote this with the assumption that each datum is a tuple of the form:
         # (state, action probabilities, reward). I'll try to batch this as we move
         # along with the implementation
+        print("-----------Updating policy-----------")
 
         # zero gradients
         self._opt.zero_grad()
 
         # calc loss for each data point
         total_steps = len(train_data)
+        print("total_steps: " + str(total_steps))
         avg_loss = 0
         for i in range(total_steps):
             state, action, reward, next_state, done = train_data[i]
             state_tensor = (torch.from_numpy(state).float()).to(self._device)
             heuristic = self._net(state_tensor)
             loss = (total_steps - (heuristic + i))**2
+            # print("heuristic + i: " + str(heuristic + i))
             loss.backward()
             avg_loss += loss
         print("Avg loss: " + str(avg_loss / total_steps))
@@ -281,8 +328,11 @@ class HA_Star(Base_Policy):
         #decaying epsilon
         self.decayEpsilon()
 
+    def add_state(self, state):
+        self._prev_states.append(state)
+
     def reset(self):
-        pass
+        self._prev_states = []
 
     def decayEpsilon(self):
         #decaying the epsilon

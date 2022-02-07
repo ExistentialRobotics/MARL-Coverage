@@ -13,23 +13,30 @@ def generate_episode(env, policy, logger, render=False, makevid=False, ignore_do
     policy.reset()
 
     # iterate till episode completion
+    # print(testing)
     while not done:
         # determine action
         action = policy.pi(state)
 
         # step environment and save episode results
         next_state, reward = env.step(action)
+        # print("next state: " + str(next_state))
+        policy.add_state(str(next_state))
 
         # determine if episode is completed
         done = env.done()
 
         #checking if done happened because we ran out of time and possibly ignoring it
-        new_done = done
-        if ignore_done and done and env._currstep == env._maxsteps:
-            new_done = False
+        # new_done = done
+        # if ignore_done and done and env._currstep == env._maxsteps:
+        #     new_done = False
+        print(env._currstep)
+        print(env._maxsteps)
+        if env._currstep == env._maxsteps:
+            done = True
 
         #adding variables to episode
-        episode.append((state, action, reward, next_state, new_done))
+        episode.append((state, action, reward, next_state, done))
         state = next_state
         total_reward += reward
 
