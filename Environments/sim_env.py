@@ -19,7 +19,8 @@ class SuperGrid_Sim(object):
 
         #environment config parameters
         self._numrobot = env_config['numrobot']
-        self._maxsteps = env_config['maxsteps']
+        self._train_maxsteps = env_config['train_maxsteps']
+        self._test_maxsteps = env_config['test_maxsteps']
         self._collision_penalty = env_config['collision_penalty']
         self._senseradius = env_config['senseradius']
         self._free_penalty = env_config['free_penalty']
