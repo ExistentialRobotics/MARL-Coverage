@@ -244,6 +244,7 @@ class HA_Star(Base_Policy):
 
     def reset(self):
         self._prev_states = []
+        self._nodes = defaultdict(lambda: None)
 
     def decayEpsilon(self):
         #decaying the epsilon
