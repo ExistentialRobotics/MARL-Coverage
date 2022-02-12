@@ -11,10 +11,11 @@ class SuperGridRL(object):
     space. The objective of the environment is to cover as much of the region
     as possible.
     """
-    def __init__(self, gridlis, env_config):
+    def __init__(self, train_set, env_config, test_set=None):
         super().__init__()
         #list of grids to use in training
-        self._gridlis = gridlis
+        self._train_gridlis = train_set
+        self._test_gridlis = test_set
 
         #environment config parameters
         self._numrobot = env_config['numrobot']
@@ -31,7 +32,7 @@ class SuperGridRL(object):
         self._prev_states = []
 
         #pick random map and generate robot positions
-        self.reset()
+        self.reset(False, False)
 
         # # init graph data object
         # self._graph = Graph_Data(env_config['numfeatures'], self._xinds, self._yinds, env_config['commradius'])
@@ -236,9 +237,12 @@ class SuperGridRL(object):
                 ret.append(robotlayer)
         return ret
 
-    def reset(self):
+    def reset(self, testing, ind):
         #picking a map at random
-        self._grid = self._gridlis[np.random.randint(len(self._gridlis))]
+        if testing:
+            self._grid = self._test_gridlis[ind]
+        else:
+            self._grid = self._train_gridlis[np.random.randint(len(self._train_gridlis))]
 
         #dimensions
         self._gridwidth = self._grid.shape[0]

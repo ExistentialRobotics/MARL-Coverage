@@ -2,10 +2,10 @@ import numpy as np
 import sys
 import time
 
-def generate_episode(env, policy, logger, render=False, makevid=False, ignore_done=True, testing=False):
+def generate_episode(env, policy, logger, render=False, makevid=False, ignore_done=True, testing=False, ind=None):
     # reset env at the start of each episode
     episode = []
-    state = env.reset()
+    state = env.reset(testing, ind)
     total_reward = 0
     done = False
 
@@ -13,6 +13,7 @@ def generate_episode(env, policy, logger, render=False, makevid=False, ignore_do
     policy.reset()
 
     # iterate till episode completion
+    i = 0
     while not done:
         # determine action
         action = policy.pi(state)
@@ -23,6 +24,10 @@ def generate_episode(env, policy, logger, render=False, makevid=False, ignore_do
 
         # determine if episode is completed
         done = env.done()
+
+        if i % 20 == 0:
+            print(i)
+        i += 1
 
         if testing and env._currstep == env._test_maxsteps:
             done = True
@@ -100,23 +105,30 @@ def train_RLalg(env, policy, logger, train_episodes=1000, test_episodes=10, rend
 def test_RLalg(env, policy, logger, episodes=100, render_test=False, makevid=False):
     # set model to eval mode
     policy.set_eval()
+    num_test = len(env._test_gridlis)
 
     test_rewardlis = []
     percent_covered = 0
-    for _ in range(episodes):
+    i = -1
+    for _ in range(episodes * num_test):
         render = False
-        if _ % 10 == 0:
+        if _ % 5 == 0:
             # determine if rendering the current episode
             if render_test:
                 render = True
             print("Testing Episode: " + str(_) + " out of " + str(episodes))
 
+        # determine which tesing env to use
+        if _ % num_test == 0:
+            i += 1
+
         # obtain episode
-        episode, total_reward = generate_episode(env, policy, logger, render=render, makevid=makevid, testing=True)
+        episode, total_reward = generate_episode(env, policy, logger, render=render, makevid=makevid, testing=True, ind=i)
+        num_steps = len(episode)
 
         # track test related statistics
         percent_covered += env.percent_covered()
-        test_rewardlis.append(total_reward)
+        test_rewardlis.append(num_steps)
 
     #returning policy to train mode
     policy.set_train()

@@ -131,7 +131,6 @@ model_name     = model_config['model_name']
 policy_config  = exp_parameters['policy_config']
 policy_name    = policy_config['policy_name']
 
-
 print(DASH)
 print("Running experiment using: " + str(config_path))
 print(DASH)
@@ -141,13 +140,17 @@ logger = Logger(exp_name, makevid)
 
 '''Making the list of grids'''
 if exp_parameters['gridload']:
-    gridlis = gridload(exp_parameters['grid_config'])
+    train_set, test_set = gridload(exp_parameters['grid_config'])
 else:
     gridlis = gridgen(exp_parameters['grid_config'])
+    test_set = None
+
+print("Number of training environments: " + str(len(train_set)))
+print("Number of testing environments: " + str(len(test_set)))
 
 '''Making the environment'''
 if env_name == 'SuperGridRL':
-    env = SuperGridRL(gridlis, env_config)
+    env = SuperGridRL(train_set, env_config, test_set=test_set)
 elif env_name == 'DecGridRL':
     env = DecGridRL(gridlis, env_config, use_graph=policy_config["use_graph"])
 
