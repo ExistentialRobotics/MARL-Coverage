@@ -45,6 +45,9 @@ class HA_Star(Base_Policy):
         # number of nodes to explore every time an action is attempted
         self._num_explore = policy_config["num_explore"]
 
+        # which heurisitic to use
+        self._learned = policy_config["learned"]
+
         # cpu vs gpu code
         self._device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -69,6 +72,15 @@ class HA_Star(Base_Policy):
         if str(next_state) not in self._prev_states:
             return False
         return True
+
+    def calc_heuristic(self, state):
+        h = None
+        if self._learned:
+            state_tensor = (torch.from_numpy(state).float()).to(self._device)
+            h = self._net(state_tensor)
+        else:
+            h = np.count_nonzero(state[2])
+        return h
 
     def pi(self, state):
         # available actions
@@ -154,16 +166,17 @@ class HA_Star(Base_Policy):
 
                 # determine if a node is in the frontier
                 if not self._explored[child] and not self._fdict_nodes[child]:
-                    # use neural net to give heuristic
-                    state_tensor = (torch.from_numpy(child.state).float()).to(self._device)
-                    heuristic = self._net(state_tensor)
+                    # get heuristic
+                    heuristic = self.calc_heuristic(child.state)
+                    if self._learned:
+                        heuristic = heuristic.item()
 
                     # set parent
                     child.previous = node
                     child.previous_a = i
 
                     # if not done, add to heap
-                    child_cost = child.currstep + heuristic.item()
+                    child_cost = child.currstep + heuristic
                     if self._sim_env.isTerminal(child.state, child.currstep):
                         done = True
                         fin_steps = child.currstep
@@ -173,12 +186,13 @@ class HA_Star(Base_Policy):
                         heappush(self._frontier, (child_cost, child))
                         self._fdict_nodes[child] = (child_cost, child)
                 elif self._fdict_nodes[child] is not None:
-                    # use neural net to give heuristic
-                    state_tensor = (torch.from_numpy(child.state).float()).to(self._device)
-                    heuristic = self._net(state_tensor)
+                    # get heuristic
+                    heuristic = self.calc_heuristic(child.state)
+                    if self._learned:
+                        heuristic = heuristic.item()
 
                     # replace the state in the frontier if child has a lower cost
-                    c_cost = child.currstep + heuristic.item()
+                    c_cost = child.currstep + heuristic
                     f_cost, f_node = self._fdict_nodes[child]
                     if f_cost > c_cost:
                         self._frontier.remove((f_cost, f_node))
@@ -216,26 +230,25 @@ class HA_Star(Base_Policy):
         return episode
 
     def update_policy(self, train_data):
-        # zero gradients
-        self._opt.zero_grad()
+        if not self._learned:
+            # zero gradients
+            self._opt.zero_grad()
 
-        # calc loss for each data point
-        total_steps = len(train_data)
-        print("total_steps: " + str(total_steps))
-        avg_loss = 0
-        for i in range(total_steps):
-            state, action, reward, next_state, done = train_data[i]
-            state_tensor = (torch.from_numpy(state).float()).to(self._device)
-            heuristic = self._net(state_tensor)
-            loss = (total_steps - (heuristic + i))**2
-            loss.backward()
-            avg_loss += loss
-        self._avgloss = avg_loss / total_steps
-        print("Avg loss: " + str(self._avgloss.item()))
+            # calc loss for each data point
+            total_steps = len(train_data)
+            print("total_steps: " + str(total_steps))
+            avg_loss = 0
+            for i in range(total_steps):
+                state, action, reward, next_state, done = train_data[i]
+                heuristic = self.calc_heuristic(child.state)
+                loss = (total_steps - (heuristic + i))**2
+                loss.backward()
+                avg_loss += loss
+            self._avgloss = avg_loss / total_steps
+            print("Avg loss: " + str(self._avgloss.item()))
 
-        # update parameters
-        self._opt.step()
-
+            # update parameters
+            self._opt.step()
         #decaying epsilon
         self.decayEpsilon()
 

@@ -47,8 +47,6 @@ class SuperGridRL(object):
         self._display = pygame.display.set_mode((1075, 1075))
 
     def step(self, action):
-        # print("-----Inside step-----")
-
         #handling case where action is an integer that identifies the action
         if type(action) != list:
             ulis = np.zeros((self._numrobot,))
@@ -164,7 +162,6 @@ class SuperGridRL(object):
 
         #calculate current state
         state = self.get_state()
-        # print(state)
 
         #incrementing step count
         self._currstep += 1
