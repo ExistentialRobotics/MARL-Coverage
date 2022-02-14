@@ -115,11 +115,7 @@ class HA_Star(Base_Policy):
 
     def rollout(self, state):
         # obtain node from game tree if already constructed
-        if self._nodes[str(state) + str(0)] is None:
-            start_node = Node(state, 0)
-            self._nodes[str(state) + str(0)] = start_node
-        else:
-            start_node = self._nodes[str(state) + str(0)]
+        start_node = Node(state, 0)
 
         # dicts tracking the explored and frontier nodes
         self._explored = defaultdict(lambda: False)
@@ -196,6 +192,7 @@ class HA_Star(Base_Policy):
                     f_cost, f_node = self._fdict_nodes[child]
                     if f_cost > c_cost:
                         self._frontier.remove((f_cost, f_node))
+                        print("removing child from frontier")
                         heappush(self._frontier, (c_cost, child))
                         self._fdict_nodes[child] = (c_cost, child)
 
@@ -230,7 +227,7 @@ class HA_Star(Base_Policy):
         return episode
 
     def update_policy(self, train_data):
-        if not self._learned:
+        if self._learned:
             # zero gradients
             self._opt.zero_grad()
 
@@ -240,7 +237,7 @@ class HA_Star(Base_Policy):
             avg_loss = 0
             for i in range(total_steps):
                 state, action, reward, next_state, done = train_data[i]
-                heuristic = self.calc_heuristic(child.state)
+                heuristic = self.calc_heuristic(state)
                 loss = (total_steps - (heuristic + i))**2
                 loss.backward()
                 avg_loss += loss

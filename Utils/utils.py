@@ -90,7 +90,6 @@ def train_RLalg(env, policy, logger, train_episodes=1000, test_episodes=10, rend
             print("Checkpoint Policy {} covered ".format(checkpoint_num) + str(average_percent_covered) + " percent of the environment on average!")
 
         # update policy using the episode
-        # print("-----------------------Updating policy!------------------------")
         policy.update_policy(episode)
 
         #tracking training loss for the episode
@@ -116,10 +115,10 @@ def test_RLalg(env, policy, logger, episodes=100, render_test=False, makevid=Fal
             # determine if rendering the current episode
             if render_test:
                 render = True
-            print("Testing Episode: " + str(_) + " out of " + str(episodes))
+            print("Testing Episode: " + str(_) + " out of " + str(episodes * num_test))
 
         # determine which tesing env to use
-        if _ % num_test == 0:
+        if _ % episodes == 0:
             i += 1
 
         # obtain episode
