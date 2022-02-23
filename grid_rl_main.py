@@ -229,7 +229,7 @@ if not saved_model:
 '''Test policy'''
 print("-----------------------------Testing Policy----------------------------")
 # if policy_name != "alphazero" and policy_name != "ha_star":
-test_rewardlis, average_percent_covered = test_RLalg(env, policy, logger, episodes=100, render_test=render_test,
+test_rewardlis, average_percent_covered = test_RLalg(env, policy, logger, episodes=10, render_test=render_test,
                                                      makevid=makevid)
 test_percent_covered.append(average_percent_covered)
 # else:

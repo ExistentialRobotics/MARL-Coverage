@@ -3,6 +3,8 @@ import numpy as np
 import torch
 from heapq import *
 import copy
+import cv2
+import sys
 from collections import defaultdict
 
 class Node(object):
@@ -34,6 +36,7 @@ class HA_Star(Base_Policy):
         self._sim_env = sim # sim_environment to run on
         self.num_actions = env._num_actions
         self._net = net # neural network for prediction
+        self._max_len = (env._obs_dim[1] ** 2) * 2
 
         # e greedy stuff
         self._epsilon = 0
@@ -83,32 +86,34 @@ class HA_Star(Base_Policy):
         return h
 
     def pi(self, state):
-        # available actions
-        a = [0, 1, 2, 3]
+        u = self.frontier_based(state)
 
-        #epsilon greedy check
-        s = np.random.uniform()
-
-        #epsilon greedy policy
-        #if we are testing then we use a smaller testing epsilon
-        if(s > self._epsilon or (self._testing and s > self._testing_epsilon)):
-            episode = self.rollout(state)
-            if len(episode) == 0:
-                u = np.random.randint(self.num_actions)
-                print("0 episode length")
-            else:
-                u = episode[0][1]
-        else:
-            #random
-            u = np.random.randint(self.num_actions)
-        reset = self.sim_step(state, u)
-
-        # check actions until one that isn't from a previous state is found
-        while reset and len(a) > 0:
-            if u in a:
-                a.remove(u)
-            u = np.random.randint(self.num_actions)
-            reset = self.sim_step(state, u)
+        # # available actions
+        # a = [0, 1, 2, 3]
+        #
+        # #epsilon greedy check
+        # s = np.random.uniform()
+        #
+        # #epsilon greedy policy
+        # #if we are testing then we use a smaller testing epsilon
+        # if(s > self._epsilon or (self._testing and s > self._testing_epsilon)):
+        #     episode = self.rollout(state)
+        #     if len(episode) == 0:
+        #         u = np.random.randint(self.num_actions)
+        #         print("0 episode length")
+        #     else:
+        #         u = episode[0][1]
+        # else:
+        #     #random
+        #     u = np.random.randint(self.num_actions)
+        # reset = self.sim_step(state, u)
+        #
+        # # check actions until one that isn't from a previous state is found
+        # while reset and len(a) > 0:
+        #     if u in a:
+        #         a.remove(u)
+        #     u = np.random.randint(self.num_actions)
+        #     reset = self.sim_step(state, u)
 
         return u
 
@@ -188,11 +193,11 @@ class HA_Star(Base_Policy):
                         heuristic = heuristic.item()
 
                     # replace the state in the frontier if child has a lower cost
-                    c_cost = child.currstep + heuristic
                     f_cost, f_node = self._fdict_nodes[child]
-                    if f_cost > c_cost:
-                        self._frontier.remove((f_cost, f_node))
+                    if f_node.currstep > child.currstep:
                         print("removing child from frontier")
+                        c_cost = child.currstep + heuristic
+                        self._frontier.remove((f_cost, f_node))
                         heappush(self._frontier, (c_cost, child))
                         self._fdict_nodes[child] = (c_cost, child)
 
@@ -226,6 +231,48 @@ class HA_Star(Base_Policy):
 
         return episode
 
+    def frontier_based(self, state):
+        # get robot position
+        pos_img, observed_obs, free, grid = state
+        pos = np.nonzero(pos_img)
+
+        # get obstacle positions
+        obs_inds = np.argwhere(grid < 0)
+        # print("-------------------------------------")
+        # # print(grid)
+        # print(obs_inds.shape)
+        # print("free: " + str(free))
+
+        # mark obstacle positions as not free
+        free[obs_inds[:, 0], obs_inds[:, 1]] = 0
+
+        # print("pos: " + str(pos))
+        # print("free: " + str(free))
+        # calc distance to free cells
+        inv = np.bitwise_not(free.astype('?')).astype(np.uint8)
+        distance_map = cv2.distanceTransform(inv, cv2.DIST_L1,
+                                             cv2.DIST_MASK_PRECISE)
+
+        # determine action that minimizes distance to free cells
+        a = -1
+        m = self._max_len
+        for i in range(self.num_actions):
+            if i == 0:
+                p = (pos[0] - 1, pos[1])
+            elif i == 1:
+                p = (pos[0] + 1, pos[1])
+            elif i == 2:
+                p = (pos[0], pos[1] + 1)
+            elif i == 3:
+                p = (pos[0], pos[1] - 1)
+            if self._env.isInBounds(p[0], p[1]) and self._env._grid[p]>=0 and distance_map[p] < m:
+                m = distance_map[p]
+                a = i
+
+        # print("dist map: " + str(distance_map))
+
+        return a
+
     def update_policy(self, train_data):
         if self._learned:
             # zero gradients
@@ -252,9 +299,10 @@ class HA_Star(Base_Policy):
     def add_state(self, state):
         self._prev_states.append(state)
 
-    def reset(self):
+    def reset(self, grid):
         self._prev_states = []
         self._nodes = defaultdict(lambda: None)
+        self._sim_env._grid = grid
 
     def decayEpsilon(self):
         #decaying the epsilon

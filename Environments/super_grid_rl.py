@@ -205,7 +205,7 @@ class SuperGridRL(object):
         #
         # arrays = np.array(self.get_pos_image() + [self._observed_obstacles, self._free, distance_map])
 
-        arrays = np.array(self.get_pos_image() + [self._observed_obstacles, self._free])
+        arrays = np.array(self.get_pos_image() + [self._observed_obstacles, self._free, self._grid])
 
         state = np.stack(arrays, axis=0)
         return state
@@ -273,7 +273,7 @@ class SuperGridRL(object):
         # history of free cells
         self._free = np.ones((self._gridwidth, self._gridlen))
 
-        return self.get_state()
+        return self.get_state(), self._grid
 
     def done(self):
         if min(self._done_thresh, 1) <= self.percent_covered():

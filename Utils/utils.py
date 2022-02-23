@@ -5,12 +5,12 @@ import time
 def generate_episode(env, policy, logger, render=False, makevid=False, ignore_done=True, testing=False, ind=None):
     # reset env at the start of each episode
     episode = []
-    state = env.reset(testing, ind)
+    state, grid = env.reset(testing, ind)
     total_reward = 0
     done = False
 
     #reset policy at beginning of episode
-    policy.reset()
+    policy.reset(grid)
 
     # iterate till episode completion
     i = 0
