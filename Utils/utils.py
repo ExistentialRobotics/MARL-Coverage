@@ -2,7 +2,7 @@ import numpy as np
 import sys
 import time
 
-def generate_episode(env, policy, logger, render=False, makevid=False, ignore_done=True, testing=False, ind=None):
+def generate_episode(env, policy, logger, render=False, makevid=False, ignore_done=True, testing=False, ind=None, phase_1=None):
     # reset env at the start of each episode
     episode = []
     state, grid = env.reset(testing, ind)
@@ -10,13 +10,13 @@ def generate_episode(env, policy, logger, render=False, makevid=False, ignore_do
     done = False
 
     #reset policy at beginning of episode
-    policy.reset(grid)
+    policy.reset(grid, testing)
 
     # iterate till episode completion
     i = 0
     while not done:
         # determine action
-        action = policy.pi(state)
+        action = policy.pi(state, phase_1=phase_1)
 
         # step environment and save episode results
         next_state, reward = env.step(action)
@@ -25,7 +25,7 @@ def generate_episode(env, policy, logger, render=False, makevid=False, ignore_do
         # determine if episode is completed
         done = env.done()
 
-        if i % 20 == 0:
+        if i % 50 == 0:
             print(i)
         i += 1
 
@@ -49,6 +49,8 @@ def generate_episode(env, policy, logger, render=False, makevid=False, ignore_do
 
 def train_RLalg(env, policy, logger, train_episodes=1000, test_episodes=10, render=False,
                 checkpoint_interval=500, ignore_done=True):
+    p_1_thres = train_episodes / 3
+
     # set policy network to train mode
     policy.set_train()
 
@@ -64,8 +66,11 @@ def train_RLalg(env, policy, logger, train_episodes=1000, test_episodes=10, rend
             print("Training Episode: " + str(_) + " out of " + str(train_episodes) + " num nodes in tree: " + str(len(policy._nodes)))
 
         # obtain the next episode
-        # print("----------------------Generating episode!----------------------")
-        episode, total_reward = generate_episode(env, policy, logger, render=False, makevid=False, ignore_done=ignore_done)
+        if p_1_thres > _:
+            phase_1 = True
+        else:
+            phase_1 = False
+        episode, total_reward = generate_episode(env, policy, logger, render=False, makevid=False, ignore_done=ignore_done, phase_1=phase_1)
 
         # track reward per episode
         reward_per_episode.append(total_reward)
@@ -111,7 +116,7 @@ def test_RLalg(env, policy, logger, episodes=100, render_test=False, makevid=Fal
     i = -1
     for _ in range(episodes * num_test):
         render = False
-        if _ % 5 == 0:
+        if _ % 10 == 0:
             # determine if rendering the current episode
             if render_test:
                 render = True
@@ -122,7 +127,7 @@ def test_RLalg(env, policy, logger, episodes=100, render_test=False, makevid=Fal
             i += 1
 
         # obtain episode
-        episode, total_reward = generate_episode(env, policy, logger, render=render, makevid=makevid, testing=True, ind=i)
+        episode, total_reward = generate_episode(env, policy, logger, render=render, makevid=makevid, testing=True, ind=i, phase_1=False)
         num_steps = len(episode)
 
         # track test related statistics
@@ -133,5 +138,5 @@ def test_RLalg(env, policy, logger, episodes=100, render_test=False, makevid=Fal
     policy.set_train()
 
     #returning the statistics
-    average_percent_covered = percent_covered/episodes*100
+    average_percent_covered = percent_covered/(episodes * num_test)*100
     return test_rewardlis, average_percent_covered

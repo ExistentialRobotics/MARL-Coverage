@@ -6,6 +6,7 @@ import copy
 import cv2
 import sys
 from collections import defaultdict
+from queue import PriorityQueue
 
 class Node(object):
     def __init__(self, state, currstep, action=None, previous=None):
@@ -85,35 +86,42 @@ class HA_Star(Base_Policy):
             h = np.count_nonzero(state[2])
         return h
 
-    def pi(self, state):
+    def pi(self, state, phase_1=False):
         u = self.frontier_based(state)
 
-        # # available actions
-        # a = [0, 1, 2, 3]
-        #
-        # #epsilon greedy check
-        # s = np.random.uniform()
-        #
-        # #epsilon greedy policy
-        # #if we are testing then we use a smaller testing epsilon
-        # if(s > self._epsilon or (self._testing and s > self._testing_epsilon)):
-        #     episode = self.rollout(state)
-        #     if len(episode) == 0:
-        #         u = np.random.randint(self.num_actions)
-        #         print("0 episode length")
-        #     else:
-        #         u = episode[0][1]
-        # else:
-        #     #random
-        #     u = np.random.randint(self.num_actions)
-        # reset = self.sim_step(state, u)
-        #
-        # # check actions until one that isn't from a previous state is found
-        # while reset and len(a) > 0:
-        #     if u in a:
-        #         a.remove(u)
-        #     u = np.random.randint(self.num_actions)
-        #     reset = self.sim_step(state, u)
+        # available actions
+        a = [0, 1, 2, 3]
+
+        # epsilon greedy check
+        s = np.random.uniform()
+
+        # epsilon greedy policy
+        if(s > self._epsilon or (self._testing and s > self._testing_epsilon)):
+            if phase_1:
+                # run frontier based with e probability for the first phase of training
+                u = self.frontier_based(state)
+            else:
+                # run MDP A* with e probability for the first phase of training
+                episode = self.rollout(state)
+                if len(episode) == 0:
+                    u = np.random.randint(self.num_actions)
+                    print("0 episode length")
+                else:
+                    u = episode[0][1]
+        else:
+            if phase_1:
+                #random
+                u = np.random.randint(self.num_actions)
+            else:
+                u = self.frontier_based(state)
+        reset = self.sim_step(state, u)
+
+        # check actions until one that isn't from a previous state is found
+        while reset and len(a) > 0:
+            if u in a:
+                a.remove(u)
+            u = np.random.randint(self.num_actions)
+            reset = self.sim_step(state, u)
 
         return u
 
@@ -232,29 +240,27 @@ class HA_Star(Base_Policy):
         return episode
 
     def frontier_based(self, state):
-        # get robot position
         pos_img, observed_obs, free, grid = state
+        free_copy = copy.deepcopy(free)
+
+        # get robot position
         pos = np.nonzero(pos_img)
+
+        # flip 0s and 1s
+        free_copy = np.bitwise_not(free_copy.astype('?')).astype(np.uint8)
+        free_copy = free_copy.astype('int')
 
         # get obstacle positions
         obs_inds = np.argwhere(grid < 0)
-        # print("-------------------------------------")
-        # # print(grid)
-        # print(obs_inds.shape)
-        # print("free: " + str(free))
 
         # mark obstacle positions as not free
-        free[obs_inds[:, 0], obs_inds[:, 1]] = 0
+        free_copy[obs_inds[:, 0], obs_inds[:, 1]] = -1
 
-        # print("pos: " + str(pos))
-        # print("free: " + str(free))
-        # calc distance to free cells
-        inv = np.bitwise_not(free.astype('?')).astype(np.uint8)
-        distance_map = cv2.distanceTransform(inv, cv2.DIST_L1,
-                                             cv2.DIST_MASK_PRECISE)
+        # get dijkstra cost
+        cost_map = self.dijkstra_path_map(free_copy, pos[0], pos[1])
 
-        # determine action that minimizes distance to free cells
-        a = -1
+        # determine action
+        u = -1
         m = self._max_len
         for i in range(self.num_actions):
             if i == 0:
@@ -265,13 +271,14 @@ class HA_Star(Base_Policy):
                 p = (pos[0], pos[1] + 1)
             elif i == 3:
                 p = (pos[0], pos[1] - 1)
-            if self._env.isInBounds(p[0], p[1]) and self._env._grid[p]>=0 and distance_map[p] < m:
-                m = distance_map[p]
-                a = i
+            if self._env.isInBounds(p[0], p[1]) and cost_map[p] == 1:
+                u = i
+                break
 
-        # print("dist map: " + str(distance_map))
+        if u == -1:
+            u = 0
 
-        return a
+        return u
 
     def update_policy(self, train_data):
         if self._learned:
@@ -299,7 +306,8 @@ class HA_Star(Base_Policy):
     def add_state(self, state):
         self._prev_states.append(state)
 
-    def reset(self, grid):
+    def reset(self, grid, testing):
+        self._testing = testing
         self._prev_states = []
         self._nodes = defaultdict(lambda: None)
         self._sim_env._grid = grid
@@ -330,3 +338,161 @@ class HA_Star(Base_Policy):
         '''
         self._testing = True
         self._net.eval()
+
+    def in_bounds(self, x, y, grid):
+        return x >= 0 and y >=0 and x < grid.shape[0] and y < grid.shape[1]
+
+    def get_valid_neighbors(self, x, y, grid, visited):
+        """
+        Args:
+           x : the x position on the grid
+           y : the y position
+           grid : an array representing the environment, 0 is explored,
+                 1 is unexplored, and -1 is obstacle
+           visited: an array representing whether we have visited a cell
+                    or not, 1 is visited, 0 is not visited
+
+        Returns:
+           A list of valid neighbors and their coordinates
+        """
+        neighbors = []
+
+        if self.in_bounds(x+1, y, grid) and visited[x+1][y] == 0 and grid[x+1][y] != -1:
+            neighbors.append((x+1,y))
+
+        if self.in_bounds(x-1, y, grid) and visited[x-1][y] == 0 and grid[x-1][y] != -1:
+            neighbors.append((x-1,y))
+
+        if self.in_bounds(x, y+1, grid) and visited[x][y+1] == 0 and grid[x][y+1] != -1:
+            neighbors.append((x,y+1))
+
+        if self.in_bounds(x, y-1, grid) and visited[x][y-1] == 0 and grid[x][y-1] != -1:
+            neighbors.append((x,y-1))
+
+        return neighbors
+
+
+    def dijkstra_cost_map(self, grid):
+        """
+        Args:
+           grid : an array representing the environment, 1 is explored,
+                 0 is unexplored, and -1 is obstacle
+
+        Returns:
+           a cost array representing the cost from the closest unexplored node
+
+        Notes:
+        we will assume that the goals points are unexplored cells
+        """
+        open_set = PriorityQueue()
+        visited = np.zeros(grid.shape)
+        cost = -1*np.ones(grid.shape)
+
+        #adding all unexplored cells to the open set
+        for i in range(grid.shape[0]):
+            for j in range(grid.shape[1]):
+
+                #checking if cell is unexplored
+                if grid[i][j] == 0:
+                    #adding unexplored cell to open set
+                    open_set.put((0, (i,j)))
+
+        #main dijkstra loop
+        while not open_set.empty():
+            cell = open_set.get()
+
+            #check if cell has already been visited
+            if visited[cell[1][0]][cell[1][1]] == 1:
+                continue
+
+            #mark as visited, finalize cost
+            visited[cell[1][0]][cell[1][1]] = 1
+            cost[cell[1][0]][cell[1][1]] = cell[0]
+
+            #looping over all neighbors and updating their costs
+            neighbors = get_valid_neighbors(cell[1][0], cell[1][1], grid, visited)
+
+            for neighbor in neighbors:
+                open_set.put((cell[0] + 1, neighbor))
+
+        return cost
+
+    def dijkstra_path_map(self, grid, start_x, start_y):
+        """
+        Args:
+           grid : an array representing the environment, 1 is explored,
+                 0 is unexplored, and -1 is obstacle
+           start_x : starting x position
+           start_y : starting y position
+
+        Returns:
+           an array showing the shortest path to an unexplored cell
+
+        """
+        open_set = PriorityQueue()
+        visited = np.zeros(grid.shape)
+        cost = -1*np.ones(grid.shape)
+
+        #adding starting point to the open set
+        open_set.put((0, (start_x[0], start_y[0])))
+
+        end_point = None
+
+        #main dijkstra loop
+        # print(grid)
+        while not open_set.empty():
+            cell = open_set.get()
+
+            #check if cell has already been visited
+            # print("--------------")
+            # print(str(cell[1][0]) + " " + str(cell[1][1]))
+            # print(visited)
+            if visited[cell[1][0]][cell[1][1]] == 1:
+                continue
+
+            #mark as visited, finalize cost
+            visited[cell[1][0]][cell[1][1]] = 1
+            cost[cell[1][0]][cell[1][1]] = cell[0]
+
+            #checking if cell is unexplored
+            if grid[cell[1][0]][cell[1][1]] == 0:
+                end_point = cell[1]
+                break
+
+            #looping over all neighbors and updating their costs
+            neighbors = self.get_valid_neighbors(cell[1][0], cell[1][1], grid, visited)
+
+            for neighbor in neighbors:
+                open_set.put((cell[0] + 1, neighbor))
+
+        #using cost array to make optimal path
+        path_array = np.zeros(grid.shape)
+
+        #handling case where we can't reach any unexplored points
+        # print(end_point)
+        if end_point == None:
+            return path_array
+
+        curr = end_point
+        curr_cost = cost[curr[0], curr[1]]
+        path_array[curr[0], curr[1]] = 1
+
+        #reset visited to not interfere with neighbor check
+        visited = 1 - visited
+
+        while curr[0] != start_x or curr[1] != start_y:
+            neighbors = self.get_valid_neighbors(curr[0], curr[1], grid, visited)
+
+            #finding the neighbor with the minimum cost
+            for neighbor in neighbors:
+                if cost[neighbor[0], neighbor[1]] == curr_cost - 1:
+                    curr_cost -= 1
+                    curr = neighbor
+                    break
+
+            #adding the current cell to the path
+            path_array[curr[0], curr[1]] = 1
+
+        assert path_array[start_x, start_y] == 1
+
+        return path_array

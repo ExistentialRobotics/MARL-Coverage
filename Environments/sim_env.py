@@ -45,7 +45,6 @@ class SuperGrid_Sim(object):
         pos_img = state[0]
         observed_obstacles = state[1]
         free = state[2]
-        # distance_map = state[3]
 
         # extract x,y position
         pos = np.nonzero(pos_img)
@@ -147,7 +146,7 @@ class SuperGrid_Sim(object):
 
         # create state
         # state = np.stack(np.array([pos_img, observed_obstacles, free, distance_map]), axis=0)
-        state = np.stack(np.array([pos_img, observed_obstacles, free]), axis=0)
+        state = np.stack(np.array([pos_img, observed_obstacles, free, self._grid]), axis=0)
 
         # print("state after sim_env step: " + str(state))
 
