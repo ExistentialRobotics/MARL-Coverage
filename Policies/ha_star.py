@@ -9,23 +9,22 @@ from collections import defaultdict
 from queue import PriorityQueue
 
 class Node(object):
-    def __init__(self, state, currstep, action=None, previous=None):
+    def __init__(self, state, dist, action=None, previous=None):
         self.state = state
-        self.currstep = currstep
+        self.dist = dist
         self.tstep = None
         self.children = []
         self.previous = previous
         self.previous_a = action
-        self._prev_states = []
 
     def __lt__(self, other):
-        return self.currstep < other.currstep
+        return self.dist < self.dist
 
     def __eq__(self, other):
         return np.all(self.state==other.state)
 
     def __hash__(self):
-        return hash(str(self.state) + str(self.currstep))
+        return hash(str(self.state))
 
 
 class HA_Star(Base_Policy):
@@ -73,7 +72,7 @@ class HA_Star(Base_Policy):
 
     def sim_step(self, state, action):
         next_state, reward = self._sim_env.step(state, action)
-        if str(next_state) not in self._prev_states:
+        if str(next_state[0]) not in self._prev_states:
             return False
         return True
 
@@ -83,7 +82,15 @@ class HA_Star(Base_Policy):
             state_tensor = (torch.from_numpy(state).float()).to(self._device)
             h = self._net(state_tensor)
         else:
-            h = np.count_nonzero(state[2])
+            pos_img, observed_obs, free, grid = state
+            free_copy = copy.deepcopy(free)
+
+            # get obstacle positions
+            obs_inds = np.argwhere(grid < 0)
+
+            # mark obstacle positions as not free
+            free_copy[obs_inds[:, 0], obs_inds[:, 1]] = -1
+            h = np.count_nonzero(free_copy)
         return h
 
     def pi(self, state, phase_1=False):
@@ -122,13 +129,21 @@ class HA_Star(Base_Policy):
                 a.remove(u)
             u = np.random.randint(self.num_actions)
             reset = self.sim_step(state, u)
-
+        # print("action: " + str(u))
         return u
 
 
     def rollout(self, state):
         # obtain node from game tree if already constructed
-        start_node = Node(state, 0)
+        state_str = str(state[0])
+        if self._nodes[state_str] is None:
+            start_node = Node(state[0], state[1])
+            self._nodes[state_str] = start_node
+        else:
+            start_node = self._nodes[state_str]
+
+        # print("start node state: " + str(start_node.state) + " " + str(start_node.dist))
+        # print("start node cost: " + str(0))
 
         # dicts tracking the explored and frontier nodes
         self._explored = defaultdict(lambda: False)
@@ -150,6 +165,10 @@ class HA_Star(Base_Policy):
                 break
             curr_cost, node = heappop(self._frontier)
 
+            # print("-----------------------")
+            # print("popped node state: " + str(node.state) + " " + str(node.dist))
+            # print("popped node cost: " + str(curr_cost))
+
             # reset dicts
             self._fdict_nodes[node] = None
             self._explored[node] = True
@@ -157,19 +176,18 @@ class HA_Star(Base_Policy):
             # generate children if node hasn't been visited
             if len(node.children) == 0:
                 for i in range(self._sim_env._num_actions):
-                    state, reward = self._sim_env.step(copy.deepcopy(node.state), i)
+                    state, reward = self._sim_env.step((copy.deepcopy(node.state), node.dist), i)
 
                     # obtain node from game tree if already constructed
-                    state_str = str(state) + str(node.currstep + 1)
+                    state_str = str(state[0])
                     if self._nodes[state_str] is None:
-                        n = Node(state, node.currstep + 1)
+                        n = Node(state[0], state[1])
                         self._nodes[state_str] = n
                     else:
                         n = self._nodes[state_str]
                     node.children.append(n)
 
             # iterate thru children
-            done = False
             for i in range(len(node.children)):
                 child = node.children[i]
 
@@ -185,27 +203,27 @@ class HA_Star(Base_Policy):
                     child.previous_a = i
 
                     # if not done, add to heap
-                    child_cost = child.currstep + heuristic
-                    if self._sim_env.isTerminal(child.state, child.currstep):
-                        done = True
-                        fin_steps = child.currstep
+                    child_cost = child.dist + heuristic
+                    if self._sim_env.isTerminal((child.state, child.dist)):
                         goal_node = child
                         break
                     else:
                         heappush(self._frontier, (child_cost, child))
                         self._fdict_nodes[child] = (child_cost, child)
                 elif self._fdict_nodes[child] is not None:
-                    # get heuristic
-                    heuristic = self.calc_heuristic(child.state)
-                    if self._learned:
-                        heuristic = heuristic.item()
-
                     # replace the state in the frontier if child has a lower cost
                     f_cost, f_node = self._fdict_nodes[child]
-                    if f_node.currstep > child.currstep:
+                    if f_node.dist > child.dist:
                         print("removing child from frontier")
-                        c_cost = child.currstep + heuristic
                         self._frontier.remove((f_cost, f_node))
+
+                        # get heuristic
+                        heuristic = self.calc_heuristic(child.state)
+                        if self._learned:
+                            heuristic = heuristic.item()
+
+                        # replace node in frontier
+                        c_cost = child.dist + heuristic
                         heappush(self._frontier, (c_cost, child))
                         self._fdict_nodes[child] = (c_cost, child)
 
@@ -219,9 +237,9 @@ class HA_Star(Base_Policy):
         # if goal hasn't been reached, set terminal node as last node explored
         if goal_node is None:
             goal_node = node
-            total_steps = goal_node.currstep
+            total_steps = goal_node.dist
         else:
-            total_steps = goal_node.currstep
+            total_steps = goal_node.dist
 
         cont = False
         if start_node == goal_node:
@@ -231,7 +249,7 @@ class HA_Star(Base_Policy):
         p_node = goal_node.previous
         while cont or c_node != start_node:
             cont = False
-            episode.append((p_node.state, c_node.previous_a, c_node.state, p_node.currstep, total_steps))
+            episode.append((p_node.state, c_node.previous_a, c_node.state, p_node.dist, total_steps))
             temp = p_node.previous
             c_node = p_node
             p_node = temp
@@ -240,7 +258,7 @@ class HA_Star(Base_Policy):
         return episode
 
     def frontier_based(self, state):
-        pos_img, observed_obs, free, grid = state
+        pos_img, observed_obs, free, grid = state[0]
         free_copy = copy.deepcopy(free)
 
         # get robot position
@@ -291,7 +309,7 @@ class HA_Star(Base_Policy):
             avg_loss = 0
             for i in range(total_steps):
                 state, action, reward, next_state, done = train_data[i]
-                heuristic = self.calc_heuristic(state)
+                heuristic = self.calc_heuristic(state[0])
                 loss = (total_steps - (heuristic + i))**2
                 loss.backward()
                 avg_loss += loss
@@ -306,11 +324,10 @@ class HA_Star(Base_Policy):
     def add_state(self, state):
         self._prev_states.append(state)
 
-    def reset(self, grid, testing):
+    def reset(self, testing):
         self._testing = testing
         self._prev_states = []
         self._nodes = defaultdict(lambda: None)
-        self._sim_env._grid = grid
 
     def decayEpsilon(self):
         #decaying the epsilon
@@ -444,9 +461,6 @@ class HA_Star(Base_Policy):
             cell = open_set.get()
 
             #check if cell has already been visited
-            # print("--------------")
-            # print(str(cell[1][0]) + " " + str(cell[1][1]))
-            # print(visited)
             if visited[cell[1][0]][cell[1][1]] == 1:
                 continue
 
@@ -469,7 +483,6 @@ class HA_Star(Base_Policy):
         path_array = np.zeros(grid.shape)
 
         #handling case where we can't reach any unexplored points
-        # print(end_point)
         if end_point == None:
             return path_array
 

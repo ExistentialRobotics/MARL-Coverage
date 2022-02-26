@@ -20,6 +20,7 @@ from Policies.Networks.gnn import GNN
 from Policies.Networks.vin import VIN
 from Policies.Networks.rvin import RVIN
 from Policies.Networks.alpha_net import Alpha_Net
+from Policies.Networks.alpha_net_wstep import Alpha_Net_WStep
 from Utils.gridmaker import gridgen, gridload
 
 
@@ -142,11 +143,12 @@ logger = Logger(exp_name, makevid)
 if exp_parameters['gridload']:
     train_set, test_set = gridload(exp_parameters['grid_config'])
 else:
-    gridlis = gridgen(exp_parameters['grid_config'])
+    train_set = gridgen(exp_parameters['grid_config'])
     test_set = None
 
 print("Number of training environments: " + str(len(train_set)))
-print("Number of testing environments: " + str(len(test_set)))
+if test_set is not None:
+    print("Number of testing environments: " + str(len(test_set)))
 
 '''Making the environment'''
 if env_name == 'SuperGridRL':
@@ -179,6 +181,8 @@ else:
         net = GNN(num_actions, obs_dim, model_config)
     elif model_name == "alpha_net":
         net = Alpha_Net(num_actions, obs_dim, model_config)
+    elif model_name == "alpha_net_wstep":
+        net = Alpha_Net_WStep(num_actions, obs_dim, model_config)
     else:
         print(DASH)
         print(str(model_name) + " is an invalid model.")
@@ -201,7 +205,7 @@ else:
         policy = AlphaZero(env, sim, net, num_actions, obs_dim, policy_config,
                      model_path=model_path)
     elif policy_name == "ha_star":
-        sim = SuperGrid_Sim(env._grid, env._obs_dim, env_config)
+        sim = SuperGrid_Sim(env._obs_dim, env_config)
         policy = HA_Star(env, sim, net, num_actions, obs_dim, logger, policy_config,
                      model_path=model_path)
     else:
@@ -211,7 +215,6 @@ else:
         sys.exit(1)
 
 # train a policy if not testing a saved model
-# if not saved_model and policy_name != "alphazero" and policy_name != "ha_star":
 if not saved_model:
     '''Train policy'''
     if not random_policy:
@@ -222,19 +225,14 @@ if not saved_model:
                                                                         render=render_train, ignore_done=ignore_done)
     else:
         print("-----------------------Running Random Policy-----------------------")
-# else:
-#     print("----------Training " + str(policy_name) + "----------")
-#     policy.train()
+
 
 '''Test policy'''
 print("-----------------------------Testing Policy----------------------------")
-# if policy_name != "alphazero" and policy_name != "ha_star":
 test_rewardlis, average_percent_covered = test_RLalg(env, policy, logger, episodes=50, render_test=render_test,
                                                      makevid=makevid)
 test_percent_covered.append(average_percent_covered)
-# else:
-#     episode = policy.rollout()
-#     policy.simulate(episode)
+
 
 # get max and average coverage across all tests
 max_coverage = max(test_percent_covered)

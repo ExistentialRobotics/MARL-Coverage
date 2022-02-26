@@ -12,11 +12,8 @@ class SuperGrid_Sim(object):
     space. The objective of the environment is to cover as much of the region
     as possible.
     """
-    def __init__(self, grid, obs_dim, env_config):
+    def __init__(self, obs_dim, env_config):
         super().__init__()
-        #list of grids to use in training
-        self._grid = grid
-
         #environment config parameters
         self._numrobot = env_config['numrobot']
         self._train_maxsteps = env_config['train_maxsteps']
@@ -39,20 +36,19 @@ class SuperGrid_Sim(object):
         self._display = pygame.display.set_mode((1075, 1075))
 
     def step(self, state, action):
-        # print("state inside sim_env step: " + str(state))
-
         # decompose state
-        pos_img = state[0]
-        observed_obstacles = state[1]
-        free = state[2]
+        pos_img, observed_obstacles, free, grid = state[0]
+        currstep = state[1]
+
+        # print("state inside sim_env step: " + str(state))
 
         # extract x,y position
         pos = np.nonzero(pos_img)
         # pos = copy.deepcopy(pos)
 
         # dims of self._grid
-        width = self._grid.shape[0]
-        height = self._grid.shape[1]
+        width = grid.shape[0]
+        height = grid.shape[1]
 
         #initialize reward for this step
         reward = 0
@@ -71,7 +67,7 @@ class SuperGrid_Sim(object):
             x = pos[0] - 1
             y = pos[1]
 
-            if(self.isInBounds(x,y,width,height) and not self.isOccupied(x,y)):
+            if(self.isInBounds(x, y, width, height) and not self.isOccupied(x, y, grid)):
                 pos = (x, y)
                 # print("new pos: " + str(pos))
                 if self._dist_r:
@@ -83,7 +79,7 @@ class SuperGrid_Sim(object):
             x = pos[0] + 1
             y = pos[1]
 
-            if(self.isInBounds(x,y,width,height) and not self.isOccupied(x,y)):
+            if(self.isInBounds(x, y, width, height) and not self.isOccupied(x, y, grid)):
                 pos = (x, y)
                 # print("new pos: " + str(pos))
                 if self._dist_r:
@@ -95,7 +91,7 @@ class SuperGrid_Sim(object):
             x = pos[0]
             y = pos[1] + 1
 
-            if(self.isInBounds(x,y,width,height) and not self.isOccupied(x,y)):
+            if(self.isInBounds(x, y, width, height) and not self.isOccupied(x, y, grid)):
                 pos = (x, y)
                 # print("new pos: " + str(pos))
                 if self._dist_r:
@@ -107,7 +103,7 @@ class SuperGrid_Sim(object):
             x = pos[0]
             y = pos[1] - 1
 
-            if(self.isInBounds(x,y,width,height) and not self.isOccupied(x,y)):
+            if(self.isInBounds(x, y, width, height) and not self.isOccupied(x, y, grid)):
                 pos = (x, y)
                 # print("new pos: " + str(pos))
                 if self._dist_r:
@@ -123,22 +119,24 @@ class SuperGrid_Sim(object):
         for j in range(x_p - self._senseradius, x_p + self._senseradius + 1):
             for k in range(y_p - self._senseradius, y_p + self._senseradius + 1):
                 #checking if cell is not visited, in bounds, not an obstacle
-                if(self.isInBounds(j,k,width,height) and self._grid[j][k]>=0 and
+                if(self.isInBounds(j,k,width,height) and grid[j][k]>=0 and
                     free[j][k] == 1):
                     # add reward
-                    reward += self._grid[j][k]
+                    reward += grid[j][k]
 
                     # mark as not free
                     free[j][k] = 0
 
-                elif(self.isInBounds(j,k,width,height) and self._grid[j][k]>=0 and
+                elif(self.isInBounds(j,k,width,height) and grid[j][k]>=0 and
                     free[j][k] == 0):
                     reward -= self._free_penalty
 
-                elif(self.isInBounds(j,k,width,height) and self._grid[j][k]<0 and
+                elif(self.isInBounds(j,k,width,height) and grid[j][k]<0 and
                         observed_obstacles[j][k] == 0):
                         # track observed obstacles
                         observed_obstacles[j][k] = 1
+        # increment step count
+        currstep += 1
 
         # create position image
         pos_img = np.zeros((pos_img.shape[0], pos_img.shape[1]))
@@ -146,7 +144,8 @@ class SuperGrid_Sim(object):
 
         # create state
         # state = np.stack(np.array([pos_img, observed_obstacles, free, distance_map]), axis=0)
-        state = np.stack(np.array([pos_img, observed_obstacles, free, self._grid]), axis=0)
+        state = np.stack(np.array([pos_img, observed_obstacles, free, grid]), axis=0)
+        state = (state, currstep)
 
         # print("state after sim_env step: " + str(state))
 
@@ -160,9 +159,9 @@ class SuperGrid_Sim(object):
         # print(str(x) + " " + str(y) + " " + str(width) + " " + str(length))
         return x >= 0 and x < width and y >= 0 and y < length
 
-    def isOccupied(self, x, y):
+    def isOccupied(self, x, y, grid):
         #checking if no obstacle in that spot
-        if(self._grid[x, y] < 0):
+        if(grid[x, y] < 0):
             return True
 
         return False
@@ -179,14 +178,12 @@ class SuperGrid_Sim(object):
         # invert the values
         return 1 - distance_map
 
-    def isTerminal(self, state, steps):
+    def isTerminal(self, state):
         if min(self._done_thresh, 1) <= self.percent_covered(state):
             self._done_thresh += self._done_incr
             return True
-        # if steps == self._maxsteps:
-        #     return True
         return False
 
     def percent_covered(self, state):
-        free = state[2]
-        return np.count_nonzero(free < 1) / np.count_nonzero(self._grid > 0)
+        pos_img, observed_obstacles, free, grid = state[0]
+        return np.count_nonzero(free < 1) / np.count_nonzero(grid > 0)

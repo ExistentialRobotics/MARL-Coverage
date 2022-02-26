@@ -10,7 +10,7 @@ def generate_episode(env, policy, logger, render=False, makevid=False, ignore_do
     done = False
 
     #reset policy at beginning of episode
-    policy.reset(grid, testing)
+    policy.reset(testing)
 
     # iterate till episode completion
     i = 0
@@ -20,7 +20,7 @@ def generate_episode(env, policy, logger, render=False, makevid=False, ignore_do
 
         # step environment and save episode results
         next_state, reward = env.step(action)
-        policy.add_state(str(next_state))
+        policy.add_state(str(next_state[0]))
 
         # determine if episode is completed
         done = env.done()
@@ -109,7 +109,10 @@ def train_RLalg(env, policy, logger, train_episodes=1000, test_episodes=10, rend
 def test_RLalg(env, policy, logger, episodes=100, render_test=False, makevid=False):
     # set model to eval mode
     policy.set_eval()
-    num_test = len(env._test_gridlis)
+    if env._test_gridlis is not None:
+        num_test = len(env._test_gridlis)
+    else:
+        num_test = 1
 
     test_rewardlis = []
     percent_covered = 0

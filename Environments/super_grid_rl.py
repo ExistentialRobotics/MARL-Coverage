@@ -39,7 +39,7 @@ class SuperGridRL(object):
 
         #observation and action dimensions
         state = self.get_state()
-        self._obs_dim = state.shape
+        self._obs_dim = state[0].shape
         self._num_actions = 4**self._numrobot
 
         #experimental pygame shite
@@ -157,15 +157,13 @@ class SuperGridRL(object):
                             # track observed obstacles
                             self._observed_obstacles[j][k] = 1
 
-        # update graph
-        # self._graph.set_data(self._xinds, self._yinds)
+        #incrementing step count
+        self._currstep += 1
 
         #calculate current state
         state = self.get_state()
 
-        #incrementing step count
-        self._currstep += 1
-
+        # finalize reward
         reward = np.sum(reward)
         if min(self._done_thresh, 1) <= self.percent_covered():
             reward += self._terminal_reward
@@ -208,7 +206,7 @@ class SuperGridRL(object):
         arrays = np.array(self.get_pos_image() + [self._observed_obstacles, self._free, self._grid])
 
         state = np.stack(arrays, axis=0)
-        return state
+        return (state, self._currstep)
 
     def get_pos_image(self):
         """
@@ -236,7 +234,7 @@ class SuperGridRL(object):
 
     def reset(self, testing, ind):
         #picking a map at random
-        if testing:
+        if testing and self._test_gridlis is not None:
             self._grid = self._test_gridlis[ind]
         else:
             self._grid = self._train_gridlis[np.random.randint(len(self._train_gridlis))]
@@ -272,6 +270,9 @@ class SuperGridRL(object):
 
         # history of free cells
         self._free = np.ones((self._gridwidth, self._gridlen))
+
+        # reset step count
+        self._currstep = 0
 
         return self.get_state(), self._grid
 
