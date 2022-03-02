@@ -65,6 +65,7 @@ def train_RLalg(env, policy, logger, train_episodes=1000, test_episodes=10, rend
     for _ in range(train_episodes):
         if _ % 10 == 0:
             print("Training Episode: " + str(_) + " out of " + str(train_episodes) + " num nodes in tree: " + str(len(policy._nodes)))
+        # policy.train_epi = _
 
         # obtain the next episode
         if p_1_thres > _:

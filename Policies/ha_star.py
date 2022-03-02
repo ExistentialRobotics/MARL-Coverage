@@ -18,6 +18,7 @@ class Node(object):
         self.previous_a = action
         self.in_frontier = False
         self.explored = False
+        self.rewards = []
 
     def __lt__(self, other):
         return self.dist < self.dist
@@ -72,6 +73,8 @@ class HA_Star(Base_Policy):
         # dict mapping states to nodes in the tree
         self._nodes = defaultdict(lambda: None)
 
+        self.train_epi = 0
+
     def sim_step(self, state, action):
         next_state, reward = self._sim_env.step(state, action)
         if str(next_state[0]) not in self._prev_states:
@@ -93,7 +96,10 @@ class HA_Star(Base_Policy):
             # mark obstacle positions as not free
             free_copy[obs_inds[:, 0], obs_inds[:, 1]] = -1
             h = np.count_nonzero(free_copy)
-        return 0
+        return h
+        # print("heuristic: " + str(h/10))
+        # return (h/10)
+
 
     def pi(self, state, phase_1=False):
         u = self.frontier_based(state)
@@ -131,7 +137,9 @@ class HA_Star(Base_Policy):
                 a.remove(u)
             u = np.random.randint(self.num_actions)
             reset = self.sim_step(state, u)
-        # print("action: " + str(u))
+
+        if self.train_epi >= 800:
+            print("action: " + str(u))
         return u
 
 
@@ -170,9 +178,10 @@ class HA_Star(Base_Policy):
 
             pos = np.nonzero(node.state[0])
 
-            # print("-----------------------")
-            # print("popped node state: " + str(node.state) + " " + str(node.dist) + " " + str(pos))
-            # print("popped node cost: " + str(curr_cost))
+            if self.train_epi >= 800:
+                print("-----------------------")
+                print("popped node state: " + str(node.state) + " " + str(node.dist) + " " + str(pos))
+                print("popped node cost: " + str(curr_cost))
 
             # reset dicts
             self._fdict_nodes[node] = None
@@ -191,7 +200,10 @@ class HA_Star(Base_Policy):
                     else:
                         # print("child already in tree")
                         n = self._nodes[state_str]
+
+                    # track children info
                     node.children.append(n)
+                    node.rewards.append(reward)
 
             # iterate thru children
             for i in range(len(node.children)):
@@ -205,6 +217,7 @@ class HA_Star(Base_Policy):
                         heuristic = heuristic.item()
 
                     # set parent
+                    child.dist = node.dist + node.rewards[i]
                     child.previous = node
                     child.previous_a = i
 
@@ -217,10 +230,18 @@ class HA_Star(Base_Policy):
                         heappush(self._frontier, (child_cost, child))
                         self._fdict_nodes[child] = (child_cost, child)
                 elif self._fdict_nodes[child] is not None:
+                    # potentially new dist to this node
+                    # new_dist = node.dist + 1 # for minimizing steps
+                    new_dist = node.dist + node.rewards[i] # for maximizing reward
+
                     # replace the state in the frontier if child has a lower cost
                     f_cost, f_node = self._fdict_nodes[child]
-                    if f_node.dist > child.dist:
-                        print("removing child from frontier")
+                    # print("child in frontier! child cost: " + str(new_dist) + " frontier node cost: " + str(f_node.dist) + " " + str(f_node.previous == node))
+
+                    # if f_node.dist > new_dist: # minimizing steps
+                    if f_node.dist < new_dist: # maximizing reward
+
+                        # print("removing child from frontier")
                         self._frontier.remove((f_cost, f_node))
 
                         # get heuristic
@@ -228,14 +249,17 @@ class HA_Star(Base_Policy):
                         if self._learned:
                             heuristic = heuristic.item()
 
+                        # set parent
+                        child.previous = node
+                        child.previous_a = i
+                        child.dist = new_dist
+
                         # replace node in frontier
                         c_cost = -(child.dist + heuristic)
                         heappush(self._frontier, (c_cost, child))
                         self._fdict_nodes[child] = (c_cost, child)
 
-                        # set parent
-                        child.previous = node
-                        child.previous_a = i
+
 
         # construct episode from optimal path
         episode = []
@@ -305,7 +329,15 @@ class HA_Star(Base_Policy):
         return u
 
     def update_policy(self, train_data):
+        # calc loss for each data point
+        total_steps = len(train_data)
+        print("total_steps: " + str(total_steps))
         if self._learned:
+            total_reward = 0
+            for i in range(total_steps):
+                state, action, reward, next_state, done = train_data[i]
+                total_reward += reward
+
             # zero gradients
             self._opt.zero_grad()
 
@@ -313,10 +345,18 @@ class HA_Star(Base_Policy):
             total_steps = len(train_data)
             print("total_steps: " + str(total_steps))
             avg_loss = 0
+            curr_reward = 0
             for i in range(total_steps):
                 state, action, reward, next_state, done = train_data[i]
                 heuristic = self.calc_heuristic(state[0])
-                loss = (total_steps - (heuristic + i))**2
+
+                curr_reward += reward
+                # loss = (total_steps - (heuristic + i))**2
+                loss = (total_reward - (heuristic + curr_reward))**2
+
+                if self.train_epi >= 800:
+                    print("total_reward: " + str(total_reward) + " heuristic: " + str(heuristic) + " curr_reward: " + str(curr_reward))
+
                 loss.backward()
                 avg_loss += loss
             self._avgloss = avg_loss / total_steps
