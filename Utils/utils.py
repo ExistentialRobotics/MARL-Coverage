@@ -16,6 +16,7 @@ def generate_episode(env, policy, logger, render=False, makevid=False, ignore_do
     i = 0
     while not done:
         # determine action
+        policy.set_reward(total_reward)
         action = policy.pi(state, phase_1=phase_1)
 
         # step environment and save episode results

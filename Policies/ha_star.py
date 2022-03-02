@@ -16,6 +16,8 @@ class Node(object):
         self.children = []
         self.previous = previous
         self.previous_a = action
+        self.in_frontier = False
+        self.explored = False
 
     def __lt__(self, other):
         return self.dist < self.dist
@@ -91,7 +93,7 @@ class HA_Star(Base_Policy):
             # mark obstacle positions as not free
             free_copy[obs_inds[:, 0], obs_inds[:, 1]] = -1
             h = np.count_nonzero(free_copy)
-        return h
+        return 0
 
     def pi(self, state, phase_1=False):
         u = self.frontier_based(state)
@@ -137,7 +139,8 @@ class HA_Star(Base_Policy):
         # obtain node from game tree if already constructed
         state_str = str(state[0])
         if self._nodes[state_str] is None:
-            start_node = Node(state[0], state[1])
+            # start_node = Node(state[0], state[1])
+            start_node = Node(state[0], self._curr_reward)
             self._nodes[state_str] = start_node
         else:
             start_node = self._nodes[state_str]
@@ -165,8 +168,10 @@ class HA_Star(Base_Policy):
                 break
             curr_cost, node = heappop(self._frontier)
 
+            pos = np.nonzero(node.state[0])
+
             # print("-----------------------")
-            # print("popped node state: " + str(node.state) + " " + str(node.dist))
+            # print("popped node state: " + str(node.state) + " " + str(node.dist) + " " + str(pos))
             # print("popped node cost: " + str(curr_cost))
 
             # reset dicts
@@ -181,9 +186,10 @@ class HA_Star(Base_Policy):
                     # obtain node from game tree if already constructed
                     state_str = str(state[0])
                     if self._nodes[state_str] is None:
-                        n = Node(state[0], state[1])
+                        n = Node(state[0], node.dist + reward)
                         self._nodes[state_str] = n
                     else:
+                        # print("child already in tree")
                         n = self._nodes[state_str]
                     node.children.append(n)
 
@@ -203,7 +209,7 @@ class HA_Star(Base_Policy):
                     child.previous_a = i
 
                     # if not done, add to heap
-                    child_cost = child.dist + heuristic
+                    child_cost = -(child.dist + heuristic)
                     if self._sim_env.isTerminal((child.state, child.dist)):
                         goal_node = child
                         break
@@ -223,7 +229,7 @@ class HA_Star(Base_Policy):
                             heuristic = heuristic.item()
 
                         # replace node in frontier
-                        c_cost = child.dist + heuristic
+                        c_cost = -(child.dist + heuristic)
                         heappush(self._frontier, (c_cost, child))
                         self._fdict_nodes[child] = (c_cost, child)
 
@@ -320,6 +326,9 @@ class HA_Star(Base_Policy):
             self._opt.step()
         #decaying epsilon
         self.decayEpsilon()
+
+    def set_reward(self, reward):
+        self._curr_reward = reward
 
     def add_state(self, state):
         self._prev_states.append(state)
