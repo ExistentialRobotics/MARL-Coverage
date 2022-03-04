@@ -96,7 +96,8 @@ class HA_Star(Base_Policy):
             # mark obstacle positions as not free
             free_copy[obs_inds[:, 0], obs_inds[:, 1]] = -1
             h = np.count_nonzero(free_copy)
-        return h
+        return 0
+        # return h
         # print("heuristic: " + str(h/10))
         # return (h/10)
 
@@ -147,8 +148,8 @@ class HA_Star(Base_Policy):
         # obtain node from game tree if already constructed
         state_str = str(state[0])
         if self._nodes[state_str] is None:
-            # start_node = Node(state[0], state[1])
-            start_node = Node(state[0], self._curr_reward)
+            start_node = Node(state[0], state[1]) # min steps
+            # start_node = Node(state[0], self._curr_reward) # max reward
             self._nodes[state_str] = start_node
         else:
             start_node = self._nodes[state_str]
@@ -195,7 +196,8 @@ class HA_Star(Base_Policy):
                     # obtain node from game tree if already constructed
                     state_str = str(state[0])
                     if self._nodes[state_str] is None:
-                        n = Node(state[0], node.dist + reward)
+                        n = Node(state[0], state[1]) # min steps
+                        # n = Node(state[0], node.dist + reward) # max reward
                         self._nodes[state_str] = n
                     else:
                         # print("child already in tree")
@@ -217,12 +219,16 @@ class HA_Star(Base_Policy):
                         heuristic = heuristic.item()
 
                     # set parent
-                    child.dist = node.dist + node.rewards[i]
+                    # child.dist = node.dist + node.rewards[i] # max reward
+                    child.dist = node.dist + 1 # min steps
+
                     child.previous = node
                     child.previous_a = i
 
                     # if not done, add to heap
-                    child_cost = -(child.dist + heuristic)
+                    # child_cost = -(child.dist + heuristic) # max reward
+                    child_cost = child.dist + heuristic # min steps
+
                     if self._sim_env.isTerminal((child.state, child.dist)):
                         goal_node = child
                         break
@@ -231,15 +237,15 @@ class HA_Star(Base_Policy):
                         self._fdict_nodes[child] = (child_cost, child)
                 elif self._fdict_nodes[child] is not None:
                     # potentially new dist to this node
-                    # new_dist = node.dist + 1 # for minimizing steps
-                    new_dist = node.dist + node.rewards[i] # for maximizing reward
+                    new_dist = node.dist + 1 # for minimizing steps
+                    # new_dist = node.dist + node.rewards[i] # for maximizing reward
 
                     # replace the state in the frontier if child has a lower cost
                     f_cost, f_node = self._fdict_nodes[child]
                     # print("child in frontier! child cost: " + str(new_dist) + " frontier node cost: " + str(f_node.dist) + " " + str(f_node.previous == node))
 
-                    # if f_node.dist > new_dist: # minimizing steps
-                    if f_node.dist < new_dist: # maximizing reward
+                    if f_node.dist > new_dist: # minimizing steps
+                    # if f_node.dist < new_dist: # maximizing reward
 
                         # print("removing child from frontier")
                         self._frontier.remove((f_cost, f_node))
@@ -255,7 +261,9 @@ class HA_Star(Base_Policy):
                         child.dist = new_dist
 
                         # replace node in frontier
-                        c_cost = -(child.dist + heuristic)
+                        # c_cost = -(child.dist + heuristic) # max reward
+                        c_cost = child.dist + heuristic # min steps
+
                         heappush(self._frontier, (c_cost, child))
                         self._fdict_nodes[child] = (c_cost, child)
 
