@@ -3,10 +3,9 @@ import numpy as np
 import torch
 from heapq import *
 import copy
-import cv2
-import sys
 from collections import defaultdict
 from queue import PriorityQueue
+
 
 class Node(object):
     def __init__(self, state, dist, action=None, previous=None):
@@ -24,7 +23,7 @@ class Node(object):
         return self.dist < self.dist
 
     def __eq__(self, other):
-        return np.all(self.state==other.state)
+        return np.all(self.state == other.state)
 
     def __hash__(self):
         return hash(str(self.state))
@@ -36,9 +35,9 @@ class HA_Star(Base_Policy):
         self._logger = logger
 
         self._env = env
-        self._sim_env = sim # sim_environment to run on
+        self._sim_env = sim  # sim_environment to run on
         self.num_actions = env._num_actions
-        self._net = net # neural network for prediction
+        self._net = net  # neural network for prediction
         self._max_len = (env._obs_dim[1] ** 2) * 2
 
         # e greedy stuff
@@ -55,16 +54,17 @@ class HA_Star(Base_Policy):
         self._learned = policy_config["learned"]
 
         # cpu vs gpu code
-        self._device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self._device = torch.device(
+            'cuda' if torch.cuda.is_available() else 'cpu')
 
-        #moving net to gpu
+        # moving net to gpu
         self._net.to(self._device)
 
         # loss and optimizer
         self._loss = torch.nn.CrossEntropyLoss()
         self._opt = torch.optim.Adam(self._net.parameters(),
-                        lr=policy_config['lr'],
-                        weight_decay=policy_config['weight_decay'])
+                                     lr=policy_config['lr'],
+                                     weight_decay=policy_config['weight_decay'])
         self._avgloss = None
 
         # performance metrics
@@ -96,14 +96,13 @@ class HA_Star(Base_Policy):
             # mark obstacle positions as not free
             free_copy[obs_inds[:, 0], obs_inds[:, 1]] = -1
             h = np.count_nonzero(free_copy)
+        # return 0
         return 0
-        # return h
         # print("heuristic: " + str(h/10))
         # return (h/10)
 
-
     def pi(self, state, phase_1=False):
-        u = self.frontier_based(state)
+        # u = self.frontier_based(state)
 
         # available actions
         a = [0, 1, 2, 3]
@@ -139,17 +138,14 @@ class HA_Star(Base_Policy):
             u = np.random.randint(self.num_actions)
             reset = self.sim_step(state, u)
 
-        if self.train_epi >= 800:
-            print("action: " + str(u))
         return u
-
 
     def rollout(self, state):
         # obtain node from game tree if already constructed
         state_str = str(state[0])
         if self._nodes[state_str] is None:
-            start_node = Node(state[0], state[1]) # min steps
-            # start_node = Node(state[0], self._curr_reward) # max reward
+            # start_node = Node(state[0], state[1]) # min steps
+            start_node = Node(state[0], self._curr_reward)  # max reward
             self._nodes[state_str] = start_node
         else:
             start_node = self._nodes[state_str]
@@ -181,7 +177,8 @@ class HA_Star(Base_Policy):
 
             if self.train_epi >= 800:
                 print("-----------------------")
-                print("popped node state: " + str(node.state) + " " + str(node.dist) + " " + str(pos))
+                print("popped node state: " + str(node.state)
+                      + " " + str(node.dist) + " " + str(pos))
                 print("popped node cost: " + str(curr_cost))
 
             # reset dicts
@@ -191,13 +188,14 @@ class HA_Star(Base_Policy):
             # generate children if node hasn't been visited
             if len(node.children) == 0:
                 for i in range(self._sim_env._num_actions):
-                    state, reward = self._sim_env.step((copy.deepcopy(node.state), node.dist), i)
+                    state, reward = self._sim_env.step(
+                        (copy.deepcopy(node.state), node.dist), i)
 
                     # obtain node from game tree if already constructed
                     state_str = str(state[0])
                     if self._nodes[state_str] is None:
-                        n = Node(state[0], state[1]) # min steps
-                        # n = Node(state[0], node.dist + reward) # max reward
+                        # n = Node(state[0], state[1]) # min steps
+                        n = Node(state[0], node.dist + reward)  # max reward
                         self._nodes[state_str] = n
                     else:
                         # print("child already in tree")
@@ -219,15 +217,15 @@ class HA_Star(Base_Policy):
                         heuristic = heuristic.item()
 
                     # set parent
-                    # child.dist = node.dist + node.rewards[i] # max reward
-                    child.dist = node.dist + 1 # min steps
+                    child.dist = node.dist + node.rewards[i]  # max reward
+                    # child.dist = node.dist + 1 # min steps
 
                     child.previous = node
                     child.previous_a = i
 
                     # if not done, add to heap
-                    # child_cost = -(child.dist + heuristic) # max reward
-                    child_cost = child.dist + heuristic # min steps
+                    child_cost = -(child.dist + heuristic)  # max reward
+                    # child_cost = child.dist + heuristic # min steps
 
                     if self._sim_env.isTerminal((child.state, child.dist)):
                         goal_node = child
@@ -237,15 +235,16 @@ class HA_Star(Base_Policy):
                         self._fdict_nodes[child] = (child_cost, child)
                 elif self._fdict_nodes[child] is not None:
                     # potentially new dist to this node
-                    new_dist = node.dist + 1 # for minimizing steps
-                    # new_dist = node.dist + node.rewards[i] # for maximizing reward
+                    # new_dist = node.dist + 1 # for minimizing steps
+                    # for maximizing reward
+                    new_dist = node.dist + node.rewards[i]
 
                     # replace the state in the frontier if child has a lower cost
                     f_cost, f_node = self._fdict_nodes[child]
                     # print("child in frontier! child cost: " + str(new_dist) + " frontier node cost: " + str(f_node.dist) + " " + str(f_node.previous == node))
 
-                    if f_node.dist > new_dist: # minimizing steps
-                    # if f_node.dist < new_dist: # maximizing reward
+                    # if f_node.dist > new_dist: # minimizing steps
+                    if f_node.dist < new_dist:  # maximizing reward
 
                         # print("removing child from frontier")
                         self._frontier.remove((f_cost, f_node))
@@ -261,13 +260,11 @@ class HA_Star(Base_Policy):
                         child.dist = new_dist
 
                         # replace node in frontier
-                        # c_cost = -(child.dist + heuristic) # max reward
-                        c_cost = child.dist + heuristic # min steps
+                        c_cost = -(child.dist + heuristic)  # max reward
+                        # c_cost = child.dist + heuristic # min steps
 
                         heappush(self._frontier, (c_cost, child))
                         self._fdict_nodes[child] = (c_cost, child)
-
-
 
         # construct episode from optimal path
         episode = []
@@ -287,7 +284,8 @@ class HA_Star(Base_Policy):
         p_node = goal_node.previous
         while cont or c_node != start_node:
             cont = False
-            episode.append((p_node.state, c_node.previous_a, c_node.state, p_node.dist, total_steps))
+            episode.append((p_node.state, c_node.previous_a,
+                           c_node.state, p_node.dist, total_steps))
             temp = p_node.previous
             c_node = p_node
             p_node = temp
@@ -363,7 +361,8 @@ class HA_Star(Base_Policy):
                 loss = (total_reward - (heuristic + curr_reward))**2
 
                 if self.train_epi >= 800:
-                    print("total_reward: " + str(total_reward) + " heuristic: " + str(heuristic) + " curr_reward: " + str(curr_reward))
+                    print("total_reward: " + str(total_reward) + " heuristic: "
+                          + str(heuristic) + " curr_reward: " + str(curr_reward))
 
                 loss.backward()
                 avg_loss += loss
@@ -414,7 +413,7 @@ class HA_Star(Base_Policy):
         self._net.eval()
 
     def in_bounds(self, x, y, grid):
-        return x >= 0 and y >=0 and x < grid.shape[0] and y < grid.shape[1]
+        return x >= 0 and y >= 0 and x < grid.shape[0] and y < grid.shape[1]
 
     def get_valid_neighbors(self, x, y, grid, visited):
         """
@@ -432,19 +431,18 @@ class HA_Star(Base_Policy):
         neighbors = []
 
         if self.in_bounds(x+1, y, grid) and visited[x+1][y] == 0 and grid[x+1][y] != -1:
-            neighbors.append((x+1,y))
+            neighbors.append((x+1, y))
 
         if self.in_bounds(x-1, y, grid) and visited[x-1][y] == 0 and grid[x-1][y] != -1:
-            neighbors.append((x-1,y))
+            neighbors.append((x-1, y))
 
         if self.in_bounds(x, y+1, grid) and visited[x][y+1] == 0 and grid[x][y+1] != -1:
-            neighbors.append((x,y+1))
+            neighbors.append((x, y+1))
 
         if self.in_bounds(x, y-1, grid) and visited[x][y-1] == 0 and grid[x][y-1] != -1:
-            neighbors.append((x,y-1))
+            neighbors.append((x, y-1))
 
         return neighbors
-
 
     def dijkstra_cost_map(self, grid):
         """
@@ -469,7 +467,7 @@ class HA_Star(Base_Policy):
                 #checking if cell is unexplored
                 if grid[i][j] == 0:
                     #adding unexplored cell to open set
-                    open_set.put((0, (i,j)))
+                    open_set.put((0, (i, j)))
 
         #main dijkstra loop
         while not open_set.empty():
@@ -484,7 +482,8 @@ class HA_Star(Base_Policy):
             cost[cell[1][0]][cell[1][1]] = cell[0]
 
             #looping over all neighbors and updating their costs
-            neighbors = get_valid_neighbors(cell[1][0], cell[1][1], grid, visited)
+            neighbors = get_valid_neighbors(
+                cell[1][0], cell[1][1], grid, visited)
 
             for neighbor in neighbors:
                 open_set.put((cell[0] + 1, neighbor))
@@ -531,7 +530,8 @@ class HA_Star(Base_Policy):
                 break
 
             #looping over all neighbors and updating their costs
-            neighbors = self.get_valid_neighbors(cell[1][0], cell[1][1], grid, visited)
+            neighbors = self.get_valid_neighbors(
+                cell[1][0], cell[1][1], grid, visited)
 
             for neighbor in neighbors:
                 open_set.put((cell[0] + 1, neighbor))
@@ -551,7 +551,8 @@ class HA_Star(Base_Policy):
         visited = 1 - visited
 
         while curr[0] != start_x or curr[1] != start_y:
-            neighbors = self.get_valid_neighbors(curr[0], curr[1], grid, visited)
+            neighbors = self.get_valid_neighbors(
+                curr[0], curr[1], grid, visited)
 
             #finding the neighbor with the minimum cost
             for neighbor in neighbors:
