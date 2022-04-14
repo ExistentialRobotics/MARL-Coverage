@@ -32,8 +32,8 @@ class BA_Star(object):
         vis = copy.deepcopy(
             self._visited[self._curr_x - 1:self._curr_x + 2, self._curr_y - 1:self._curr_y + 2])
 
-        print("ori vis: " + str(vis))
-        print("ori obs: " + str(obs))
+        # print("ori vis: " + str(vis))
+        # print("ori obs: " + str(obs))
 
         if self._curr_a == 0:
             r = 1
@@ -59,8 +59,8 @@ class BA_Star(object):
         for i in range(r):
             obs = np.rot90(obs)
 
-        print("rot obs: " + str(obs))
-        print("rot vis: " + str(vis))
+        # print("rot obs: " + str(obs))
+        # print("rot vis: " + str(vis))
 
         return obs, vis
 
@@ -109,7 +109,7 @@ class BA_Star(object):
 
         goal = None
         m = (vis.shape[0] * vis.shape[1]) + 1
-        print(backtracking_list)
+        # print(backtracking_list)
         for p in backtracking_list:
             dist = np.linalg.norm(np.array(p) - np.array(start))
             if dist < m:
@@ -119,13 +119,13 @@ class BA_Star(object):
         return goal
 
     def pi(self, state):
-        print("------")
+        # print("------")
 
         obs, vis = self.get_obs_vis(state)
 
-        print("current angle: " + str(self._curr_a))
-        print("frontiering: " + str(self._frontiering))
-        print("turning: " + str(self._turning))
+        # print("current angle: " + str(self._curr_a))
+        # print("frontiering: " + str(self._frontiering))
+        # print("turning: " + str(self._turning))
 
         # update the robot's maps
         self.update_maps(state)
@@ -133,7 +133,7 @@ class BA_Star(object):
         # check if we need to turn
         init_boustro = False
         if (obs[1, 2] == 1 or vis[1, 2] == 1) and self._turning is False and self._frontiering is False:
-            print("attempting to init turn, prev turn: " + str(self._prev_turn))
+            # print("attempting to init turn, prev turn: " + str(self._prev_turn))
 
             # check if robot is able to turn, if not init frontier
             if self._prev_turn == "right":
@@ -149,8 +149,8 @@ class BA_Star(object):
             if self._frontiering is False:
                 self.init_turn()
 
-        print("frontiering: " + str(self._frontiering))
-        print("turning: " + str(self._turning))
+        # print("frontiering: " + str(self._frontiering))
+        # print("turning: " + str(self._turning))
 
         # turn
         if self._turning:
@@ -170,8 +170,8 @@ class BA_Star(object):
             if (self._init_a + 180) % 360 == self._curr_a or self._frontiering:
                 self._turning = False
 
-        print("frontiering: " + str(self._frontiering))
-        print("turning: " + str(self._turning))
+        # print("frontiering: " + str(self._frontiering))
+        # print("turning: " + str(self._turning))
 
         # execute frontier based exploration
         if self._frontiering:
@@ -180,25 +180,26 @@ class BA_Star(object):
                 self._path_map = None
                 self._goal_point = None
                 self._prev_a = self.to_open()
-                print("Reached goal point! Action to open space: "
-                      + str(self._prev_a))
+                # print("Reached goal point! Action to open space: "
+                #       + str(self._prev_a))
                 if self._prev_a == -1:
                     self.init_frontier()
                     self._prev_a = self.frontier_based()
                 else:
-                    self.init_boustro(state)
+                    init_boustro = True
+                    # self.init_boustro(state)
             else:
                 self._prev_a = self.frontier_based()
-                print("frontier output: " + str(self._prev_a))
+                # print("frontier output: " + str(self._prev_a))
 
         u = self._prev_a
 
         # update robot's controls
         self.update_controls(u)
 
-        # # initialize boustrophedon motion if necessary
-        # if init_boustro:
-        #     self.init_boustro(state)
+        # initialize boustrophedon motion if necessary
+        if init_boustro:
+            self.init_boustro(state)
 
         return u
 
@@ -228,19 +229,19 @@ class BA_Star(object):
         return u
 
     def init_boustro(self, state):
-        if self._visited[self._curr_x + 1, self._curr_y] == 0 and self._obstacles[self._curr_x + 1, self._curr_y] == 0:
-            self._curr_a = 0
-        elif self._visited[self._curr_x, self._curr_y + 1] == 0 and self._obstacles[self._curr_x, self._curr_y + 1] == 0:
-            self._curr_a = 90
-        elif self._visited[self._curr_x - 1, self._curr_y] == 0 and self._obstacles[self._curr_x - 1, self._curr_y] == 0:
-            self._curr_a = 180
-        else:
-            self._curr_a = 270
+        # if self._visited[self._curr_x + 1, self._curr_y] == 0 and self._obstacles[self._curr_x + 1, self._curr_y] == 0:
+        #     self._curr_a = 0
+        # elif self._visited[self._curr_x, self._curr_y + 1] == 0 and self._obstacles[self._curr_x, self._curr_y + 1] == 0:
+        #     self._curr_a = 90
+        # elif self._visited[self._curr_x - 1, self._curr_y] == 0 and self._obstacles[self._curr_x - 1, self._curr_y] == 0:
+        #     self._curr_a = 180
+        # else:
+        #     self._curr_a = 270
 
         obs, vis = self.get_obs_vis(state)
 
-        print("init boustro obs: " + str(obs))
-        print("init boustro vis: " + str(vis))
+        # print("init boustro obs: " + str(obs))
+        # print("init boustro vis: " + str(vis))
 
         if vis[0, 1] == 1 or obs[0, 1] == 1:
             self._prev_turn = "left"
@@ -252,7 +253,7 @@ class BA_Star(object):
             self._prev_turn = "left"
         else:
             self._prev_turn = "right"
-        print("initializing turn! setting prev turn to: " + str(self._prev_turn))
+        # print("initializing turn! setting prev turn to: " + str(self._prev_turn))
         self._turning = True
         self._init_a = self._curr_a
 
@@ -286,12 +287,12 @@ class BA_Star(object):
         # set status to frontiering
         self._frontiering = True
 
-        print("visited: " + str(self._visited))
+        # print("visited: " + str(self._visited))
         # print(self._free)
-        print("obstacles: " + str(self._obstacles))
-        print("goal point: " + str(self._goal_point))
-        print("path map: " + str(self._path_map))
-        print("starting frontier based!")
+        # print("obstacles: " + str(self._obstacles))
+        # print("goal point: " + str(self._goal_point))
+        # print("path map: " + str(self._path_map))
+        # print("starting frontier based!")
 
     def turn_left(self):
         # print("turning left!")
@@ -320,7 +321,7 @@ class BA_Star(object):
         elif u == 3:
             self._curr_y -= 1
 
-        print("pos: " + str((self._curr_x, self._curr_y)))
+        # print("pos: " + str((self._curr_x, self._curr_y)))
 
     def update_maps(self, state):
         pos_map, free, obs, dist = state[0]
@@ -547,10 +548,10 @@ if __name__ == "__main__":
     }
 
     '''Making the list of grids'''
-    # gridlis = gridload(grid_config)
-    train_set, test_set = gridload(grid_config)
+    gridlis = gridload(grid_config)
+    # train_set, test_set = gridload(grid_config)
 
-    env = DecGridRL(test_set, env_config)
+    env = DecGridRL(gridlis, env_config)
 
     # logger stuff
     makevid = True
@@ -558,7 +559,7 @@ if __name__ == "__main__":
     logger = Logger(exp_name, makevid)
 
     # testing bsa
-    bsa_controller = BA_Star(50, env_config["egoradius"])
+    bsa_controller = BA_Star(105, env_config["egoradius"])
 
     state = env.reset()  # getting only the obstacle layer
     done = False
