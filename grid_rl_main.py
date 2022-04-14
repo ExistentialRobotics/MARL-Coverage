@@ -1,5 +1,6 @@
 import numpy as np
-import getopt, sys
+import getopt
+import sys
 import json
 
 from Environments.super_grid_rl import SuperGridRL
@@ -49,7 +50,7 @@ try:
     for currentArgument, currentValue in arguments:
 
         if currentArgument in ("-m", "--model"):
-            print (("Running saved model directly from % s") % (currentValue))
+            print(("Running saved model directly from % s") % (currentValue))
             model_path = currentValue
             saved_model = True
         else:
@@ -57,7 +58,7 @@ try:
 
 except getopt.error as err:
     # output error, and return with an error code
-    print (str(err))
+    print(str(err))
 
 if saved_model:
     # run testing with a saved model
@@ -76,7 +77,7 @@ if saved_model:
     sc = 0
     for i in range(len(model_path) - 1, -1, -1):
         if model_path[i] == "/":
-             sc += 1
+            sc += 1
         if sc == 2:
             break
 
@@ -109,28 +110,28 @@ except:
     sys.exit(1)
 
 '''Environment Parameters'''
-env_name       = exp_parameters["env_name"]
-env_config     = exp_parameters['env_config']
-numrobot       = env_config['numrobot']
+env_name = exp_parameters["env_name"]
+env_config = exp_parameters['env_config']
+numrobot = env_config['numrobot']
 
 '''Experiment Parameters'''
-exp_name       = exp_parameters["exp_name"]
-exp_config     = exp_parameters['exp_config']
+exp_name = exp_parameters["exp_name"]
+exp_config = exp_parameters['exp_config']
 train_episodes = exp_config["train_episodes"]
-test_episodes  = exp_config["test_episodes"]
-show_fig       = exp_config["render_plots"]
-render_test    = exp_config['render_test']
-render_train   = exp_config['render_train']
-makevid        = exp_config["makevid"]
-ignore_done    = exp_config['ignore_done']
+test_episodes = exp_config["test_episodes"]
+show_fig = exp_config["render_plots"]
+render_test = exp_config['render_test']
+render_train = exp_config['render_train']
+makevid = exp_config["makevid"]
+ignore_done = exp_config['ignore_done']
 
 '''Model Parameters'''
-model_config   = exp_parameters['model_config']
-model_name     = model_config['model_name']
+model_config = exp_parameters['model_config']
+model_name = model_config['model_name']
 
 '''Policy Parameters'''
-policy_config  = exp_parameters['policy_config']
-policy_name    = policy_config['policy_name']
+policy_config = exp_parameters['policy_config']
+policy_name = policy_config['policy_name']
 
 print(DASH)
 print("Running experiment using: " + str(config_path))
@@ -154,7 +155,8 @@ if test_set is not None:
 if env_name == 'SuperGridRL':
     env = SuperGridRL(train_set, env_config, test_set=test_set)
 elif env_name == 'DecGridRL':
-    env = DecGridRL(gridlis, env_config, use_graph=policy_config["use_graph"])
+    env = DecGridRL(train_set, env_config,
+                    use_graph=policy_config["use_graph"])
 
 num_actions = env._num_actions
 obs_dim = env._obs_dim
@@ -203,11 +205,11 @@ else:
     elif policy_name == "alphazero":
         sim = SuperGrid_Sim(env._grid, env._obs_dim, env_config)
         policy = AlphaZero(env, sim, net, num_actions, obs_dim, policy_config,
-                     model_path=model_path)
+                           model_path=model_path)
     elif policy_name == "ha_star":
         sim = SuperGrid_Sim(env._obs_dim, env_config)
         policy = HA_Star(env, sim, net, num_actions, obs_dim, logger, policy_config,
-                     model_path=model_path)
+                         model_path=model_path)
     else:
         print(DASH)
         print(str(policy_name) + " is an invalid policy.")
@@ -218,11 +220,12 @@ else:
 if not saved_model:
     '''Train policy'''
     if not random_policy:
-        print("----------Running {} for ".format(policy_name) + str(train_episodes) + " episodes-----------")
+        print("----------Running {} for ".format(policy_name)
+              + str(train_episodes) + " episodes-----------")
         policy.printNumParams()
 
         train_rewardlis, losslist, test_percent_covered = train_RLalg(env, policy, logger, train_episodes=train_episodes, test_episodes=test_episodes,
-                                                                        render=render_train, ignore_done=ignore_done)
+                                                                      render=render_train, ignore_done=ignore_done)
     else:
         print("-----------------------Running Random Policy-----------------------")
 
@@ -240,8 +243,10 @@ avg_coverage = sum(test_percent_covered) / len(test_percent_covered)
 
 '''Display testing results'''
 print(DASH)
-print("Trained policy covered " + str(max_coverage) + " percent of the environment on its best test!")
-print("Trained policy covered " + str(avg_coverage) + " percent of the environment on average across all tests!")
+print("Trained policy covered " + str(max_coverage)
+      + " percent of the environment on its best test!")
+print("Trained policy covered " + str(avg_coverage)
+      + " percent of the environment on average across all tests!")
 print(DASH)
 
 if not saved_model:
@@ -255,12 +260,12 @@ if not saved_model:
                 "Training Loss", show_fig=show_fig)
 
     # plot testing rewards
-    logger.plot(test_rewardlis, 4, "Testing Reward per Episode", 'Episodes', 'Reward', "Testing Reward"
-                , "Testing Reward", show_fig=show_fig)
+    logger.plot(test_rewardlis, 4, "Testing Reward per Episode", 'Episodes',
+                'Reward', "Testing Reward", "Testing Reward", show_fig=show_fig)
 
     # plot average percent covered when testing
-    logger.plot(test_percent_covered, 5, "Average Percent Covered", 'Episode (x10)', 'Percent Covered', "Percent Covered"
-                , "Percent Covered", show_fig=show_fig)
+    logger.plot(test_percent_covered, 5, "Average Percent Covered", 'Episode (x10)',
+                'Percent Covered', "Percent Covered", "Percent Covered", show_fig=show_fig)
 
 #closing logger
 logger.close()

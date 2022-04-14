@@ -28,15 +28,12 @@ class BSACoveragePolicy(object):
         # reset policy (creates visited array and curr_x, curr_y)
         self.reset()
 
-    def pi(self, state):
+    def get_obs_vis(self, state):
         # getting only the obstacle layer
         obs = copy.deepcopy(np.squeeze(state)[2])
         vis = copy.deepcopy(
             self._visited[self._curr_x - 1:self._curr_x + 2, self._curr_y - 1:self._curr_y + 2])
 
-        print("--------------------------")
-        print(str(self._curr_a))
-
         if self._curr_a == 0:
             r = 1
         elif self._curr_a == 90:
@@ -47,9 +44,7 @@ class BSACoveragePolicy(object):
             r = 2
 
         for i in range(r):
-            print(vis)
             vis = np.rot90(vis)
-        print("vis: " + str(vis))
 
         if self._curr_a == 0:
             r = 1
@@ -61,31 +56,22 @@ class BSACoveragePolicy(object):
             r = 2
 
         for i in range(r):
-            print(obs)
             obs = np.rot90(obs)
 
-        print("obs: " + str(obs))
-        print("obs vals: " + str(obs[0, 1]) + " "
-              + str(obs[1, 2]) + " " + str(obs[2, 1]))
-        print("vis vals: " + str(vis[0, 1]) + " "
-              + str(vis[1, 2]) + " " + str(vis[2, 1]))
+        return obs, vis
+
+    def pi(self, state):
+        # getting only the obstacle layer
+        obs, vis = self.get_obs_vis(state)
 
         if obs[0, 1] != 1 and vis[0, 1] != 1:
-            # turn left
-            self._curr_a = (self._curr_a + 90) % 360
-            self._prev_a = (self._prev_a + 1) % 4
+            self.turn_left()
         elif obs[1, 2] != 1 and vis[1, 2] != 1:
             pass
         elif obs[2, 1] != 1 and vis[2, 1] != 1:
-            # turn right
-            self._curr_a -= 90
-            if self._curr_a < 0:
-                self._curr_a = 270
-            self._prev_a -= 1
-            if self._prev_a < 0:
-                self._prev_a = 3
+            self.turn_right()
         else:
-            print("No more actions!")
+            print("Running frontier based!")
             self._prev_a = self.frontier_based(state)
 
             if self._prev_a == 0:
@@ -98,20 +84,6 @@ class BSACoveragePolicy(object):
                 self._curr_a = 270
 
         u = self._prev_a
-        print(str(u) + " " + str(self._curr_a))
-
-        # # look counterclockwise for actions
-        # if obs[0, 1] != 1 and self._visited[self._curr_x - 1, self._curr_y] != 1:
-        #     u = 2  # left
-        # elif obs[1, 0] != 1 and self._visited[self._curr_x, self._curr_y - 1] != 1:
-        #     u = 3  # down
-        # elif obs[2, 1] != 1 and self._visited[self._curr_x + 1, self._curr_y] != 1:
-        #     u = 0  # right
-        # elif obs[1, 2] != 1 and self._visited[self._curr_x, self._curr_y + 1] != 1:
-        #     u = 1  # up
-        # else:
-        #     print("No more actions!")
-        #     u = self.frontier_based(state)
 
         # updating robot x, y based on controls
         if u == 0:
@@ -128,9 +100,20 @@ class BSACoveragePolicy(object):
 
         return u
 
+    def turn_left(self):
+        self._curr_a = (self._curr_a + 90) % 360
+        self._prev_a = (self._prev_a + 1) % 4
+
+    def turn_right(self):
+        self._curr_a -= 90
+        if self._curr_a < 0:
+            self._curr_a = 270
+        self._prev_a -= 1
+        if self._prev_a < 0:
+            self._prev_a = 3
+
     def frontier_based(self, state):
         pos_img, observed_obs, free, path_map = state[0]
-        free_copy = copy.deepcopy(free)
 
         # get robot position
         pos = np.nonzero(pos_img)
@@ -198,7 +181,6 @@ if __name__ == "__main__":
         "sensor_config": {
             "range": 1
             }
-
     }
 
     grid_config = {
@@ -213,7 +195,7 @@ if __name__ == "__main__":
     # gridlis = gridload(grid_config)
     train_set, test_set = gridload(grid_config)
 
-    env = DecGridRL(test_set, env_config)
+    env = DecGridRL(train_set, env_config)
 
     # logger stuff
     makevid = True
