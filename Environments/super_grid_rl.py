@@ -1,17 +1,38 @@
+"""
+super_grid_rl.py contains the code for the centralized grid environment.
+
+Author: Peter Stratton
+Email: pstratto@ucsd.edu, pstratt@umich.edu, peterstratton121@gmail.com
+Author: Shreyas Arora
+Email: sharora@ucsd.edu
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
-from . environment import Environment
 from queue import PriorityQueue
 import cv2
 import pygame
+import torch
 
 class SuperGridRL(object):
     """
     A Centralized Multi-Agent Grid Environment with a discrete action
     space. The objective of the environment is to cover as much of the region
-    as possible.
+    as possible. Differing from DecGridRL, this environment is fully observed,
+    so the robot gets full observations of the environment after a step is
+    performed.
     """
     def __init__(self, train_set, env_config, test_set=None):
+        """
+        Constructor for class SuperGridRL inits assorted parameters and resets
+        the map
+
+        Parameters:
+            train_set  - list of grids to use for training
+            env_config - config file containing assorted parameters of the
+                         environment
+            test_set   - list of grids to use for testing
+        """
         super().__init__()
         #list of grids to use in training
         self._train_gridlis = train_set
@@ -31,22 +52,36 @@ class SuperGridRL(object):
         self._use_scanning = env_config['use_scanning']
         self._prev_states = []
 
+        self.a_prev = None
+
         #pick random map and generate robot positions
         self.reset(False, False)
 
-        # # init graph data object
-        # self._graph = Graph_Data(env_config['numfeatures'], self._xinds, self._yinds, env_config['commradius'])
+        # maps actions to their inverse
+        self.a_inv = {2: 3, 3: 2, 0: 1, 1: 0}
 
         #observation and action dimensions
         state = self.get_state()
         self._obs_dim = state[0].shape
         self._num_actions = 4**self._numrobot
 
-        #experimental pygame shite
+        #pygame init
         pygame.init()
         self._display = pygame.display.set_mode((1075, 1075))
 
     def step(self, action):
+        """
+        Processes the an action according to the environment dynamics and alters
+        the environment as necessary
+
+        Parameters:
+            action - int or array describing the action to execute
+
+        Return:
+            state   - stack of numpy arrays descirbing the state of the new
+                      environment
+            reward  - scalar reward signal calculated based on the action
+        """
         #handling case where action is an integer that identifies the action
         if type(action) != list:
             ulis = np.zeros((self._numrobot,))
@@ -138,7 +173,8 @@ class SuperGridRL(object):
 
             #looping over all grid cells to sense
             for j in range(x - self._senseradius, x + self._senseradius + 1):
-                for k in range(y - self._senseradius, y + self._senseradius + 1):
+                for k in range(y - self._senseradius,
+                               y + self._senseradius + 1):
                     #checking if cell is not visited, in bounds, not an obstacle
                     if(self.isInBounds(j,k) and self._grid[j][k]>=0 and
                         self._free[j][k] == 1):
@@ -157,6 +193,13 @@ class SuperGridRL(object):
                             # track observed obstacles
                             self._observed_obstacles[j][k] = 1
 
+        a = action
+        if torch.is_tensor(action):
+            a = action.item()
+
+        reward += self.motion_penalty(a)
+        self.a_prev = a
+
         #incrementing step count
         self._currstep += 1
 
@@ -170,11 +213,51 @@ class SuperGridRL(object):
 
         return state, reward
 
+
+    def motion_penalty(self, a):
+        """
+        Generates a motion penalty
+
+        Parameters:
+            a - the current action
+
+        Return:
+         - reward penalty for moving back to the position of the previous
+           timestep
+        """
+        inv = self.a_inv[a]
+        if a == self.a_prev:
+            return 0
+        if a == inv:
+            return -2
+        return -1
+
+
     def isInBounds(self, x, y):
+        """
+        Checks whether the position is inside the map
+
+        Parameters:
+            x - x position
+            y - y position
+
+        Return:
+            - boolean describing whether or not the position is in bounds
+        """
         return x >= 0 and x < self._gridwidth and y >= 0 and y < self._gridlen
 
-    #TODO remove the for loop so this is actually fast
     def isOccupied(self, x, y):
+        """
+        Checks whether the cell at the specificed position contains another
+        robot or obstacle
+
+        Parameters:
+            x - x position
+            y - y position
+
+        Return:
+            - boolean describing whether or not the position is occupied
+        """
         #checking if no obstacle in that spot
         if(self._grid[x][y] < 0):
             return True
@@ -187,6 +270,18 @@ class SuperGridRL(object):
         return False
 
     def get_distance_map(self):
+        """
+        Creates a numpy matrix where each entry contains a value which describes
+        the shortest distance from the robot's current position to that grid
+        cell.
+
+        Parameters:
+            free - numpy matrix representing the uncovered grid cells in the
+                   environment
+
+        Return:
+            - numpy matrix representing the distance map
+        """
         inv = np.bitwise_not(self._free.astype('?')).astype(np.uint8)
         distance_map = cv2.distanceTransform(inv, cv2.DIST_L1,
                                              cv2.DIST_MASK_PRECISE)
@@ -199,11 +294,15 @@ class SuperGridRL(object):
         return 1 - distance_map
 
     def get_state(self):
-        # distance_map = self.get_distance_map()
-        #
-        # arrays = np.array(self.get_pos_image() + [self._observed_obstacles, self._free, distance_map])
+        """
+        Returns a stack of numpy arrays representing the environment state
+        """
+        distance_map = self.get_distance_map()
+        arrays = np.array(self.get_pos_image() + [self._observed_obstacles,
+                                                  self._free, distance_map])
 
-        arrays = np.array(self.get_pos_image() + [self._observed_obstacles, self._free, self._grid])
+        # arrays = np.array(self.get_pos_image() + [self._observed_obstacles,
+                            # self._free, self._grid])
 
         state = np.stack(arrays, axis=0)
         return (state, self._currstep)
@@ -233,11 +332,24 @@ class SuperGridRL(object):
         return ret
 
     def reset(self, testing, ind):
+        """
+        Resets the environment by picking a new grid map and setting the robot's
+        position randomly within it.
+
+        Parameters:
+            testing - boolean describing whether or not testing is occuring
+            ind     - index into the list of grid maps used for testing
+
+        Return:
+            state - numpy matrix denoting the state of the new map on timestep 0
+            grid  - grid map now being used
+        """
         #picking a map at random
         if testing and self._test_gridlis is not None:
             self._grid = self._test_gridlis[ind]
         else:
-            self._grid = self._train_gridlis[np.random.randint(len(self._train_gridlis))]
+            self._grid = \
+                self._train_gridlis[np.random.randint(len(self._train_gridlis))]
 
         #dimensions
         self._gridwidth = self._grid.shape[0]
@@ -277,6 +389,12 @@ class SuperGridRL(object):
         return self.get_state(), self._grid
 
     def done(self):
+        """
+        Checks if the environment is finished
+
+        Return:
+            - boolean describing whether or not the environment is done
+        """
         if min(self._done_thresh, 1) <= self.percent_covered():
             print("Full Environment Covered")
             self._done_thresh += self._done_incr
@@ -286,9 +404,19 @@ class SuperGridRL(object):
         return False
 
     def percent_covered(self):
-        return np.count_nonzero(self._free < 1) / np.count_nonzero(self._grid > 0)
+        """
+        Returns the percent of free cells that have been sensed by the robot
+        """
+        return np.count_nonzero(self._free < 1) / \
+               np.count_nonzero(self._grid > 0)
 
     def render(self):
+        """
+        Creates an image to render using the logger
+
+        Return:
+            image - the image of the environment to be rendered
+        """
         #base image
         image = np.zeros((self._gridwidth, self._gridlen, 3))
 
@@ -311,8 +439,11 @@ class SuperGridRL(object):
         image += freelayer
 
         scaling = max(min(1075//self._gridwidth, 1075//self._gridlen), 1)
-        image = cv2.resize(image, (0,0), fx=scaling, fy=scaling, interpolation=cv2.INTER_NEAREST)
-        image = cv2.copyMakeBorder(image, 0, 1075 - image.shape[1], 0, 1075 - image.shape[0], cv2.BORDER_CONSTANT, value=[0,0,0])
+        image = cv2.resize(image, (0,0), fx=scaling, fy=scaling,
+                           interpolation=cv2.INTER_NEAREST)
+        image = cv2.copyMakeBorder(image, 0, 1075 - image.shape[1], 0,
+                                   1075 - image.shape[0], cv2.BORDER_CONSTANT,
+                                   value=[0,0,0])
 
         surf = pygame.surfarray.make_surface(image)
         self._display.blit(surf, (0, 0))

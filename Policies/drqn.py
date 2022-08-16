@@ -7,7 +7,7 @@ from copy import deepcopy
 
 class DRQN(Base_Policy):
 
-    def __init__(self, q_net, num_actions, obs_dim, policy_config, model_config, model_path=None):
+    def __init__(self, sim, q_net, num_actions, obs_dim, policy_config, model_config, model_path=None):
         super().__init__()
 
         #policy config parameters
@@ -25,6 +25,10 @@ class DRQN(Base_Policy):
         self._lstm_cell_size = model_config['lstm_cell_size']
         self._num_recurr_layers = model_config['num_recurr_layers']
         self.curr_hidden = None
+
+        self._sim_env = sim
+
+        self._inv_dict = {2: 3, 3: 2, 0: 1, 1: 0}
 
         #cpu vs gpu code
         self._device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -53,11 +57,19 @@ class DRQN(Base_Policy):
                         lr=policy_config['lr'],
                         weight_decay=policy_config['weight_decay'])
 
+    def sim_step(self, state, action):
+        next_state, reward = self._sim_env.step(state, action, self._grid)
+        if str(next_state[0]) not in self._prev_states:
+            return False
+        return True
+
     def pi(self, state):
         '''
         This method takes the state as input and returns a list of actions, one
         for each robot.
         '''
+        # available actions
+        a = [0, 1, 2, 3]
 
         #epsilon greedy check
         s = np.random.uniform()
@@ -73,7 +85,7 @@ class DRQN(Base_Policy):
         if(s > self._epsilon or (self._testing and s > self._testing_epsilon)):
             # calc qvals, using no grad to avoid computing gradients
             with torch.no_grad():
-                state_tensor = (torch.from_numpy(state).float()).to(self._device)
+                state_tensor = (torch.from_numpy(state[0]).float()).to(self._device)
                 qvals, hidden = self.q_net(state_tensor, self.curr_hidden)
 
                 # set new hidden state
@@ -85,6 +97,9 @@ class DRQN(Base_Policy):
             u = np.random.randint(self.num_actions)
 
         return u
+
+    def add_state(self, state):
+        self._prev_states.append(state)
 
     def update_policy(self, episode):
         #adding new data to buffer
@@ -195,9 +210,10 @@ class DRQN(Base_Policy):
                                    if p.requires_grad)
         print(str(pytorch_total_params) + " in the Q Network")
 
-    def reset(self):
+    def reset(self, testing, grid):
         self.curr_hidden = (torch.zeros((self._num_recurr_layers, 1,
                                          self._lstm_cell_size)).to(self._device),
                             torch.zeros((self._num_recurr_layers, 1,
                                          self._lstm_cell_size)).to(self._device))
-
+        self._a_inv = -1
+        self._grid = grid

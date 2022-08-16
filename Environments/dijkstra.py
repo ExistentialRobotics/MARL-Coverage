@@ -1,22 +1,47 @@
+"""
+dijkstra.py contains the code to create numpy arrays that represent paths to
+the nearest unexplored cell and arrays to represent cost from the nearest
+unexplored node.
+
+Author: Peter Stratton
+Email: pstratto@ucsd.edu, pstratt@umich.edu, peterstratton121@gmail.com
+Author: Shreyas Arora
+Email: sharora@ucsd.edu
+"""
+
 import numpy as np
 from queue import PriorityQueue
 
 
 def in_bounds(x, y, grid):
+    """
+    Checks whether the position is inside the map
+
+    Parameters:
+        x    - x position
+        y    - y position
+        grid - an array representing the environment, 0 is explored,
+               1 is unexplored, and -1 is obstacle
+
+    Return:
+        - boolean describing whether or not the position is in bounds
+    """
     return x >= 0 and y >=0 and x < grid.shape[0] and y < grid.shape[1]
 
 def get_valid_neighbors(x, y, grid, visited):
     """
-    Args:
-       x : the x position on the grid
-       y : the y position
-       grid : an array representing the environment, 0 is explored,
-             1 is unexplored, and -1 is obstacle
-       visited: an array representing whether we have visited a cell
-                or not, 1 is visited, 0 is not visited
+    Gets the valid neighbors of the specified position
+
+    Parameters:
+       x       - the x position on the grid
+       y       - the y position
+       grid    - an array representing the environment, 0 is explored,
+                 1 is unexplored, and -1 is obstacle
+       visited - an array representing whether we have visited a cell
+                 or not, 1 is visited, 0 is not visited
 
     Returns:
-       A list of valid neighbors and their coordinates
+       - A list of valid neighbors and their coordinates
     """
     neighbors = []
 
@@ -37,12 +62,15 @@ def get_valid_neighbors(x, y, grid, visited):
 
 def dijkstra_cost_map(grid):
     """
-    Args:
-       grid : an array representing the environment, 1 is explored,
-             0 is unexplored, and -1 is obstacle
+    Generates a numpy array who's entries represent cost from the nearest
+    unexplored node
+
+    Parameters:
+       grid - an array representing the environment, 1 is explored,
+              0 is unexplored, and -1 is obstacle
 
     Returns:
-       a cost array representing the cost from the closest unexplored node
+       - a cost array representing the cost from the closest unexplored node
 
     Notes:
     we will assume that the goals points are unexplored cells
@@ -82,15 +110,17 @@ def dijkstra_cost_map(grid):
 
 def dijkstra_path_map(grid, start_x, start_y):
     """
-    Args:
-       grid : an array representing the environment, 1 is explored,
-             0 is unexplored, and -1 is obstacle
-       start_x : starting x position
-       start_y : starting y position
+    Generates a numpy array who's entries contain a path from the nearest
+    unexplored node
+
+    Parameters:
+       grid    - an array representing the environment, 1 is explored,
+                 0 is unexplored, and -1 is obstacle
+       start_x - starting x position
+       start_y - starting y position
 
     Returns:
-       an array showing the shortest path to an unexplored cell
-
+       - an array showing the shortest path to an unexplored cell
     """
     open_set = PriorityQueue()
     visited = np.zeros(grid.shape)
@@ -160,4 +190,3 @@ if __name__ == "__main__":
     grid = np.ones((10,10))
     grid = np.pad(grid,((1,1),(1,1)), constant_values = ((0,0),(0,0)))
     print(dijkstra(grid))
-

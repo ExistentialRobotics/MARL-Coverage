@@ -1,3 +1,15 @@
+"""
+grid_rl_main.py is the main file for the RL coverage codebase. It takes command
+line arguements to run an experiment using one of the available policy types,
+runs the experiment, and outputs the results to the command line. The user also
+has the option to run a saved model.
+
+Author: Peter Stratton
+Email: pstratto@ucsd.edu, pstratt@umich.edu, peterstratton121@gmail.com
+Author: Shreyas Arora
+Email: sharora@ucsd.edu
+"""
+
 import numpy as np
 import getopt, sys
 import json
@@ -143,18 +155,17 @@ logger = Logger(exp_name, makevid)
 if exp_parameters['gridload']:
     train_set, test_set = gridload(exp_parameters['grid_config'])
 else:
-    train_set = gridgen(exp_parameters['grid_config'])
-    test_set = None
+    train_set, test_set = gridgen(exp_parameters['grid_config'])
 
 print("Number of training environments: " + str(len(train_set)))
-if test_set is not None:
-    print("Number of testing environments: " + str(len(test_set)))
+print("Number of testing environments: " + str(len(test_set)))
 
 '''Making the environment'''
 if env_name == 'SuperGridRL':
     env = SuperGridRL(train_set, env_config, test_set=test_set)
 elif env_name == 'DecGridRL':
-    env = DecGridRL(gridlis, env_config, use_graph=policy_config["use_graph"])
+    env = DecGridRL(train_set, env_config, use_graph=policy_config["use_graph"],
+                    test_set=test_set)
 
 num_actions = env._num_actions
 obs_dim = env._obs_dim
@@ -191,23 +202,23 @@ else:
     print(net)
 
     '''Init policy'''
+    sim = SuperGrid_Sim(env._obs_dim, env_config)
     if policy_name == "vdn":
         policy = VDN(net, num_actions, obs_dim, numrobot, policy_config,
                      model_path=model_path)
     elif policy_name == "drqn":
-        policy = DRQN(net, num_actions, obs_dim, policy_config, model_config,
-                      model_path=model_path)
+        policy = DRQN(sim, net, num_actions, obs_dim, policy_config,
+                      model_config, model_path=model_path)
     elif policy_name == "dqn":
         policy = DQN(net, num_actions, obs_dim, policy_config,
                      model_path=model_path)
     elif policy_name == "alphazero":
-        sim = SuperGrid_Sim(env._grid, env._obs_dim, env_config)
         policy = AlphaZero(env, sim, net, num_actions, obs_dim, policy_config,
                      model_path=model_path)
     elif policy_name == "ha_star":
         sim = SuperGrid_Sim(env._obs_dim, env_config)
-        policy = HA_Star(env, sim, net, num_actions, obs_dim, logger, policy_config,
-                     model_path=model_path)
+        policy = HA_Star(env, sim, net, num_actions, obs_dim, logger,
+                         policy_config, model_path=model_path)
     else:
         print(DASH)
         print(str(policy_name) + " is an invalid policy.")
@@ -218,18 +229,23 @@ else:
 if not saved_model:
     '''Train policy'''
     if not random_policy:
-        print("----------Running {} for ".format(policy_name) + str(train_episodes) + " episodes-----------")
+        print("----------Running {} for ".format(policy_name) + \
+              str(train_episodes) + " episodes-----------")
         policy.printNumParams()
 
-        train_rewardlis, losslist, test_percent_covered = train_RLalg(env, policy, logger, train_episodes=train_episodes, test_episodes=test_episodes,
-                                                                        render=render_train, ignore_done=ignore_done)
+        train_rewardlis, losslist, test_percent_covered = train_RLalg(env,
+                                policy, logger, train_episodes=train_episodes,
+                                test_episodes=test_episodes,
+                                render=render_train, ignore_done=ignore_done)
     else:
-        print("-----------------------Running Random Policy-----------------------")
+        print("---------------------Running Random Policy---------------------")
 
 
 '''Test policy'''
 print("-----------------------------Testing Policy----------------------------")
-test_rewardlis, average_percent_covered = test_RLalg(env, policy, logger, episodes=50, render_test=render_test,
+test_rewardlis, average_percent_covered = test_RLalg(env, policy, logger,
+                                                     episodes=50,
+                                                     render_test=render_test,
                                                      makevid=makevid)
 test_percent_covered.append(average_percent_covered)
 
@@ -240,8 +256,10 @@ avg_coverage = sum(test_percent_covered) / len(test_percent_covered)
 
 '''Display testing results'''
 print(DASH)
-print("Trained policy covered " + str(max_coverage) + " percent of the environment on its best test!")
-print("Trained policy covered " + str(avg_coverage) + " percent of the environment on average across all tests!")
+print("Trained policy covered " + str(max_coverage) + \
+      " percent of the environment on its best test!")
+print("Trained policy covered " + str(avg_coverage) + \
+      " percent of the environment on average across all tests!")
 print(DASH)
 
 if not saved_model:
@@ -251,16 +269,17 @@ if not saved_model:
                 show_fig=show_fig)
 
     # plot training loss
-    logger.plot(losslist, 3, "Training Loss per Episode", 'Episodes', 'Loss', "Training Loss",
-                "Training Loss", show_fig=show_fig)
+    logger.plot(losslist, 3, "Training Loss per Episode", 'Episodes', 'Loss', \
+                "Training Loss", "Training Loss", show_fig=show_fig)
 
     # plot testing rewards
-    logger.plot(test_rewardlis, 4, "Testing Reward per Episode", 'Episodes', 'Reward', "Testing Reward"
-                , "Testing Reward", show_fig=show_fig)
+    logger.plot(test_rewardlis, 4, "Testing Reward per Episode", 'Episodes', \
+                'Reward', "Testing Reward", "Testing Reward", show_fig=show_fig)
 
     # plot average percent covered when testing
-    logger.plot(test_percent_covered, 5, "Average Percent Covered", 'Episode (x10)', 'Percent Covered', "Percent Covered"
-                , "Percent Covered", show_fig=show_fig)
+    logger.plot(test_percent_covered, 5, "Average Percent Covered", \
+                'Episode (x10)', 'Percent Covered', "Percent Covered", \
+                "Percent Covered", show_fig=show_fig)
 
 #closing logger
 logger.close()

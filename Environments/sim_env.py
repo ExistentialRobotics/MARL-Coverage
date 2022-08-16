@@ -1,6 +1,13 @@
+"""
+sim_env.py contains code for the SuperGrid_Sim simulation environment.
+
+Author: Peter Stratton
+Email: pstratto@ucsd.edu, pstratt@umich.edu, peterstratton121@gmail.com
+Author: Shreyas Arora
+Email: sharora@ucsd.edu
+"""
 import numpy as np
 import matplotlib.pyplot as plt
-from . environment import Environment
 from queue import PriorityQueue
 import cv2
 import pygame
@@ -10,9 +17,19 @@ class SuperGrid_Sim(object):
     """
     A Centralized Multi-Agent Grid Environment with a discrete action
     space. The objective of the environment is to cover as much of the region
-    as possible.
+    as possible. This environment is used if a policy needs to simulate a few
+    timesteps ahead. It contains no notion of state. SuperGrid_Sim should only
+    be used in conjunction with environment SuperGridRL.
     """
     def __init__(self, obs_dim, env_config):
+        """
+        Constructor for class  SuperGrid_Sim inits assorted parameters
+
+        Parameters:
+            obs_dim    - dimension of observations
+            env_config - config file containing assorted parameters of the
+                         environment
+        """
         super().__init__()
         #environment config parameters
         self._numrobot = env_config['numrobot']
@@ -35,10 +52,26 @@ class SuperGrid_Sim(object):
         pygame.init()
         self._display = pygame.display.set_mode((1075, 1075))
 
-    def step(self, state, action):
+        self.prev_a = None
+
+    def step(self, state, action, grid):
+        """
+        Processes the an action according to the environment dynamics
+
+        Parameters:
+            state  - numpy array describing the state of the environment to
+                     simulate
+            action - int or array describing the action to execute
+            grid   - numpy array representing the unaltered original environment
+
+        Return:
+            state   - stack of numpy arrays descirbing the state of the new
+                      environment
+            reward  - scalar reward signal calculated based on the action
+        """
         # decompose state
-        pos_img, observed_obstacles, free, grid = state[0]
-        currstep = state[1]
+        pos_img, observed_obstacles, free, distance_map = state[0]
+        # currstep = state[1]
 
         # print("state inside sim_env step: " + str(state))
 
@@ -53,10 +86,6 @@ class SuperGrid_Sim(object):
         #initialize reward for this step
         reward = 0
 
-        # calc distance from observed to free cells
-        # if self._dist_r:
-        #     distance_map = self.get_distance_map(free)
-
         # apply controls
         u = action
 
@@ -67,7 +96,8 @@ class SuperGrid_Sim(object):
             x = pos[0] - 1
             y = pos[1]
 
-            if(self.isInBounds(x, y, width, height) and not self.isOccupied(x, y, grid)):
+            if(self.isInBounds(x, y, width, height) and not self.isOccupied(x,
+                                                                      y, grid)):
                 pos = (x, y)
                 # print("new pos: " + str(pos))
                 if self._dist_r:
@@ -79,7 +109,8 @@ class SuperGrid_Sim(object):
             x = pos[0] + 1
             y = pos[1]
 
-            if(self.isInBounds(x, y, width, height) and not self.isOccupied(x, y, grid)):
+            if(self.isInBounds(x, y, width, height) and not self.isOccupied(x,
+                                                                      y, grid)):
                 pos = (x, y)
                 # print("new pos: " + str(pos))
                 if self._dist_r:
@@ -91,7 +122,8 @@ class SuperGrid_Sim(object):
             x = pos[0]
             y = pos[1] + 1
 
-            if(self.isInBounds(x, y, width, height) and not self.isOccupied(x, y, grid)):
+            if(self.isInBounds(x, y, width, height) and not self.isOccupied(x,
+                                                                      y, grid)):
                 pos = (x, y)
                 # print("new pos: " + str(pos))
                 if self._dist_r:
@@ -103,7 +135,8 @@ class SuperGrid_Sim(object):
             x = pos[0]
             y = pos[1] - 1
 
-            if(self.isInBounds(x, y, width, height) and not self.isOccupied(x, y, grid)):
+            if(self.isInBounds(x, y, width, height) and not self.isOccupied(x,
+                                                                      y, grid)):
                 pos = (x, y)
                 # print("new pos: " + str(pos))
                 if self._dist_r:
@@ -117,7 +150,8 @@ class SuperGrid_Sim(object):
 
         #looping over all self._grid cells to sense
         for j in range(x_p - self._senseradius, x_p + self._senseradius + 1):
-            for k in range(y_p - self._senseradius, y_p + self._senseradius + 1):
+            for k in range(y_p - self._senseradius,
+                           y_p + self._senseradius + 1):
                 #checking if cell is not visited, in bounds, not an obstacle
                 if(self.isInBounds(j,k,width,height) and grid[j][k]>=0 and
                     free[j][k] == 1):
@@ -136,16 +170,16 @@ class SuperGrid_Sim(object):
                         # track observed obstacles
                         observed_obstacles[j][k] = 1
         # increment step count
-        currstep += 1
+        # currstep += 1
 
         # create position image
         pos_img = np.zeros((pos_img.shape[0], pos_img.shape[1]))
         pos_img[pos] = 1
 
         # create state
-        # state = np.stack(np.array([pos_img, observed_obstacles, free, distance_map]), axis=0)
-        state = np.stack(np.array([pos_img, observed_obstacles, free, grid]), axis=0)
-        state = (state, currstep)
+        state = np.stack(np.array([pos_img, observed_obstacles, free,
+                         distance_map]), axis=0)
+        # state = (state, currstep)
 
         # print("state after sim_env step: " + str(state))
 
@@ -155,35 +189,61 @@ class SuperGrid_Sim(object):
 
         return state, reward
 
+
     def isInBounds(self, x, y, width, length):
-        # print(str(x) + " " + str(y) + " " + str(width) + " " + str(length))
+        """
+        Checks whether the position is inside the map
+
+        Parameters:
+            x - x position
+            y - y position
+
+        Return:
+            - boolean describing whether or not the position is in bounds
+        """
         return x >= 0 and x < width and y >= 0 and y < length
 
     def isOccupied(self, x, y, grid):
+        """
+        Checks whether the cell at the specificed position contains another
+        robot or obstacle
+
+        Parameters:
+            x - x position
+            y - y position
+
+        Return:
+            - boolean describing whether or not the position is occupied
+        """
         #checking if no obstacle in that spot
         if(grid[x, y] < 0):
             return True
 
         return False
 
-    def get_distance_map(self, free):
-        inv = np.bitwise_not(free.astype('?')).astype(np.uint8)
-        distance_map = cv2.distanceTransform(inv, cv2.DIST_L1,
-                                             cv2.DIST_MASK_PRECISE)
-
-        # scale map values to be between 0 and 1
-        if np.max(distance_map) > 0:
-            distance_map = distance_map / np.max(distance_map)
-
-        # invert the values
-        return 1 - distance_map
-
     def isTerminal(self, state):
+        """
+        Checks if robot reached a terminal state that ends the trajectory
+
+        Parameters:
+            state - stack of numpy arrays which represents the environment state
+
+        Return:
+            - boolean representing if the robot has reached the terminal state
+        """
         if min(self._done_thresh, 1) <= self.percent_covered(state):
             self._done_thresh += self._done_incr
             return True
         return False
 
-    def percent_covered(self, state):
-        pos_img, observed_obstacles, free, grid = state[0]
+    def percent_covered(self, state, grid):
+        """
+        Parameters:
+            state - numpy array describing the state of the environment
+            grid  - unaltered grid map of the environment
+
+        Return:
+            - percent of free cells that have been sensed by the robot
+        """
+        pos_img, observed_obstacles, free, dist = state
         return np.count_nonzero(free < 1) / np.count_nonzero(grid > 0)

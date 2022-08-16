@@ -64,11 +64,11 @@ class Grid_RL_Recur(nn.Module):
                                                affine=False),
                                 conv_activation()]
                 # calculate the output of the current layer based on the output of the last layer
-            print(str(conv_output_size[1:]) + " " + str(2 * padding) + " " + str(np.array(conv_filters[i])))
+            # print(str(conv_output_size[1:]) + " " + str(2 * padding) + " " + str(np.array(conv_filters[i])))
             conv_output_size[1:] = np.floor((conv_output_size[1:] + 2 * padding
                                              - np.array(conv_filters[i])) / stride + 1)
             conv_output_size[0] = conv_channels[i]
-            print(conv_output_size)
+            # print(conv_output_size)
 
         # add flatten layer to made conv output 1D for the fc layers
         conv_layers += [nn.Flatten()]
@@ -130,10 +130,10 @@ class Grid_RL_Recur(nn.Module):
             return x, hidden
         else:
             x = torch.unsqueeze(self.conv_layers(x), axis=1)
-            print(x.shape)
-            print(hidden[0].shape)
+            # print(x.shape)
+            # print(hidden[0].shape)
             x, hidden = self.lstm(x, hidden)
-            print(x.shape)
+            # print(x.shape)
             x = self.lin_layers(torch.squeeze(x, axis=1))
             return torch.squeeze(x, axis=0), hidden
 

@@ -10,25 +10,22 @@ def generate_episode(env, policy, logger, render=False, makevid=False, ignore_do
     done = False
 
     #reset policy at beginning of episode
-    policy.reset(testing)
+    policy.reset(testing, grid)
 
     # iterate till episode completion
     i = 0
     while not done:
         # determine action
-        policy.set_reward(total_reward)
-        action = policy.pi(state, phase_1=phase_1)
+        # policy.set_reward(total_reward)
+        # action = policy.pi(state, phase_1=phase_1)
+        action = policy.pi(state)
+
 
         # step environment and save episode results
         next_state, reward = env.step(action)
-        policy.add_state(str(next_state[0]))
 
         # determine if episode is completed
         done = env.done()
-
-        if i % 50 == 0:
-            print(i)
-        i += 1
 
         if testing and env._currstep == env._test_maxsteps:
             done = True
@@ -36,7 +33,7 @@ def generate_episode(env, policy, logger, render=False, makevid=False, ignore_do
             done = True
 
         #adding variables to episode
-        episode.append((state, action, reward, next_state, done))
+        episode.append((state[0], action, reward, next_state[0], done))
         state = next_state
         total_reward += reward
 
@@ -46,11 +43,14 @@ def generate_episode(env, policy, logger, render=False, makevid=False, ignore_do
             if(makevid):
                 logger.addFrame(frame)
 
+        if done:
+            break
+
     return episode, total_reward
 
 def train_RLalg(env, policy, logger, train_episodes=1000, test_episodes=10, render=False,
                 checkpoint_interval=500, ignore_done=True):
-    p_1_thres = train_episodes / 3
+    p_1_thres = train_episodes / 5
 
     # set policy network to train mode
     policy.set_train()
@@ -63,8 +63,8 @@ def train_RLalg(env, policy, logger, train_episodes=1000, test_episodes=10, rend
     best_reward = -sys.maxsize - 1
     checkpoint_num = 0
     for _ in range(train_episodes):
-        if _ % 10 == 0:
-            print("Training Episode: " + str(_) + " out of " + str(train_episodes) + " num nodes in tree: " + str(len(policy._nodes)))
+        # if _ % 10 == 0:
+        #     print("Training Episode: " + str(_) + " out of " + str(train_episodes) + " num nodes in tree: " + str(len(policy._nodes)))
         # policy.train_epi = _
 
         # obtain the next episode
@@ -90,7 +90,7 @@ def train_RLalg(env, policy, logger, train_episodes=1000, test_episodes=10, rend
             #testing policy
             testrewards, average_percent_covered = test_RLalg(env, policy, logger, episodes=test_episodes, render_test=render)
             test_percent_covered.append(average_percent_covered)
-            policy.set_train()
+            # policy.set_train()
 
             #printing debug info
             checkpoint_num += 1
@@ -100,7 +100,7 @@ def train_RLalg(env, policy, logger, train_episodes=1000, test_episodes=10, rend
         policy.update_policy(episode)
 
         #tracking training loss for the episode
-        losslist.append(policy._avgloss)
+        losslist.append(policy._lastloss)
 
     #saving final policy
     logger.saveModelWeights(policy.getnet())
@@ -110,7 +110,7 @@ def train_RLalg(env, policy, logger, train_episodes=1000, test_episodes=10, rend
 
 def test_RLalg(env, policy, logger, episodes=100, render_test=False, makevid=False):
     # set model to eval mode
-    policy.set_eval()
+    # policy.set_eval()
     if env._test_gridlis is not None:
         num_test = len(env._test_gridlis)
     else:
@@ -137,10 +137,10 @@ def test_RLalg(env, policy, logger, episodes=100, render_test=False, makevid=Fal
 
         # track test related statistics
         percent_covered += env.percent_covered()
-        test_rewardlis.append(num_steps)
+        test_rewardlis.append(total_reward)
 
     #returning policy to train mode
-    policy.set_train()
+    # policy.set_train()
 
     #returning the statistics
     average_percent_covered = percent_covered/(episodes * num_test)*100

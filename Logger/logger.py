@@ -1,3 +1,12 @@
+"""
+logger.py contains the Logger class, which (unsurprisingly) logs information
+about the current experiment.
+
+Author: Peter Stratton
+Email: pstratto@ucsd.edu, pstratt@umich.edu, peterstratton121@gmail.com
+Author: Shreyas Arora
+Email: sharora@ucsd.edu
+"""
 import numpy as np
 import matplotlib.pyplot as plt
 import os, sys
@@ -6,9 +15,19 @@ import cv2
 
 class Logger(object):
     """
-    class to log videos, graphs, text files of runs to output directory
+    class Logger logs videos, graphs, text files of runs to output directory
     """
     def __init__(self, experiment_name, make_video):
+        """
+        Constructor for class Logger inits terminal and video writers and saves
+        paths to the output directories
+
+        Parameters:
+            experiment_name - name of the experiement used to init the directory
+                              where all the logs are saved
+            make_video      - boolean that dictates whether or not to save a
+                              video
+        """
         super().__init__()
         self._output_dir = "./Experiments/grid_rl/{}/".format(experiment_name)
         self._make_vid = make_video
@@ -20,7 +39,10 @@ class Logger(object):
             os.makedirs(self._output_dir)
 
         if make_video:
-            self._writer = cv2.VideoWriter(self._output_dir + experiment_name + ".mp4", cv2.VideoWriter_fourcc(*'mp4v'), 30, (1075, 1075))
+            self._writer = cv2.VideoWriter(self._output_dir + experiment_name +\
+                                           ".mp4",
+                                           cv2.VideoWriter_fourcc(*'mp4v'), 30,
+                                           (1075, 1075))
 
         self._timeseries = {}
 
@@ -31,6 +53,12 @@ class Logger(object):
         sys.stdout = TerminalWriter(self._output_dir + "TerminalOutput.txt")
 
     def addFrame(self, frame):
+        """
+        Adds a frame to the video
+
+        Parameters:
+            frame - image of the state of the environment
+        """
         frame = np.uint8(frame)
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         if(self._make_vid):
@@ -39,6 +67,10 @@ class Logger(object):
     def addTimeSeries(self, label, data):
         '''
         Adds timeseries data to logger by label
+
+        Parameters:
+            label - key in the timeseries dictionary
+            data  - value in the timeseries
         '''
         if label not in self._timeseries:
             self._timeseries[label] = []
@@ -46,16 +78,21 @@ class Logger(object):
 
     def savefig(self, figure, name):
         '''
-        figure should be a matplotlib figure that has already been populated,
-        name is the what it will be stored as.
+        Saves a matplotlib figure to the experiment directory
+
+        Parameters:
+            figure - a matplotlib figure that has already been populated
+            name   - name of the figure to be stored as
         '''
         figure.savefig(self._output_dir + name + ".png")
 
     def saveModelWeights(self, model):
         '''
-        save a pytorch model state_dict
-        '''
+        Saves a pytorch model state_dict
 
+        Parameters:
+            model - pytorch model to be saved in the experiment directory
+        '''
         #checking if models directory exists
         if os.path.isdir(self._output_dir + 'models/'):
             print("past models exist, overwriting them")
@@ -66,7 +103,21 @@ class Logger(object):
                    + str(self._current_checkpoint) + '.pt')
         self._current_checkpoint += 1
 
-    def plot(self, list, fignum, title, xlabel, ylabel, linelabel, figname, show_fig):
+    def plot(self, list, fignum, title, xlabel, ylabel, linelabel, figname,
+            show_fig):
+        """
+        Makes a matplotlib plot
+
+        Parameters:
+            list      - python list of data to be plotted
+            fignum    - figure number
+            title     - title of plot
+            xlabel    - label of x data
+            ylabel    - label of y data
+            linelabel - label of line plotted
+            figname   - name of the plot that is saved to experiment directory
+            show_fig  - boolean dictating whether or not to show the figure
+        """
         plt.figure(fignum)
         plt.title(title)
         plt.xlabel(xlabel)
@@ -93,14 +144,31 @@ class Logger(object):
 #adopted from some stackoverflow answer
 #https://stackoverflow.com/questions/14906764/how-to-redirect-stdout-to-both-file-and-console-with-scripting
 class TerminalWriter(object):
+    """
+    class TerminalWriter writes information to the terminal
+    """
     def __init__(self, filename):
+        """
+        Constructor for class TerminalWriter
+
+        Parameters:
+            filename - name of the logfile
+        """
         self.terminal = sys.stdout
         self.log = open(filename, 'w')
 
     def write(self, message):
+        """
+        Writes a string to both the terminal and logfile
+
+        Parameters:
+            message - string to be written
+        """
         self.terminal.write(message)
         self.log.write(message)
 
     def flush(self):
+        """
+        Should flush something
+        """
         pass
-

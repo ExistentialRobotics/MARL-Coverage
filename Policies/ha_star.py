@@ -96,10 +96,43 @@ class HA_Star(Base_Policy):
             # mark obstacle positions as not free
             free_copy[obs_inds[:, 0], obs_inds[:, 1]] = -1
             h = np.count_nonzero(free_copy)
-        return 0
+        return h
         # return h
         # print("heuristic: " + str(h/10))
         # return (h/10)
+
+    def pi_multistep(self, state):
+        # epsilon greedy check
+        s = np.random.uniform()
+
+        # epsilon greedy policy
+        random = False
+        if(s > self._epsilon or (self._testing and s > self._testing_epsilon)):
+            # run MDP A* with e probability for the first phase of training
+            episode = self.rollout(state)
+            if len(episode) == 0:
+                u = np.random.randint(self.num_actions)
+                print("0 episode length")
+            else:
+                random = True
+        else:
+            random = True
+
+        if random:
+            lim = self._num_explore
+        else:
+            lim = len(episode)
+
+        u_lis = []
+        for i in range(lim):
+            if random:
+                u_lis.append(np.random.randint(self.num_actions))
+            else:
+                u_lis.append(episode[i][1])
+
+        return u_lis
+
+
 
 
     def pi(self, state, phase_1=False):
@@ -139,8 +172,8 @@ class HA_Star(Base_Policy):
             u = np.random.randint(self.num_actions)
             reset = self.sim_step(state, u)
 
-        if self.train_epi >= 800:
-            print("action: " + str(u))
+        # if self.train_epi >= 800:
+        #     print("action: " + str(u))
         return u
 
 
@@ -154,8 +187,9 @@ class HA_Star(Base_Policy):
         else:
             start_node = self._nodes[state_str]
 
-        # print("start node state: " + str(start_node.state) + " " + str(start_node.dist))
-        # print("start node cost: " + str(0))
+        # if self.train_epi >= 500:
+        #     print("start node state: " + str(start_node.state) + " " + str(start_node.dist))
+        #     print("start node cost: " + str(0))
 
         # dicts tracking the explored and frontier nodes
         self._explored = defaultdict(lambda: False)
@@ -179,10 +213,10 @@ class HA_Star(Base_Policy):
 
             pos = np.nonzero(node.state[0])
 
-            if self.train_epi >= 800:
-                print("-----------------------")
-                print("popped node state: " + str(node.state) + " " + str(node.dist) + " " + str(pos))
-                print("popped node cost: " + str(curr_cost))
+            # if self.train_epi >= 500:
+            #     print("-----------------------node number: " + str(_) + "-----------------------")
+            #     print("popped node state: " + str(node.state) + " " + str(node.dist) + " " + str(pos))
+            #     print("popped node cost: " + str(curr_cost))
 
             # reset dicts
             self._fdict_nodes[node] = None
@@ -341,29 +375,31 @@ class HA_Star(Base_Policy):
         total_steps = len(train_data)
         print("total_steps: " + str(total_steps))
         if self._learned:
-            total_reward = 0
-            for i in range(total_steps):
-                state, action, reward, next_state, done = train_data[i]
-                total_reward += reward
+            # total_reward = 0
+            # for i in range(total_steps):
+            #     state, action, reward, next_state, done = train_data[i]
+            #     total_reward += reward
 
             # zero gradients
             self._opt.zero_grad()
 
             # calc loss for each data point
-            total_steps = len(train_data)
-            print("total_steps: " + str(total_steps))
+            # total_steps = len(train_data)
+            # print("total_steps: " + str(total_steps))
             avg_loss = 0
             curr_reward = 0
             for i in range(total_steps):
                 state, action, reward, next_state, done = train_data[i]
                 heuristic = self.calc_heuristic(state[0])
 
-                curr_reward += reward
-                # loss = (total_steps - (heuristic + i))**2
-                loss = (total_reward - (heuristic + curr_reward))**2
 
-                if self.train_epi >= 800:
-                    print("total_reward: " + str(total_reward) + " heuristic: " + str(heuristic) + " curr_reward: " + str(curr_reward))
+                loss = (total_steps - (heuristic + i))**2 # minimize steps
+
+                curr_reward += reward
+                # loss = (total_reward - (heuristic + curr_reward))**2 # maximize reward
+
+                # if self.train_epi >= 800:
+                #     print("total_reward: " + str(total_reward) + " heuristic: " + str(heuristic) + " curr_reward: " + str(curr_reward))
 
                 loss.backward()
                 avg_loss += loss
