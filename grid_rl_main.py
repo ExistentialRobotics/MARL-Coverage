@@ -11,7 +11,8 @@ Email: sharora@ucsd.edu
 """
 
 import numpy as np
-import getopt, sys
+import getopt
+import sys
 import json
 
 from Environments.super_grid_rl import SuperGridRL
@@ -61,7 +62,7 @@ try:
     for currentArgument, currentValue in arguments:
 
         if currentArgument in ("-m", "--model"):
-            print (("Running saved model directly from % s") % (currentValue))
+            print(("Running saved model directly from % s") % (currentValue))
             model_path = currentValue
             saved_model = True
         else:
@@ -69,7 +70,7 @@ try:
 
 except getopt.error as err:
     # output error, and return with an error code
-    print (str(err))
+    print(str(err))
 
 if saved_model:
     # run testing with a saved model
@@ -88,7 +89,7 @@ if saved_model:
     sc = 0
     for i in range(len(model_path) - 1, -1, -1):
         if model_path[i] == "/":
-             sc += 1
+            sc += 1
         if sc == 2:
             break
 
@@ -121,28 +122,28 @@ except:
     sys.exit(1)
 
 '''Environment Parameters'''
-env_name       = exp_parameters["env_name"]
-env_config     = exp_parameters['env_config']
-numrobot       = env_config['numrobot']
+env_name = exp_parameters["env_name"]
+env_config = exp_parameters['env_config']
+numrobot = env_config['numrobot']
 
 '''Experiment Parameters'''
-exp_name       = exp_parameters["exp_name"]
-exp_config     = exp_parameters['exp_config']
+exp_name = exp_parameters["exp_name"]
+exp_config = exp_parameters['exp_config']
 train_episodes = exp_config["train_episodes"]
-test_episodes  = exp_config["test_episodes"]
-show_fig       = exp_config["render_plots"]
-render_test    = exp_config['render_test']
-render_train   = exp_config['render_train']
-makevid        = exp_config["makevid"]
-ignore_done    = exp_config['ignore_done']
+test_episodes = exp_config["test_episodes"]
+show_fig = exp_config["render_plots"]
+render_test = exp_config['render_test']
+render_train = exp_config['render_train']
+makevid = exp_config["makevid"]
+ignore_done = exp_config['ignore_done']
 
 '''Model Parameters'''
-model_config   = exp_parameters['model_config']
-model_name     = model_config['model_name']
+model_config = exp_parameters['model_config']
+model_name = model_config['model_name']
 
 '''Policy Parameters'''
-policy_config  = exp_parameters['policy_config']
-policy_name    = policy_config['policy_name']
+policy_config = exp_parameters['policy_config']
+policy_name = policy_config['policy_name']
 
 print(DASH)
 print("Running experiment using: " + str(config_path))
@@ -214,7 +215,7 @@ else:
                      model_path=model_path)
     elif policy_name == "alphazero":
         policy = AlphaZero(env, sim, net, num_actions, obs_dim, policy_config,
-                     model_path=model_path)
+                           model_path=model_path)
     elif policy_name == "ha_star":
         sim = SuperGrid_Sim(env._obs_dim, env_config)
         policy = HA_Star(env, sim, net, num_actions, obs_dim, logger,

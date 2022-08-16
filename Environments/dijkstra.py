@@ -46,16 +46,16 @@ def get_valid_neighbors(x, y, grid, visited):
     neighbors = []
 
     if in_bounds(x+1, y, grid) and visited[x+1][y] == 0 and grid[x+1][y] != -1:
-        neighbors.append((x+1,y))
+        neighbors.append((x+1, y))
 
     if in_bounds(x-1, y, grid) and visited[x-1][y] == 0 and grid[x-1][y] != -1:
-        neighbors.append((x-1,y))
+        neighbors.append((x-1, y))
 
     if in_bounds(x, y+1, grid) and visited[x][y+1] == 0 and grid[x][y+1] != -1:
-        neighbors.append((x,y+1))
+        neighbors.append((x, y+1))
 
     if in_bounds(x, y-1, grid) and visited[x][y-1] == 0 and grid[x][y-1] != -1:
-        neighbors.append((x,y-1))
+        neighbors.append((x, y-1))
 
     return neighbors
 
@@ -86,7 +86,7 @@ def dijkstra_cost_map(grid):
             #checking if cell is unexplored
             if grid[i][j] == 0:
                 #adding unexplored cell to open set
-                open_set.put((0, (i,j)))
+                open_set.put((0, (i, j)))
 
     #main dijkstra loop
     while not open_set.empty():
@@ -107,6 +107,7 @@ def dijkstra_cost_map(grid):
             open_set.put((cell[0] + 1, neighbor))
 
     return cost
+
 
 def dijkstra_path_map(grid, start_x, start_y):
     """

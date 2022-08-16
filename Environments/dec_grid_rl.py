@@ -15,6 +15,8 @@ from queue import PriorityQueue
 import pygame
 import cv2
 import time
+import copy
+
 
 class DecGridRL(object):
     """
@@ -81,7 +83,6 @@ class DecGridRL(object):
         #pygame init
         pygame.init()
         self._display = pygame.display.set_mode((1075, 1075))
-
 
     def step(self, action):
         """
@@ -304,7 +305,7 @@ class DecGridRL(object):
         Returns:
             z - numpy matrix describing the robot's observations
         '''
-        #creating the observation array
+        # creating the observation array
         if self._mini_map_rad > 0:
             numlayers = 5
         else:
@@ -315,20 +316,22 @@ class DecGridRL(object):
             numlayers += 1
 
         if self._dijkstra_input:
-            numlayers +=1
+            numlayers += 1
 
         z = np.zeros((self._numrobot, numlayers, 2*self._egoradius + 1,
                       2*self._egoradius + 1))
 
-        #construct state for each robot
+        # construct state for each robot
         for i in range(self._numrobot):
             x = self._xinds[i]
             y = self._yinds[i]
 
-            #egocentric observation layers
+            # egocentric observation layers
             z[i][0] = self.arraySubset(self._robot_pad, x, y, self._egoradius)
-            z[i][1] = self.arraySubset(self._free_pad[i], x, y, self._egoradius)
-            z[i][2] = self.arraySubset(self._obst_pad[i], x, y, self._egoradius)
+            z[i][1] = self.arraySubset(
+                self._free_pad[i], x, y, self._egoradius)
+            z[i][2] = self.arraySubset(
+                self._obst_pad[i], x, y, self._egoradius)
 
             # get current robot's distance map
             if self._dist_r:
@@ -340,7 +343,7 @@ class DecGridRL(object):
                                              self._obst_pad[i], x + self._pad,
                                              y + self._pad)
                 z[i][3] = self.arraySubset(cost_map, x, y, self._egoradius)
-            #larger map view
+            # larger map view
             if self._mini_map_rad > 0:
                 mini_free = self.arraySubset(self._free_pad[i], x, y,
                                              self._mini_map_rad)
@@ -411,10 +414,10 @@ class DecGridRL(object):
         """
 
         #making temporary arrays for intermediate results
-        obst_temp = np.zeros((self._numrobot, self._gridwidth +
-                                   2*self._pad, self._gridlen + 2*self._pad))
-        free_temp = np.zeros((self._numrobot, self._gridwidth +
-                                   2*self._pad, self._gridlen + 2*self._pad))
+        obst_temp = np.zeros((self._numrobot, self._gridwidth
+                              + 2*self._pad, self._gridlen + 2*self._pad))
+        free_temp = np.zeros((self._numrobot, self._gridwidth
+                              + 2*self._pad, self._gridlen + 2*self._pad))
         #looping over items in adjacency matrix and summing neighbors
         for i in range(self._numrobot):
             for j in range(self._numrobot):
@@ -486,12 +489,12 @@ class DecGridRL(object):
 
         # history of observed obstacles
         self._observed_obstacles = np.zeros((self._gridwidth, self._gridlen))
-        self._obst_pad = np.zeros((self._numrobot, self._gridwidth +
-                                   2*self._pad, self._gridlen + 2*self._pad))
+        self._obst_pad = np.zeros((self._numrobot, self._gridwidth
+                                   + 2*self._pad, self._gridlen + 2*self._pad))
 
         # history of free cells, one layer per robot
-        self._free_pad = np.zeros((self._numrobot, self._gridwidth +
-                                   2*self._pad, self._gridlen + 2*self._pad))
+        self._free_pad = np.zeros((self._numrobot, self._gridwidth
+                                   + 2*self._pad, self._gridlen + 2*self._pad))
 
         #visited array to track all visitations
         self._visited = np.zeros((self._gridwidth, self._gridlen))
@@ -532,7 +535,7 @@ class DecGridRL(object):
         """
         Returns the percent of free cells that have been sensed by the robot
         """
-        return self._numobserved / self._numfree
+        return np.count_nonzero(self._free_pad > 0) / np.count_nonzero(self._grid > 0)
 
     def render(self):
         """
@@ -563,14 +566,15 @@ class DecGridRL(object):
         image += freelayer
 
         scaling = max(min(1024//self._gridwidth, 1024//self._gridlen), 1)
-        image = cv2.resize(image, (0,0), fx=scaling, fy=scaling,
+        image = cv2.resize(image, (0, 0), fx=scaling, fy=scaling,
                            interpolation=cv2.INTER_NEAREST)
 
         image = cv2.copyMakeBorder(image, 0, 1075 - image.shape[1], 0, 1075 -
                                    image.shape[0], cv2.BORDER_CONSTANT,
                                    value=[0,0,0])
 
-        image = cv2.flip(image, 1) #flipping image so up is up and down is down
+        # flipping image so up is up and down is down
+        image = cv2.flip(image, 1)
         #graphing occupancy grid
         surf = pygame.surfarray.make_surface(image)
 
