@@ -25,6 +25,96 @@ By using this repository one will be able to:
   - Alter environment dynamics as needed
   - Load maps to use for training and testing
 
+# Installation
+
+## Windows
+First, install python by following this link and the instructions specified
+there: https://www.python.org/downloads/. 
+
+Next, install pip by first getting a copy of get-pip.py via the command line
+and then running get-pip.py:
+```
+curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+python3 get-pip.py
+```
+
+We want to use a virtual environment to isolate the required packages for 
+the repo, so use this command to install venv, a package used to create and
+manage virtual environments:
+```
+pip install virtualenv
+```
+
+After that, we need to clone the repo and navigate to the right directory. To
+do this, run these commands:
+```
+git clone https://github.com/ExistentialRobotics/MARL-Coverage.git
+cd MARL_Coverage
+```
+
+Now, we want to create a virtual environment. Run this command to create the
+virtual environment:
+```
+virtualenv coverage_env
+```
+
+Then, we need to activate the environment. Do this by running:
+```
+coverage_env\scripts\activate
+```
+
+Next, run the script easy_install.sh to activate the virtual environment and 
+install all the required packages:
+```
+easy_install_windows
+```
+
+Last, deactivate the virtual environment:
+```
+deactivate
+```
+
+## Linux
+First, install python executing this in a terminal:
+```
+sudo apt-get install python3
+```
+
+Next, install pip by running:
+```
+sudo apt install python3-pip
+```
+
+We want to use a virtual environment to isolate the required packages for 
+the repo, so use this command to install venv, a package used to create and
+manage virtual environments:
+```
+pip install virtualenv
+```
+
+After that, we need to clone the repo and navigate to the right directory. To
+do this, run these commands:
+```
+git clone https://github.com/ExistentialRobotics/MARL-Coverage.git
+cd MARL_Coverage
+```
+
+Now, we want to create a virtual environment. Run this command to create the
+virtual environment:
+```
+virtualenv coverage_env
+```
+
+Then, we need to activate the environment. Do this by running:
+```
+source coverage_env/bin/activate
+```
+
+Last, run the script easy_install.sh to install all the required packages:
+```
+./easy_install_linux.sh
+```
+
 # How to Run the Code
 
 - Clone the Repository
