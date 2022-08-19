@@ -63,8 +63,8 @@ Then, we need to activate the environment. Do this by running:
 coverage_env\scripts\activate
 ```
 
-Next, run the script easy_install.sh to activate the virtual environment and 
-install all the required packages:
+Next, run the script easy_install_windows.bat to install all the required 
+packages:
 ```
 easy_install_windows
 ```
@@ -110,21 +110,15 @@ Then, we need to activate the environment. Do this by running:
 source coverage_env/bin/activate
 ```
 
-Last, run the script easy_install.sh to install all the required packages:
+Next, run the script easy_install_linux.sh to install all the required 
+packages:
 ```
 ./easy_install_linux.sh
 ```
 
+Last, deactivate the virtual environment:
+```
+deactivate
+```
+
 # How to Run the Code
-
-- Clone the Repository
-- Create a virtual environment and install all dependencies in requirements.txt
-- Install ffmpeg for video logging
-- edit main.py to use the controller you want with the parameters you want
-- run main.py
-
-
-# Results
-
-- All results are currently located in the tests directory, grouped by controller
-- TODO: improve logging and generation of results
