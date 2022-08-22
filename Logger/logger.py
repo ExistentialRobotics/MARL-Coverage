@@ -17,7 +17,7 @@ class Logger(object):
     """
     class Logger logs videos, graphs, text files of runs to output directory
     """
-    def __init__(self, experiment_name, make_video):
+    def __init__(self, output_dir, experiment_name, make_video):
         """
         Constructor for class Logger inits terminal and video writers and saves
         paths to the output directories
@@ -29,7 +29,7 @@ class Logger(object):
                               video
         """
         super().__init__()
-        self._output_dir = "./Experiments/grid_rl/{}/".format(experiment_name)
+        self._output_dir = output_dir.format(experiment_name)
         self._make_vid = make_video
 
         #checking if output directory exists and making it if it doesn't
@@ -93,15 +93,16 @@ class Logger(object):
         Parameters:
             model - pytorch model to be saved in the experiment directory
         '''
-        #checking if models directory exists
-        if os.path.isdir(self._output_dir + 'models/'):
-            print("past models exist, overwriting them")
-        else:
-            os.makedirs(self._output_dir + 'models/')
+        if model is not None:
+            #checking if models directory exists
+            if os.path.isdir(self._output_dir + 'models/'):
+                print("past models exist, overwriting them")
+            else:
+                os.makedirs(self._output_dir + 'models/')
 
-        torch.save(model.state_dict(), self._output_dir + 'models/checkpoint'
-                   + str(self._current_checkpoint) + '.pt')
-        self._current_checkpoint += 1
+            torch.save(model.state_dict(), self._output_dir + 'models/checkpoint'
+                       + str(self._current_checkpoint) + '.pt')
+            self._current_checkpoint += 1
 
     def plot(self, list, fignum, title, xlabel, ylabel, linelabel, figname,
             show_fig):

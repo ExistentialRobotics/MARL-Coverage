@@ -52,6 +52,8 @@ class DecGridRL(object):
         self._done_incr = env_config['done_incr']
         self._terminal_reward = env_config['terminal_reward']
         self._dist_r = env_config['dist_reward']
+        self._train_maxsteps = env_config['train_maxsteps']
+        self._test_maxsteps = env_config['test_maxsteps']
 
         self._egoradius = env_config['egoradius']
         self._mini_map_rad = env_config['mini_map_rad']
@@ -74,7 +76,7 @@ class DecGridRL(object):
         self._pad = max(self._egoradius, self._mini_map_rad)
 
         #pick random map and generate robot positions
-        self.reset()
+        self.reset(False, None)
 
         #observation and action dimensions for each agent
         self._obs_dim = self.get_egocentric_observations()[0].shape
@@ -512,9 +514,9 @@ class DecGridRL(object):
 
         #return observations
         if self._allow_comm and self._use_graph:
-            return [observations, self._adjacency_matrix]
+            return observations, self._grid, self._adjacency_matrix
         else:
-            return observations
+            return observations, self._grid
 
     def done(self):
         """

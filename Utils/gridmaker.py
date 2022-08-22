@@ -91,13 +91,15 @@ def gridload(grid_config=None):
             i += 1
 
         # split into train and test sets
-        l = len(gridlis)
+        l = len(gridlis) // 2
         if l == 1:
             train_set = gridlis
             test_set = gridlis
         else:
             train_set = gridlis[:l]
             test_set = gridlis[l:]
+
+    return train_set, test_set
 
 
 def gridgen(grid_config):
