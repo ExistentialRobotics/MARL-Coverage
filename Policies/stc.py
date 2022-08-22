@@ -227,7 +227,7 @@ if __name__ == "__main__":
     #testing stc
     stc_controller = SpanningTreeCoveragePolicy(105)
 
-    state = np.squeeze(env.reset())[2]  # getting only the obstacle layer
+    state = np.squeeze(env.reset(False, None))[2]  # getting only the obstacle layer
     done = False
     render = True
 

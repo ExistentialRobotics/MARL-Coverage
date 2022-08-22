@@ -36,7 +36,7 @@ from Policies.Networks.alpha_net import Alpha_Net
 from Policies.Networks.alpha_net_wstep import Alpha_Net_WStep
 from Utils.gridmaker import gridgen, gridload
 
-
+NON_LEARNING = ["random", "bsa", "ba_star", "dijkstra_frontier", "mastc", "stc"]
 DASH = "-----------------------------------------------------------------------"
 
 # prevent decimal printing
@@ -175,10 +175,22 @@ obs_dim = env._obs_dim
 action_space = Discrete(num_actions)
 
 '''Init policy'''
-random_policy = False
-if policy_name == "random":
-    policy = Basic_Random(action_space)
-    random_policy = True
+learning_policy = True
+if policy_name in NON_LEARNING:
+    learning_policy = False
+    
+    if policy_name == "random":
+        policy = Basic_Random(action_space)
+    if policy_name == "stc":
+
+    elif policy_name == "bsa":
+
+    elif policy_name == "ba_star":
+
+    elif policy_name == "mastc":
+
+    else:
+        policy = Dijkstra_Frontier()
 else:
     '''Init model net'''
     if model_name == "vin":
@@ -229,7 +241,7 @@ else:
 # train a policy if not testing a saved model
 if not saved_model:
     '''Train policy'''
-    if not random_policy:
+    if not random_policy and :
         print("----------Running {} for ".format(policy_name) + \
               str(train_episodes) + " episodes-----------")
         policy.printNumParams()
