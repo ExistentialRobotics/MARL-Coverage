@@ -215,10 +215,9 @@ if __name__ == "__main__":
     }
 
     '''Making the list of grids'''
-    gridlis = gridload(grid_config)
-    # train_set, test_set = gridload(grid_config)
+    train_set, test_set = gridload(grid_config)
 
-    env = DecGridRL(gridlis, env_config)
+    env = DecGridRL(train_set, env_config, test_set=test_set)
 
     #logger stuff
     makevid = True

@@ -99,6 +99,8 @@ def gridload(grid_config=None):
             train_set = gridlis[:l]
             test_set = gridlis[l:]
 
+    return train_set, test_set
+
 
 def gridgen(grid_config):
     '''

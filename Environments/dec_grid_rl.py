@@ -74,7 +74,7 @@ class DecGridRL(object):
         self._pad = max(self._egoradius, self._mini_map_rad)
 
         #pick random map and generate robot positions
-        self.reset()
+        self.reset(False, None)
 
         #observation and action dimensions for each agent
         self._obs_dim = self.get_egocentric_observations()[0].shape
