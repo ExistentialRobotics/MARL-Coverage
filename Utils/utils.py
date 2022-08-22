@@ -26,7 +26,7 @@ def generate_episode(env, policy, logger, render=False, makevid=False, ignore_do
 
         # determine if episode is completed
         done = env.done()
-
+        # print(str(env._currstep) + " " + str(env._test_maxsteps))
         if testing and env._currstep == env._test_maxsteps:
             done = True
         elif not testing and env._currstep == env._train_maxsteps:

@@ -4,9 +4,9 @@ from Utils.gridmaker import gridgen, gridload
 from Environments.dec_grid_rl import DecGridRL
 import time
 from Logger.logger import Logger
+from . base_policy import Base_Policy
 
-
-class SpanningTreeCoveragePolicy(object):
+class STC(Base_Policy):
     '''
     Online controller that takes incremental observations of the environment and
     can achieve optimal and full coverage in certain conditions (see Shreyas'
@@ -21,7 +21,7 @@ class SpanningTreeCoveragePolicy(object):
         self._internal_grid_rad = internal_grid_rad
 
         #reset policy (creates visited array and curr_x, curr_y)
-        self.reset()
+        self.reset(False, None)
 
     def pi(self, obs):
         """
@@ -31,6 +31,7 @@ class SpanningTreeCoveragePolicy(object):
         Returns:
             Returns the controls based on the given observation.
         """
+        obs = np.squeeze(obs)[2]
         assert obs.shape == (5, 5), "wrong observation dummy"
 
         # controls cheatsheet
@@ -39,7 +40,7 @@ class SpanningTreeCoveragePolicy(object):
         u = -1
         #checking whether the cell is fully explored
         if self.isCellVisited(self._curr_x, self._curr_y):
-            print('cell fully visited, leaving')
+            # print('cell fully visited, leaving')
 
             #means we got to leave the cell
             if self._curr_pos == "bl":
@@ -62,7 +63,7 @@ class SpanningTreeCoveragePolicy(object):
                 if free and not self.isAnySubcellVisited(self._curr_x, self._curr_y - 1):
                     u = 3
                 else:
-                    print("obstacle below")
+                    # print("obstacle below")
                     u = 0
             elif self._curr_pos == "br":
                 #check if cell right has any obstacles
@@ -72,7 +73,7 @@ class SpanningTreeCoveragePolicy(object):
                 if free and not self.isAnySubcellVisited(self._curr_x + 1, self._curr_y):
                     u = 0
                 else:
-                    print("obstacle right")
+                    # print("obstacle right")
                     u = 1
 
             elif self._curr_pos == "ur":
@@ -83,7 +84,7 @@ class SpanningTreeCoveragePolicy(object):
                 if free and not self.isAnySubcellVisited(self._curr_x, self._curr_y + 1):
                     u = 1
                 else:
-                    print("obstacle above")
+                    # print("obstacle above")
                     u = 2
 
             elif self._curr_pos == "ul":
@@ -94,7 +95,7 @@ class SpanningTreeCoveragePolicy(object):
                 if free and not self.isAnySubcellVisited(self._curr_x - 1, self._curr_y):
                     u = 2
                 else:
-                    print("obstacle left")
+                    # print("obstacle left")
                     u = 3
 
         #updating robot x, y based on controls
@@ -153,7 +154,7 @@ class SpanningTreeCoveragePolicy(object):
             else:
                 return "ur"
 
-    def reset(self):
+    def reset(self, testing, grid):
         '''
         resets the policy to run again on a different environment
         '''
@@ -225,7 +226,7 @@ if __name__ == "__main__":
     logger = Logger(exp_name, makevid)
 
     #testing stc
-    stc_controller = SpanningTreeCoveragePolicy(105)
+    stc_controller = STC(105)
 
     state = np.squeeze(env.reset(False, None))[2]  # getting only the obstacle layer
     done = False

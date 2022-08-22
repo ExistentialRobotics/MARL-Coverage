@@ -10,7 +10,7 @@ def coord_to_rc(x, y):
     return (y, x)
 
 
-class BSACoveragePolicy(object):
+class BSA(object):
     '''
     Online controller that takes incremental observations of the environment and
     can achieve optimal and full coverage in certain conditions (see Shreyas'

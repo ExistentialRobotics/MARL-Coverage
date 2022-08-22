@@ -18,15 +18,23 @@ import json
 from Environments.super_grid_rl import SuperGridRL
 from Environments.sim_env import SuperGrid_Sim
 from Environments.dec_grid_rl import DecGridRL
+
 from Action_Spaces.discrete import Discrete
+
+from Policies.stc import STC
+from Policies.bsa import BSA
+from Policies.ba_star import BA_Star
 from Policies.basic_random import Basic_Random
 from Policies.dqn import DQN
 from Policies.drqn import DRQN
 from Policies.vdn import VDN
-from Policies.alphazero import AlphaZero
 from Policies.ha_star import HA_Star
+
 from Logger.logger import Logger
+
 from Utils.utils import train_RLalg, test_RLalg
+from Utils.gridmaker import gridgen, gridload
+
 from Policies.Networks.grid_rl_conv import Grid_RL_Conv
 from Policies.Networks.grid_rl_recur import Grid_RL_Recur
 from Policies.Networks.gnn import GNN
@@ -34,7 +42,7 @@ from Policies.Networks.vin import VIN
 from Policies.Networks.rvin import RVIN
 from Policies.Networks.alpha_net import Alpha_Net
 from Policies.Networks.alpha_net_wstep import Alpha_Net_WStep
-from Utils.gridmaker import gridgen, gridload
+
 
 NON_LEARNING = ["random", "bsa", "ba_star", "dijkstra_frontier", "mastc", "stc"]
 DASH = "-----------------------------------------------------------------------"
@@ -54,6 +62,7 @@ argumentList = sys.argv[1:]
 
 saved_model = False
 model_path = None
+output_dir = None
 try:
     # Parsing argument
     arguments, values = getopt.getopt(argumentList, options, long_options)
@@ -73,9 +82,6 @@ except getopt.error as err:
     print(str(err))
 
 if saved_model:
-    # run testing with a saved model
-    random_policy = False
-
     # check if model path is valid
     try:
         model_file = open(model_path)
@@ -94,7 +100,8 @@ if saved_model:
             break
 
     # create config file path string
-    config_path = model_path[:i + 1] + "config.json"
+    output_dir = model_path[:i + 1]
+    config_path = output_dir + "config.json"
 else:
     if len(sys.argv) != 2:
         print(DASH)
@@ -102,6 +109,10 @@ else:
         print(DASH)
         sys.exit(1)
     config_path = sys.argv[1]
+    for i in range(len(config_path) - 1, -1, -1):
+        if config_path[i] == "/":
+            break
+    output_dir = config_path[:i + 1]
 
 # check if config path is valid
 try:
@@ -127,8 +138,8 @@ env_config = exp_parameters['env_config']
 numrobot = env_config['numrobot']
 
 '''Experiment Parameters'''
-exp_name = exp_parameters["exp_name"]
 exp_config = exp_parameters['exp_config']
+exp_name = exp_config["exp_name"]
 train_episodes = exp_config["train_episodes"]
 test_episodes = exp_config["test_episodes"]
 show_fig = exp_config["render_plots"]
@@ -138,8 +149,9 @@ makevid = exp_config["makevid"]
 ignore_done = exp_config['ignore_done']
 
 '''Model Parameters'''
-model_config = exp_parameters['model_config']
-model_name = model_config['model_name']
+if "model_config" in exp_parameters:
+    model_config = exp_parameters['model_config']
+    model_name = model_config['model_name']
 
 '''Policy Parameters'''
 policy_config = exp_parameters['policy_config']
@@ -150,13 +162,14 @@ print("Running experiment using: " + str(config_path))
 print(DASH)
 
 '''Init logger'''
-logger = Logger(exp_name, makevid)
+logger = Logger(output_dir, exp_name, makevid)
 
 '''Making the list of grids'''
-if exp_parameters['gridload']:
-    train_set, test_set = gridload(exp_parameters['grid_config'])
+grid_config = exp_parameters['grid_config']
+if grid_config['gridload']:
+    train_set, test_set = gridload(grid_config)
 else:
-    train_set, test_set = gridgen(exp_parameters['grid_config'])
+    train_set, test_set = gridgen(grid_config)
 
 print("Number of training environments: " + str(len(train_set)))
 print("Number of testing environments: " + str(len(test_set)))
@@ -178,17 +191,18 @@ action_space = Discrete(num_actions)
 learning_policy = True
 if policy_name in NON_LEARNING:
     learning_policy = False
-    
+
     if policy_name == "random":
         policy = Basic_Random(action_space)
     if policy_name == "stc":
-
+        itr = policy_config["internal_grid_rad"]
+        policy = STC(itr)
     elif policy_name == "bsa":
-
+        policy = BSA()
     elif policy_name == "ba_star":
-
+        policy = BA_Star()
     elif policy_name == "mastc":
-
+        policy = MASTC()
     else:
         policy = Dijkstra_Frontier()
 else:
@@ -241,7 +255,7 @@ else:
 # train a policy if not testing a saved model
 if not saved_model:
     '''Train policy'''
-    if not random_policy and :
+    if not learning_policy:
         print("----------Running {} for ".format(policy_name) + \
               str(train_episodes) + " episodes-----------")
         policy.printNumParams()

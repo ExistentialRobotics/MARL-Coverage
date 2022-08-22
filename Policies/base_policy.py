@@ -29,3 +29,15 @@ class Base_Policy(object):
         Resets the policy (at the end of an episode)
         """
         raise notImplementedError()
+
+    def printNumParams(self):
+        return 0
+
+    def set_train(self):
+        pass
+
+    def set_test(self):
+        pass
+
+    def getnet(self):
+        pass

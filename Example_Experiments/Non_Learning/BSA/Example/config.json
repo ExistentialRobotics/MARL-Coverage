@@ -1,0 +1,48 @@
+{
+    "env_name"          : "DecGridRL",
+    "env_config" : {
+          "numrobot": 1,
+          "maxsteps": 200,
+          "collision_penalty": 5,
+          "egoradius": 2,
+          "done_thresh": 1,
+          "done_incr": 0,
+          "terminal_reward": 30,
+          "mini_map_rad": 0,
+          "comm_radius": 0,
+          "allow_comm": 0,
+          "map_sharing": 0,
+          "single_square_tool": 1,
+          "dist_reward": 0,
+          "dijkstra_input": 0,
+          "sensor_type": "square_sensor",
+          "sensor_config": {
+              "range": 2
+            },
+          "train_maxsteps" : 100000,
+          "test_maxsteps"  : 100000
+    },
+    "exp_config" : {
+        "exp_name"   : "stc_example",
+        "makevid"           : 1,
+        "render_test"       : 1,
+        "render_train"      : 0,
+        "render_plots"      : 1,
+        "ignore_done"       : 1,
+        "train_episodes"    : 0,
+        "test_episodes"     : 100
+    },
+    "policy_config"     : {
+        "policy_name"       : "stc",
+        "use_graph"         : 0,
+        "internal_grid_rad" : 105
+    },
+    "grid_config" : {
+          "gridload"  : 1,
+          "grid_dir"  : "./Grids/bg2_100x100",
+          "gridwidth" : 30,
+          "gridlen"   : 30,
+          "numgrids"  : 30,
+          "prob_obst" : 0
+      }
+}
