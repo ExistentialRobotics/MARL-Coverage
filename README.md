@@ -113,7 +113,7 @@ source coverage_env/bin/activate
 Next, run the script easy_install_linux.sh to install all the required 
 packages:
 ```
-./easy_install_linux.sh
+bash ./easy_install_linux.sh
 ```
 
 Last, deactivate the virtual environment:
