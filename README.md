@@ -122,3 +122,36 @@ deactivate
 ```
 
 # How to Run the Code
+
+The process for running the code is to set up a folder which holds a 
+config.json file that determines the environment, policy, sensor, and types of 
+grid maps used for the experiment. Additionally, the config.json file sets 
+assorted other hyperparameters related to the experiment, such as the number
+of training episodes (if an RL agent is trained), the neural network model 
+(if an RL agent is trained), number of testing episodes, whether or not to 
+record a video of the tests running, etc. In the top level directory of the 
+cloned repo there is a folder called Example_Experiments, which contains 
+examples of the config files used for different policy types in this repo.
+
+First, activate the environment if it hasn't already been activated:
+```
+source coverage_env/bin/activate
+```
+
+Once a config file has been created, simply run:
+```
+python grid_rl_main.py [insert path to config.json file here]
+```
+For example, run this command to run an experiment using a STC policy:
+```
+python grid_rl_main.py ./Example_Experiments/Non_Learning/STC/Example/config.json
+```
+After the experiment has been completed, it will save the model weights for each
+checkpoint (if running RL), graphs of the average reward per episode for 
+training and testing, recordings of the policy being ran during testing, and 
+any terminal output that occured. 
+
+To create your own experiments, create a new folder that holds the config file of
+your experiment and run the above command, except using the path to your newly
+created config file. Feel free to check out and run the other example experiments
+for the different policies in this repo!
