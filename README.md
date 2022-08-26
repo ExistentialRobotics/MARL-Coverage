@@ -7,6 +7,9 @@ Deep Reinforcement Learning agents. In addition, we have implementations and
 benchmarks of several non-learning based staple robotic coverage algorithms:
 BSA, BA*, and Spiral STC.
 
+
+<img src="https://github.com/ExistentialRobotics/MARL-Coverage/blob/main/BSA.gif" width="450">
+
 Coverage Path Planning, or CPP, involves controlling a robot or group of robots 
 to visit every open space in an environment. CPP can be applied in situations 
 where robots need to cover large sweeps of area, such as search and rescue, 
