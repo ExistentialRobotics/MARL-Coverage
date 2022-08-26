@@ -6,6 +6,7 @@ import time
 from Logger.logger import Logger
 from . base_policy import Base_Policy
 
+
 class STC(Base_Policy):
     '''
     Online controller that takes incremental observations of the environment and
@@ -16,11 +17,11 @@ class STC(Base_Policy):
     def __init__(self, internal_grid_rad, startpos="bl"):
         super().__init__()
 
-        #describes what subcell we are currently in
+        # describes what subcell we are currently in
         self._curr_pos = startpos
         self._internal_grid_rad = internal_grid_rad
 
-        #reset policy (creates visited array and curr_x, curr_y)
+        # reset policy (creates visited array and curr_x, curr_y)
         self.reset(False, None)
 
     def pi(self, obs):
@@ -38,11 +39,11 @@ class STC(Base_Policy):
         # 0 - right, 1 - up, 2 - left, 3 - down
 
         u = -1
-        #checking whether the cell is fully explored
+        # checking whether the cell is fully explored
         if self.isCellVisited(self._curr_x, self._curr_y):
             # print('cell fully visited, leaving')
 
-            #means we got to leave the cell
+            # means we got to leave the cell
             if self._curr_pos == "bl":
                 u = 3
             elif self._curr_pos == "br":
@@ -52,11 +53,11 @@ class STC(Base_Policy):
             elif self._curr_pos == "ul":
                 u = 2
 
-        #exploring further if we can
+        # exploring further if we can
         else:
-            #different checks depending on which sub-cell we are in
+            # different checks depending on which sub-cell we are in
             if self._curr_pos == "bl":
-                #check if cell below has any obstacles
+                # check if cell below has any obstacles
                 obs = obs[2:4, 0:2]
                 free = not np.any(obs == 1)
 
@@ -66,7 +67,7 @@ class STC(Base_Policy):
                     # print("obstacle below")
                     u = 0
             elif self._curr_pos == "br":
-                #check if cell right has any obstacles
+                # check if cell right has any obstacles
                 obs = obs[3:5, 2:4]
                 free = not np.any(obs == 1)
 
@@ -77,7 +78,7 @@ class STC(Base_Policy):
                     u = 1
 
             elif self._curr_pos == "ur":
-                #check if cell above has any obstacles
+                # check if cell above has any obstacles
                 obs = obs[1:3, 3:5]
                 free = not np.any(obs == 1)
 
@@ -88,7 +89,7 @@ class STC(Base_Policy):
                     u = 2
 
             elif self._curr_pos == "ul":
-                #check if cell above has any obstacles
+                # check if cell above has any obstacles
                 obs = obs[0:2, 1:3]
                 free = not np.any(obs == 1)
 
@@ -98,7 +99,7 @@ class STC(Base_Policy):
                     # print("obstacle left")
                     u = 3
 
-        #updating robot x, y based on controls
+        # updating robot x, y based on controls
         if u == 0:
             self._curr_x += 1
         elif u == 1:
@@ -108,20 +109,22 @@ class STC(Base_Policy):
         elif u == 3:
             self._curr_y -= 1
 
-        #updating the subcell pos
+        # updating the subcell pos
         self._curr_pos = self.subcellpos(self._curr_x, self._curr_y)
 
-        #visiting the current cell
-        self._visited[self._curr_x][self._curr_y] = 1
+        # visiting the current cell
+        if self._visited[self._curr_x][self._curr_y] == 1:
+            u = -1
+        else:
+            self._visited[self._curr_x][self._curr_y] = 1
 
-        # print(u)
         return u
 
     def isCellVisited(self, x, y):
         '''
         returns true if all subcells in the enclosing cell of (x,y) are visited
         '''
-        #making coordinates point to bottom left of cell
+        # making coordinates point to bottom left of cell
         x = x - x % 2
         y = y - y % 2
 
@@ -132,7 +135,7 @@ class STC(Base_Policy):
         '''
         returns true if any subcell in the enclosing cell of (x,y) is visited
         '''
-        #making coordinates point to bottom left of cell
+        # making coordinates point to bottom left of cell
         x = x - x % 2
         y = y - y % 2
 
@@ -160,10 +163,10 @@ class STC(Base_Policy):
         '''
         internal_grid_rad = self._internal_grid_rad
 
-        #internal coordinate system for keeping track of where we have been
+        # internal coordinate system for keeping track of where we have been
         self._visited = np.zeros((2*internal_grid_rad, 2*internal_grid_rad))
 
-        #setting the starting x,y
+        # setting the starting x,y
         index = int((internal_grid_rad + internal_grid_rad % 2)/2 - 1)
         xinc = 0
         yinc = 0
@@ -179,12 +182,12 @@ class STC(Base_Policy):
         self._curr_x = 2*index + xinc
         self._curr_y = 2*index + yinc
 
-        #visiting the current cell
+        # visiting the current cell
         self._visited[self._curr_x][self._curr_y] = 1
 
 
 if __name__ == "__main__":
-    #testing spanning tree coverage on dec_grid_rl environment
+    # testing spanning tree coverage on dec_grid_rl environment
     env_config = {
         "numrobot": 1,
         "maxsteps": 200,
@@ -228,7 +231,8 @@ if __name__ == "__main__":
     #testing stc
     stc_controller = STC(105)
 
-    state = np.squeeze(env.reset(False, None))[2]  # getting only the obstacle layer
+    # getting only the obstacle layer
+    state = np.squeeze(env.reset(False, None))[2]
     done = False
     render = True
 

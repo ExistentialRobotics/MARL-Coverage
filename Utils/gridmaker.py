@@ -3,6 +3,7 @@ import os
 from PIL import Image
 import matplotlib.pyplot as plt
 
+
 def gridload(grid_config=None):
     '''
     Loads all the images from a given directory, converts them to black and
@@ -18,63 +19,64 @@ def gridload(grid_config=None):
     '''
     train_set = None
     test_set = None
+    print(grid_config)
     if grid_config is None:
         test1 = np.ones((15, 15))
-        test1[11,3:8] = -1.0
-        test1[7,7:13] = -1.0
-        test1[2:7,3] = -1.0
-        test1[2,3:8] = -1.0
+        test1[11, 3:8] = -1.0
+        test1[7, 7:13] = -1.0
+        test1[2:7, 3] = -1.0
+        test1[2, 3:8] = -1.0
 
         test2 = np.ones((15, 15))
-        test2[10:13,3] = -1.0
-        test2[12,4:8] = -1.0
-        test2[10:13,8] = -1.0
-        test2[2:5,6] = -1.0
-        test2[2,7:11] = -1.0
-        test2[2:5,11] = -1.0
+        test2[10:13, 3] = -1.0
+        test2[12, 4:8] = -1.0
+        test2[10:13, 8] = -1.0
+        test2[2:5, 6] = -1.0
+        test2[2, 7:11] = -1.0
+        test2[2:5, 11] = -1.0
 
-        test3 = np.ones((15,15))
-        test3[5:10,2] = -1.0
-        test3[5:10,5] = -1.0
-        test3[5:10,9] = -1.0
-        test3[5,10:15] = -1.0
+        test3 = np.ones((15, 15))
+        test3[5:10, 2] = -1.0
+        test3[5:10, 5] = -1.0
+        test3[5:10, 9] = -1.0
+        test3[5, 10:15] = -1.0
         test_set = [test1, test2, test3]
 
-        train1 = np.ones((15,15))
-        train1[2,3] = -1.0
-        train1[3,7] = -1.0
-        train1[1,10:14] = -1.0
-        train1[7,5] = -1.0
-        train1[8,10] = -1.0
-        train1[7:13,2] = -1.0
-        train1[10,6:9] = -1.0
-        train1[10:14,8] = -1.0
+        train1 = np.ones((15, 15))
+        train1[2, 3] = -1.0
+        train1[3, 7] = -1.0
+        train1[1, 10:14] = -1.0
+        train1[7, 5] = -1.0
+        train1[8, 10] = -1.0
+        train1[7:13, 2] = -1.0
+        train1[10, 6:9] = -1.0
+        train1[10:14, 8] = -1.0
 
-        train2 = np.ones((15,15))
-        train2[3:13,7] = -1.0
-        train2[7,2:13] = -1.0
+        train2 = np.ones((15, 15))
+        train2[3:13, 7] = -1.0
+        train2[7, 2:13] = -1.0
 
-        train3 = np.ones((15,15))
-        train3[2,10:13] = -1.0
-        train3[2:6,12] = -1.0
-        train3[4:11,6] = -1.0
-        train3[7,6:8] = -1.0
-        train3[10,2] = -1.0
+        train3 = np.ones((15, 15))
+        train3[2, 10:13] = -1.0
+        train3[2:6, 12] = -1.0
+        train3[4:11, 6] = -1.0
+        train3[7, 6:8] = -1.0
+        train3[10, 2] = -1.0
 
-        train4 = np.ones((15,15))
-        train4[4:10,10] = -1.0
-        train4[4:10,5] = -1.0
-        train4[9,5:11]= -1.0
+        train4 = np.ones((15, 15))
+        train4[4:10, 10] = -1.0
+        train4[4:10, 5] = -1.0
+        train4[9, 5:11] = -1.0
 
-        train5 = np.ones((15,15))
-        train5[3,8:12] = -1.0
-        train5[6,4:8] = -1.0
-        train5[9,1:4] = -1.0
-        train5[9:12,11] = -1.0
+        train5 = np.ones((15, 15))
+        train5[3, 8:12] = -1.0
+        train5[6, 4:8] = -1.0
+        train5[9, 1:4] = -1.0
+        train5[9:12, 11] = -1.0
 
-        train6 = np.ones((15,15))
-        train6[3:12,11] = -1.0
-        train6[3:12,7] = -1.0
+        train6 = np.ones((15, 15))
+        train6[3:12, 11] = -1.0
+        train6[3:12, 7] = -1.0
         train_set = [train1, train2, train3, train4, train5, train6]
     else:
         grid_dir = grid_config['grid_dir']

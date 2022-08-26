@@ -24,6 +24,8 @@ from Action_Spaces.discrete import Discrete
 from Policies.stc import STC
 from Policies.bsa import BSA
 from Policies.ba_star import BA_Star
+from Policies.mastc import MASTC
+from Policies.dijkstra_frontier import DijkstraFrontier
 from Policies.basic_random import Basic_Random
 from Policies.dqn import DQN
 from Policies.drqn import DRQN
@@ -44,7 +46,8 @@ from Policies.Networks.alpha_net import Alpha_Net
 from Policies.Networks.alpha_net_wstep import Alpha_Net_WStep
 
 
-NON_LEARNING = ["random", "bsa", "ba_star", "dijkstra_frontier", "mastc", "stc"]
+NON_LEARNING = ["random", "bsa", "ba_star",
+                "dijkstra_frontier", "mastc", "stc"]
 DASH = "-----------------------------------------------------------------------"
 
 # prevent decimal printing
@@ -167,7 +170,10 @@ logger = Logger(output_dir, exp_name, makevid)
 '''Making the list of grids'''
 grid_config = exp_parameters['grid_config']
 if grid_config['gridload']:
-    train_set, test_set = gridload(grid_config)
+    if grid_config['grid_dir'] == 0:
+        train_set, test_set = gridload(grid_config=None)
+    else:
+        train_set, test_set = gridload(grid_config=grid_config)
 else:
     train_set, test_set = gridgen(grid_config)
 
@@ -195,16 +201,16 @@ if policy_name in NON_LEARNING:
     if policy_name == "random":
         policy = Basic_Random(action_space)
     if policy_name == "stc":
-        itr = policy_config["internal_grid_rad"]
-        policy = STC(itr)
+        policy = STC(policy_config["internal_grid_rad"])
     elif policy_name == "bsa":
-        policy = BSA()
+        policy = BSA(policy_config["internal_grid_rad"])
     elif policy_name == "ba_star":
-        policy = BA_Star()
+        policy = BA_Star(policy_config["internal_grid_rad"],
+                         env_config["egoradius"])
     elif policy_name == "mastc":
         policy = MASTC()
     else:
-        policy = Dijkstra_Frontier()
+        policy = DijkstraFrontier()
 else:
     '''Init model net'''
     if model_name == "vin":
@@ -256,14 +262,14 @@ else:
 if not saved_model:
     '''Train policy'''
     if not learning_policy:
-        print("----------Running {} for ".format(policy_name) + \
-              str(train_episodes) + " episodes-----------")
+        print("----------Running {} for ".format(policy_name)
+              + str(train_episodes) + " episodes-----------")
         policy.printNumParams()
 
         train_rewardlis, losslist, test_percent_covered = train_RLalg(env,
-                                policy, logger, train_episodes=train_episodes,
-                                test_episodes=test_episodes,
-                                render=render_train, ignore_done=ignore_done)
+                                                                      policy, logger, train_episodes=train_episodes,
+                                                                      test_episodes=test_episodes,
+                                                                      render=render_train, ignore_done=ignore_done)
     else:
         print("---------------------Running Random Policy---------------------")
 
@@ -283,10 +289,10 @@ avg_coverage = sum(test_percent_covered) / len(test_percent_covered)
 
 '''Display testing results'''
 print(DASH)
-print("Trained policy covered " + str(max_coverage) + \
-      " percent of the environment on its best test!")
-print("Trained policy covered " + str(avg_coverage) + \
-      " percent of the environment on average across all tests!")
+print("Trained policy covered " + str(max_coverage)
+      + " percent of the environment on its best test!")
+print("Trained policy covered " + str(avg_coverage)
+      + " percent of the environment on average across all tests!")
 print(DASH)
 
 if not saved_model:
@@ -296,16 +302,16 @@ if not saved_model:
                 show_fig=show_fig)
 
     # plot training loss
-    logger.plot(losslist, 3, "Training Loss per Episode", 'Episodes', 'Loss', \
+    logger.plot(losslist, 3, "Training Loss per Episode", 'Episodes', 'Loss',
                 "Training Loss", "Training Loss", show_fig=show_fig)
 
     # plot testing rewards
-    logger.plot(test_rewardlis, 4, "Testing Reward per Episode", 'Episodes', \
+    logger.plot(test_rewardlis, 4, "Testing Reward per Episode", 'Episodes',
                 'Reward', "Testing Reward", "Testing Reward", show_fig=show_fig)
 
     # plot average percent covered when testing
-    logger.plot(test_percent_covered, 5, "Average Percent Covered", \
-                'Episode (x10)', 'Percent Covered', "Percent Covered", \
+    logger.plot(test_percent_covered, 5, "Average Percent Covered",
+                'Episode (x10)', 'Percent Covered', "Percent Covered",
                 "Percent Covered", show_fig=show_fig)
 
 #closing logger

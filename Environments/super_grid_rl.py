@@ -14,6 +14,7 @@ import cv2
 import pygame
 import torch
 
+
 class SuperGridRL(object):
     """
     A Centralized Multi-Agent Grid Environment with a discrete action
@@ -22,6 +23,7 @@ class SuperGridRL(object):
     so the robot gets full observations of the environment after a step is
     performed.
     """
+
     def __init__(self, train_set, env_config, test_set=None):
         """
         Constructor for class SuperGridRL inits assorted parameters and resets
@@ -82,137 +84,145 @@ class SuperGridRL(object):
                       environment
             reward  - scalar reward signal calculated based on the action
         """
-        #handling case where action is an integer that identifies the action
-        if type(action) != list:
-            ulis = np.zeros((self._numrobot,))
-            #conveting integer to base 4 and putting it in ulis
-            for i in range(self._numrobot):
-                ulis[i] = action % 4
-                action = action // 4
+        done = False
+        if action == -1 or action == None:
+            done = True
+            reward = 0
         else:
-            ulis = action
-
-        # print("robot position: " + str((self._xinds, self._yinds)))
-
-        #initialize reward for this step
-        reward = np.zeros((self._numrobot,))
-
-        #making pq for sorting by minimum scan score
-        pq = PriorityQueue()
-        for i in range(self._numrobot):
-            score = self._xinds[i] + self._yinds[i]*self._gridwidth
-            pq.put((score, i))
-
-        #robot 2 control, storing what robot got what control
-        r2c = np.zeros((self._numrobot,), dtype=int)
-
-        # calc distance from observed to free cells
-        if self._dist_r:
-            distance_map = self.get_distance_map()
-
-        # apply controls to each robot
-        for i in range(len(ulis)):
-            u = ulis[i]
-
-            #z is the robot index we are assigning controls to
-            if self._use_scanning:
-                z = pq.get()[1]
+            # handling case where action is an integer that identifies the action
+            if type(action) != list:
+                ulis = np.zeros((self._numrobot,))
+                #conveting integer to base 4 and putting it in ulis
+                for i in range(self._numrobot):
+                    ulis[i] = action % 4
+                    action = action // 4
             else:
-                z = i
-            r2c[z] = i
+                ulis = action
 
-            #left
-            if(u == 0):
-                x = self._xinds[z] - 1
-                y = self._yinds[z]
+            # print("robot position: " + str((self._xinds, self._yinds)))
 
-                if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
-                    self._xinds[z] = x
-                    if self._dist_r:
-                        reward[i] += distance_map[x, y]
+            # initialize reward for this step
+            reward = np.zeros((self._numrobot,))
+
+            # making pq for sorting by minimum scan score
+            pq = PriorityQueue()
+            for i in range(self._numrobot):
+                score = self._xinds[i] + self._yinds[i]*self._gridwidth
+                pq.put((score, i))
+
+            # robot 2 control, storing what robot got what control
+            r2c = np.zeros((self._numrobot,), dtype=int)
+
+            # calc distance from observed to free cells
+            if self._dist_r:
+                distance_map = self.get_distance_map()
+
+            # apply controls to each robot
+            for i in range(len(ulis)):
+                u = ulis[i]
+
+                # z is the robot index we are assigning controls to
+                if self._use_scanning:
+                    z = pq.get()[1]
                 else:
-                    reward[i] -= self._collision_penalty
-            #right
-            elif(u == 1):
-                x = self._xinds[z] + 1
-                y = self._yinds[z]
+                    z = i
+                r2c[z] = i
 
-                if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
-                    self._xinds[z] = x
-                    if self._dist_r:
-                        reward[i] += distance_map[x, y]
-                else:
-                    reward[i] -= self._collision_penalty
-            #up
-            elif(u == 2):
-                x = self._xinds[z]
-                y = self._yinds[z] + 1
+                # left
+                if(u == 0):
+                    x = self._xinds[z] - 1
+                    y = self._yinds[z]
 
-                if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
-                    self._yinds[z] = y
-                    if self._dist_r:
-                        reward[i] += distance_map[x, y]
-                else:
-                    reward[i] -= self._collision_penalty
-            #down
-            elif(u == 3):
-                x = self._xinds[z]
-                y = self._yinds[z] - 1
+                    if(self.isInBounds(x, y) and not self.isOccupied(x, y)):
+                        self._xinds[z] = x
+                        if self._dist_r:
+                            reward[i] += distance_map[x, y]
+                    else:
+                        reward[i] -= self._collision_penalty
+                # right
+                elif(u == 1):
+                    x = self._xinds[z] + 1
+                    y = self._yinds[z]
 
-                if(self.isInBounds(x,y) and not self.isOccupied(x,y)):
-                    self._yinds[z]= y
-                    if self._dist_r:
-                        reward[i] += distance_map[x, y]
-                else:
-                    reward[i] -= self._collision_penalty
+                    if(self.isInBounds(x, y) and not self.isOccupied(x, y)):
+                        self._xinds[z] = x
+                        if self._dist_r:
+                            reward[i] += distance_map[x, y]
+                    else:
+                        reward[i] -= self._collision_penalty
+                # up
+                elif(u == 2):
+                    x = self._xinds[z]
+                    y = self._yinds[z] + 1
 
-        #sense from all the current robot positions
-        for i in range(self._numrobot):
-            x = self._xinds[i]
-            y = self._yinds[i]
+                    if(self.isInBounds(x, y) and not self.isOccupied(x, y)):
+                        self._yinds[z] = y
+                        if self._dist_r:
+                            reward[i] += distance_map[x, y]
+                    else:
+                        reward[i] -= self._collision_penalty
+                # down
+                elif(u == 3):
+                    x = self._xinds[z]
+                    y = self._yinds[z] - 1
 
-            #looping over all grid cells to sense
-            for j in range(x - self._senseradius, x + self._senseradius + 1):
-                for k in range(y - self._senseradius,
-                               y + self._senseradius + 1):
-                    #checking if cell is not visited, in bounds, not an obstacle
-                    if(self.isInBounds(j,k) and self._grid[j][k]>=0 and
-                        self._free[j][k] == 1):
-                        # add reward
-                        reward[r2c[i]] += self._grid[j][k]
+                    if(self.isInBounds(x, y) and not self.isOccupied(x, y)):
+                        self._yinds[z] = y
+                        if self._dist_r:
+                            reward[i] += distance_map[x, y]
+                    else:
+                        reward[i] -= self._collision_penalty
 
-                        # mark as not free
-                        self._free[j][k] = 0
+            # sense from all the current robot positions
+            for i in range(self._numrobot):
+                x = self._xinds[i]
+                y = self._yinds[i]
 
-                    elif(self.isInBounds(j,k) and self._grid[j][k]>=0 and
-                        self._free[j][k] == 0):
-                        reward[r2c[i]] -= self._free_penalty
+                # looping over all grid cells to sense
+                for j in range(x - self._senseradius, x + self._senseradius + 1):
+                    for k in range(y - self._senseradius,
+                                   y + self._senseradius + 1):
+                        # checking if cell is not visited, in bounds, not an obstacle
+                        if(self.isInBounds(j, k) and self._grid[j][k] >= 0
+                                and self._free[j][k] == 1):
+                            # add reward
+                            reward[r2c[i]] += self._grid[j][k]
 
-                    elif(self.isInBounds(j,k) and self._grid[j][k]<0 and
-                            self._observed_obstacles[j][k] == 0):
+                            # mark as not free
+                            self._free[j][k] = 0
+
+                        elif(self.isInBounds(j, k) and self._grid[j][k] >= 0
+                             and self._free[j][k] == 0):
+                            reward[r2c[i]] -= self._free_penalty
+
+                        elif(self.isInBounds(j, k) and self._grid[j][k] < 0
+                                and self._observed_obstacles[j][k] == 0):
                             # track observed obstacles
                             self._observed_obstacles[j][k] = 1
 
-        a = action
-        if torch.is_tensor(action):
-            a = action.item()
+            a = action
+            if torch.is_tensor(action):
+                a = action.item()
 
-        reward += self.motion_penalty(a)
-        self.a_prev = a
+            reward += self.motion_penalty(a)
+            self.a_prev = a
 
-        #incrementing step count
-        self._currstep += 1
+            # incrementing step count
+            self._currstep += 1
 
-        #calculate current state
+            # finalize reward
+            reward = np.sum(reward)
+            if min(self._done_thresh, 1) <= self.percent_covered():
+                reward += self._terminal_reward
+
+        # calculate current state
         state = self.get_state()
 
-        # finalize reward
-        reward = np.sum(reward)
-        if min(self._done_thresh, 1) <= self.percent_covered():
-            reward += self._terminal_reward
+        # check if episode has been completed
+        if done is False:
+            done = self.done()
 
-        return state, reward
-
+        return state, reward, done
 
     def motion_penalty(self, a):
         """
@@ -231,7 +241,6 @@ class SuperGridRL(object):
         if a == inv:
             return -2
         return -1
-
 
     def isInBounds(self, x, y):
         """
@@ -263,7 +272,7 @@ class SuperGridRL(object):
             return True
 
         #checking if no other robots are there
-        for a,b in zip(self._xinds, self._yinds):
+        for a, b in zip(self._xinds, self._yinds):
             if(a == x and b == y):
                 return True
 
@@ -302,7 +311,7 @@ class SuperGridRL(object):
                                                   self._free, distance_map])
 
         # arrays = np.array(self.get_pos_image() + [self._observed_obstacles,
-                            # self._free, self._grid])
+        # self._free, self._grid])
 
         state = np.stack(arrays, axis=0)
         return (state, self._currstep)
@@ -349,7 +358,8 @@ class SuperGridRL(object):
             self._grid = self._test_gridlis[ind]
         else:
             self._grid = \
-                self._train_gridlis[np.random.randint(len(self._train_gridlis))]
+                self._train_gridlis[np.random.randint(
+                    len(self._train_gridlis))]
 
         #dimensions
         self._gridwidth = self._grid.shape[0]
@@ -371,8 +381,8 @@ class SuperGridRL(object):
             y = np.random.randint(self._gridlen)
 
             #testing if coordinate is not an obstacle or other robot
-            if(self._grid[x][y] >= 0 and (x,y) not in coord_dict):
-                coord_dict[(x,y)] = 1
+            if(self._grid[x][y] >= 0 and (x, y) not in coord_dict):
+                coord_dict[(x, y)] = 1
                 self._xinds[count] = x
                 self._yinds[count] = y
                 count += 1
@@ -408,7 +418,7 @@ class SuperGridRL(object):
         Returns the percent of free cells that have been sensed by the robot
         """
         return np.count_nonzero(self._free < 1) / \
-               np.count_nonzero(self._grid > 0)
+            np.count_nonzero(self._grid > 0)
 
     def render(self):
         """
@@ -439,11 +449,11 @@ class SuperGridRL(object):
         image += freelayer
 
         scaling = max(min(1075//self._gridwidth, 1075//self._gridlen), 1)
-        image = cv2.resize(image, (0,0), fx=scaling, fy=scaling,
+        image = cv2.resize(image, (0, 0), fx=scaling, fy=scaling,
                            interpolation=cv2.INTER_NEAREST)
         image = cv2.copyMakeBorder(image, 0, 1075 - image.shape[1], 0,
                                    1075 - image.shape[0], cv2.BORDER_CONSTANT,
-                                   value=[0,0,0])
+                                   value=[0, 0, 0])
 
         surf = pygame.surfarray.make_surface(image)
         self._display.blit(surf, (0, 0))

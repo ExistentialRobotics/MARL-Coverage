@@ -4,9 +4,10 @@ from queue import PriorityQueue
 from Environments.dec_grid_rl import DecGridRL
 from Logger.logger import Logger
 import copy
+from . base_policy import Base_Policy
 
 
-class BA_Star(object):
+class BA_Star(Base_Policy):
     '''
     Online controller that takes incremental observations of the environment and
     can achieve optimal and full coverage in certain conditions (see Shreyas'
@@ -24,7 +25,7 @@ class BA_Star(object):
         self.num_actions = 4
 
         # reset policy (creates visited array and curr_x, curr_y)
-        self.reset()
+        self.reset(False, None)
 
     def get_obs_vis(self, state):
         # getting only the obstacle layer
@@ -482,7 +483,7 @@ class BA_Star(object):
 
         return path_array
 
-    def reset(self):
+    def reset(self, testing, grid):
         '''
         resets the policy to run again on a different environment
         '''

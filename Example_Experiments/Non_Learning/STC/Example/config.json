@@ -2,7 +2,7 @@
     "env_name"          : "DecGridRL",
     "env_config" : {
           "numrobot": 1,
-          "maxsteps": 200,
+          "maxsteps": 10000,
           "collision_penalty": 5,
           "egoradius": 2,
           "done_thresh": 1,

@@ -2,6 +2,7 @@ import numpy as np
 import sys
 import time
 
+
 def generate_episode(env, policy, logger, render=False, makevid=False, ignore_done=True, testing=False, ind=None, phase_1=None):
     # reset env at the start of each episode
     episode = []
@@ -9,30 +10,24 @@ def generate_episode(env, policy, logger, render=False, makevid=False, ignore_do
     total_reward = 0
     done = False
 
-    #reset policy at beginning of episode
+    # reset policy at beginning of episode
     policy.reset(testing, grid)
 
     # iterate till episode completion
-    i = 0
     while not done:
         # determine action
-        # policy.set_reward(total_reward)
-        # action = policy.pi(state, phase_1=phase_1)
         action = policy.pi(state)
 
-
         # step environment and save episode results
-        next_state, reward = env.step(action)
+        next_state, reward, done = env.step(action)
 
-        # determine if episode is completed
-        done = env.done()
         # print(str(env._currstep) + " " + str(env._test_maxsteps))
         if testing and env._currstep == env._test_maxsteps:
             done = True
         elif not testing and env._currstep == env._train_maxsteps:
             done = True
 
-        #adding variables to episode
+        # adding variables to episode
         episode.append((state[0], action, reward, next_state[0], done))
         state = next_state
         total_reward += reward
@@ -47,6 +42,7 @@ def generate_episode(env, policy, logger, render=False, makevid=False, ignore_do
             break
 
     return episode, total_reward
+
 
 def train_RLalg(env, policy, logger, train_episodes=1000, test_episodes=10, render=False,
                 checkpoint_interval=500, ignore_done=True):
@@ -72,37 +68,41 @@ def train_RLalg(env, policy, logger, train_episodes=1000, test_episodes=10, rend
             phase_1 = True
         else:
             phase_1 = False
-        episode, total_reward = generate_episode(env, policy, logger, render=False, makevid=False, ignore_done=ignore_done, phase_1=phase_1)
+        episode, total_reward = generate_episode(
+            env, policy, logger, render=False, makevid=False, ignore_done=ignore_done, phase_1=phase_1)
 
         # track reward per episode
         reward_per_episode.append(total_reward)
 
         # letting us know when we beat previous best
         if total_reward > best_reward:
-            print("New best reward on episode " + str(_) + ": " + str(total_reward))
+            print("New best reward on episode "
+                  + str(_) + ": " + str(total_reward))
             best_reward = total_reward
 
-        #saving policy at fixed checkpoints and running tests
+        # saving policy at fixed checkpoints and running tests
         if _ % checkpoint_interval == 0:
-            #saving weights
+            # saving weights
             logger.saveModelWeights(policy.getnet())
 
-            #testing policy
-            testrewards, average_percent_covered = test_RLalg(env, policy, logger, episodes=test_episodes, render_test=render)
+            # testing policy
+            testrewards, average_percent_covered = test_RLalg(
+                env, policy, logger, episodes=test_episodes, render_test=render)
             test_percent_covered.append(average_percent_covered)
             # policy.set_train()
 
-            #printing debug info
+            # printing debug info
             checkpoint_num += 1
-            print("Checkpoint Policy {} covered ".format(checkpoint_num) + str(average_percent_covered) + " percent of the environment on average!")
+            print("Checkpoint Policy {} covered ".format(checkpoint_num)
+                  + str(average_percent_covered) + " percent of the environment on average!")
 
         # update policy using the episode
         policy.update_policy(episode)
 
-        #tracking training loss for the episode
+        # tracking training loss for the episode
         losslist.append(policy._lastloss)
 
-    #saving final policy
+    # saving final policy
     logger.saveModelWeights(policy.getnet())
 
     return reward_per_episode, losslist, test_percent_covered
@@ -125,23 +125,25 @@ def test_RLalg(env, policy, logger, episodes=100, render_test=False, makevid=Fal
             # determine if rendering the current episode
             if render_test:
                 render = True
-            print("Testing Episode: " + str(_) + " out of " + str(episodes * num_test))
+            print("Testing Episode: " + str(_)
+                  + " out of " + str(episodes * num_test))
 
         # determine which tesing env to use
         if _ % episodes == 0:
             i += 1
 
         # obtain episode
-        episode, total_reward = generate_episode(env, policy, logger, render=render, makevid=makevid, testing=True, ind=i, phase_1=False)
+        episode, total_reward = generate_episode(
+            env, policy, logger, render=render, makevid=makevid, testing=True, ind=i, phase_1=False)
         num_steps = len(episode)
 
         # track test related statistics
         percent_covered += env.percent_covered()
         test_rewardlis.append(total_reward)
 
-    #returning policy to train mode
+    # returning policy to train mode
     # policy.set_train()
 
-    #returning the statistics
+    # returning the statistics
     average_percent_covered = percent_covered/(episodes * num_test)*100
     return test_rewardlis, average_percent_covered

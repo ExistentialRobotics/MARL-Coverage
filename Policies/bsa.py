@@ -4,13 +4,14 @@ from queue import PriorityQueue
 from Environments.dec_grid_rl import DecGridRL
 from Logger.logger import Logger
 import copy
+from . base_policy import Base_Policy
 
 
 def coord_to_rc(x, y):
     return (y, x)
 
 
-class BSA(object):
+class BSA(Base_Policy):
     '''
     Online controller that takes incremental observations of the environment and
     can achieve optimal and full coverage in certain conditions (see Shreyas'
@@ -26,7 +27,7 @@ class BSA(object):
         self.num_actions = 4
 
         # reset policy (creates visited array and curr_x, curr_y)
-        self.reset()
+        self.reset(False, None)
 
     def get_obs_vis(self, state):
         # getting only the obstacle layer
@@ -138,7 +139,7 @@ class BSA(object):
 
         return u
 
-    def reset(self):
+    def reset(self, testing, grid):
         '''
         resets the policy to run again on a different environment
         '''
@@ -203,7 +204,7 @@ if __name__ == "__main__":
     logger = Logger(exp_name, makevid)
 
     # testing bsa
-    bsa_controller = BSACoveragePolicy(155)
+    bsa_controller = BSA(155)
 
     state = env.reset()  # getting only the obstacle layer
     done = False

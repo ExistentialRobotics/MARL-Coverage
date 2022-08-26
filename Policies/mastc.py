@@ -4,18 +4,21 @@ from Utils.gridmaker import gridgen, gridload
 from Environments.dec_grid_rl import DecGridRL
 import time
 from Logger.logger import Logger
+from . base_policy import Base_Policy
 
 """
 TODO problems to address ???
 - multiple robots starting in same cell?
 """
 
-class MultiAgentSpanningTreeCoveragePolicy(object):
+
+class MASTC(Base_Policy):
     '''
     Online controller that takes incremental observations of the environment and
     can achieve optimal and full coverage in certain conditions (see Shreyas'
     notes).
     '''
+
     def __init__(self, numrobot, internal_grid_rad):
         super().__init__()
 
@@ -23,7 +26,7 @@ class MultiAgentSpanningTreeCoveragePolicy(object):
         self._internal_grid_rad = internal_grid_rad
         self._numrobot = numrobot
 
-    def pi(self, obs):
+    def pi(self, state):
         """
         Args:
             obs : an egocentric observation of radius 2 on the map of subcells,
@@ -31,7 +34,9 @@ class MultiAgentSpanningTreeCoveragePolicy(object):
         Returns:
             Returns the controls based on the given observation.
         """
-        assert obs.shape == (self._numrobot, 5,5), "wrong observation dummy"
+        obs = state[:, 2, :, :]  # getting only the obstacle layers
+
+        assert obs.shape == (self._numrobot, 5, 5), "wrong observation dummy"
 
         # controls cheatsheet
         # 0 - right, 1 - up, 2 - left, 3 - down
@@ -62,7 +67,7 @@ class MultiAgentSpanningTreeCoveragePolicy(object):
                 #different checks depending on which sub-cell we are in
                 if curr_pos == "bl":
                     #check if cell below has any obstacles
-                    o = obs[i,2:4,0:2]
+                    o = obs[i, 2:4, 0:2]
                     free = not np.any(o == 1)
 
                     if free and not self.isAnySubcellVisited(self._curr_x[i], self._curr_y[i] - 1):
@@ -73,7 +78,7 @@ class MultiAgentSpanningTreeCoveragePolicy(object):
 
                 elif curr_pos == "br":
                     #check if cell right has any obstacles
-                    o = obs[i, 3:5,2:4]
+                    o = obs[i, 3:5, 2:4]
                     free = not np.any(o == 1)
 
                     if free and not self.isAnySubcellVisited(self._curr_x[i] + 1, self._curr_y[i]):
@@ -84,7 +89,7 @@ class MultiAgentSpanningTreeCoveragePolicy(object):
 
                 elif curr_pos == "ur":
                     #check if cell above has any obstacles
-                    o = obs[i,1:3,3:5]
+                    o = obs[i, 1:3, 3:5]
                     free = not np.any(o == 1)
 
                     if free and not self.isAnySubcellVisited(self._curr_x[i], self._curr_y[i] + 1):
@@ -93,7 +98,7 @@ class MultiAgentSpanningTreeCoveragePolicy(object):
                         u = 2
                 elif curr_pos == "ul":
                     #check if cell above has any obstacles
-                    o = obs[i,0:2,1:3]
+                    o = obs[i, 0:2, 1:3]
                     free = not np.any(o == 1)
 
                     if free and not self.isAnySubcellVisited(self._curr_x[i] - 1, self._curr_y[i]):
@@ -119,7 +124,7 @@ class MultiAgentSpanningTreeCoveragePolicy(object):
 
         return ulis
 
-    def isCellVisited(self,x,y,i):
+    def isCellVisited(self, x, y, i):
         '''
         returns true if all subcells in the enclosing cell of (x,y) are visited
         '''
@@ -127,7 +132,7 @@ class MultiAgentSpanningTreeCoveragePolicy(object):
         x = x - x % 2
         y = y - y % 2
 
-        cell = self._visited[i,x:x+2,y:y+2]
+        cell = self._visited[i, x:x+2, y:y+2]
         return np.all(cell == 1)
 
     def isAnySubcellVisited(self, x, y):
@@ -138,7 +143,7 @@ class MultiAgentSpanningTreeCoveragePolicy(object):
         x = x - x % 2
         y = y - y % 2
 
-        cell = self._visited[:,x:x+2,y:y+2]
+        cell = self._visited[:, x:x+2, y:y+2]
         return np.any(cell == 1)
 
     def subcellpos(self, x, y):
@@ -167,7 +172,8 @@ class MultiAgentSpanningTreeCoveragePolicy(object):
         internal_grid_rad = self._internal_grid_rad
 
         #internal coordinate system for keeping track of where we have been
-        self._visited = np.zeros((self._numrobot, 2*internal_grid_rad, 2*internal_grid_rad))
+        self._visited = np.zeros(
+            (self._numrobot, 2*internal_grid_rad, 2*internal_grid_rad))
 
         #creating positions array
         self._curr_x = np.zeros(self._numrobot, dtype=int)
@@ -188,6 +194,7 @@ class MultiAgentSpanningTreeCoveragePolicy(object):
             #visiting the current cell
             self._visited[i][self._curr_x[i]][self._curr_y[i]] = 1
 
+
 if __name__ == "__main__":
     #testing spanning tree coverage on dec_grid_rl environment
     env_config = {
@@ -200,12 +207,12 @@ if __name__ == "__main__":
         "done_thresh": 1,
         "done_incr": 0,
         "terminal_reward": 30,
-        "mini_map_rad" : 0,
-        "comm_radius" : 0,
-        "allow_comm" : 0,
-        "map_sharing" : 0,
-        "single_square_tool" : 1,
-        "dist_reward" : 0
+        "mini_map_rad": 0,
+        "comm_radius": 0,
+        "allow_comm": 0,
+        "map_sharing": 0,
+        "single_square_tool": 1,
+        "dist_reward": 0
     }
 
     grid_config = {
@@ -228,9 +235,9 @@ if __name__ == "__main__":
     logger = Logger(exp_name, makevid)
 
     #testing stc
-    stc_controller = MultiAgentSpanningTreeCoveragePolicy(10,210)
+    stc_controller = MASTC(10, 210)
 
-    state = (env.reset())[:,2,:,:]#getting only the obstacle layers
+    state = (env.reset())[:, 2, :, :]  # getting only the obstacle layers
     stc_controller.reset(env._xinds, env._yinds)
     done = False
     render = True
@@ -242,7 +249,6 @@ if __name__ == "__main__":
 
         # step environment and save episode results
         state, reward = env.step(action)
-        state = state[:,2,:,:] #getting only the obstacle layers
 
         # determine if episode is completed
         done = env.done()
@@ -252,4 +258,3 @@ if __name__ == "__main__":
             frame = env.render()
             if(makevid):
                 logger.addFrame(frame)
-

@@ -4,12 +4,15 @@ from Utils.gridmaker import gridgen, gridload
 from Environments.dec_grid_rl import DecGridRL
 import time
 from Logger.logger import Logger
+from . base_policy import Base_Policy
 
-class DijkstraFrontier(object):
+
+class DijkstraFrontier(Base_Policy):
     '''
     Online controller that takes incremental observations of the environment
     and greedily explores by going to the closest unexplored point.
     '''
+
     def pi(self, obs):
         """
         Args:
@@ -22,16 +25,16 @@ class DijkstraFrontier(object):
         obs = obs[3]
 
         #right
-        if obs[2,1] == 1:
+        if obs[2, 1] == 1:
             u = 0
         #up
-        elif obs[1,2] == 1:
+        elif obs[1, 2] == 1:
             u = 1
         #left
-        elif obs[0,1] == 1:
+        elif obs[0, 1] == 1:
             u = 2
         #down
-        elif obs[1,0] == 1:
+        elif obs[1, 0] == 1:
             u = 3
         else:
             print("Map is full covered")
@@ -49,17 +52,17 @@ if __name__ == "__main__":
         "done_thresh": 1,
         "done_incr": 0,
         "terminal_reward": 30,
-        "mini_map_rad" : 0,
-        "comm_radius" : 0,
-        "allow_comm" : 0,
-        "map_sharing" : 0,
-        "single_square_tool" : 0,
-        "dist_reward" : 0,
-        "dijkstra_input" : 1,
-        "sensor_type" : "lidar",
-        "sensor_config" : {
-            "num_lasers" : 21,
-            "range" : 10
+        "mini_map_rad": 0,
+        "comm_radius": 0,
+        "allow_comm": 0,
+        "map_sharing": 0,
+        "single_square_tool": 0,
+        "dist_reward": 0,
+        "dijkstra_input": 1,
+        "sensor_type": "lidar",
+        "sensor_config": {
+            "num_lasers": 21,
+            "range": 10
             }
 
     }
@@ -108,4 +111,3 @@ if __name__ == "__main__":
             frame = env.render()
             if(makevid):
                 logger.addFrame(frame)
-
