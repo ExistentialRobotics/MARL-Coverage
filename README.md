@@ -1,4 +1,4 @@
-# Welcome to the UCSD Existential Robotics Laboratory Coverage Repository!
+# Welcome to the Coverage Path Planning (CPP) Repository!
 
 This repository contains an open source (gym-esque) grid world environment to
 enable researchers (or anyone interested in coverage) to develop and benchmark
