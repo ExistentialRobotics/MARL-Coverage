@@ -1,5 +1,15 @@
 # Welcome to the Coverage Path Planning (CPP) Repository!
 
+## Authors
+
+Peter Stratton                                                                
+Email: pstratto@ucsd.edu, pstratt@umich.edu
+
+Shreyas Arora                                                               
+Email: sharora@ucsd.edu
+
+## Repo Overview
+
 This repository contains an open source (gym-esque) grid world environment to
 enable researchers (or anyone interested in coverage) to develop and benchmark
 robotic coverage algorithms, with software infrastructure in place to train
